@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,15 +28,14 @@ import java.util.Map;
 import freemarker.template.Configuration;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.DisabledForJreRange;
-import org.junit.jupiter.api.condition.JRE;
 import reactor.core.publisher.Mono;
-import reactor.test.StepVerifier;
 
 import org.springframework.beans.testfixture.beans.TestBean;
 import org.springframework.context.support.GenericApplicationContext;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.MediaType;
+import org.springframework.ui.ExtendedModelMap;
+import org.springframework.ui.ModelMap;
 import org.springframework.util.FileCopyUtils;
 import org.springframework.util.StringUtils;
 import org.springframework.web.reactive.result.view.BindStatus;
@@ -46,6 +45,7 @@ import org.springframework.web.server.ServerWebExchange;
 import org.springframework.web.testfixture.http.server.reactive.MockServerHttpRequest;
 import org.springframework.web.testfixture.server.MockServerWebExchange;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Collections.singletonMap;
 import static java.util.stream.Collectors.toList;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -57,7 +57,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author Sam Brannen
  * @since 5.2
  */
-class FreeMarkerMacroTests {
+public class FreeMarkerMacroTests {
 
 	private static final String TEMPLATE_FILE = "test-macro.ftl";
 
@@ -71,7 +71,7 @@ class FreeMarkerMacroTests {
 
 
 	@BeforeEach
-	void setUp() throws Exception {
+	public void setUp() throws Exception {
 		this.templateLoaderPath = Files.createTempDirectory("webflux-").toAbsolutePath();
 
 		this.applicationContext.refresh();
@@ -82,7 +82,7 @@ class FreeMarkerMacroTests {
 	}
 
 	@Test
-	void springMacroRequestContextIsAutomaticallyExposedAsModelAttribute() throws Exception {
+	public void springMacroRequestContextIsAutomaticallyExposedAsModelAttribute() throws Exception {
 		storeTemplateInTempDir("<@spring.bind \"testBean.name\"/>\nHi ${spring.status.value}");
 
 		FreeMarkerView view = new FreeMarkerView() {
@@ -106,84 +106,79 @@ class FreeMarkerMacroTests {
 		view.setUrl("tmp.ftl");
 		view.setConfiguration(this.freeMarkerConfig);
 
-		Map<String, ?> model = singletonMap("testBean", new TestBean("Dilbert", 99));
+		view.render(singletonMap("testBean", new TestBean("Dilbert", 99)), null, this.exchange).subscribe();
 
-		StepVerifier.create(view.render(model, null, this.exchange)
-						.then(Mono.fromCallable(this::getOutput)))
-				.assertNext(l -> assertThat(l).containsExactly("Hi Dilbert"));
+		assertThat(getOutput()).containsExactly("Hi Dilbert");
 	}
 
 	@Test
-	void name() throws Exception {
-		testMacroOutput("NAME", "Darren");
-	}
-
-	private void testMacroOutput(String name, String... contents) throws Exception {
-		StepVerifier.create(getMacroOutput(name))
-				.assertNext(list -> assertThat(list).containsExactly(contents))
-				.verifyComplete();
-
+	public void name() throws Exception {
+		assertThat(getMacroOutput("NAME")).containsExactly("Darren");
 	}
 
 	@Test
-	@DisabledForJreRange(min = JRE.JAVA_21)
 	public void age() throws Exception {
-		testMacroOutput("AGE", "99");
+		assertThat(getMacroOutput("AGE")).containsExactly("99");
 	}
 
 	@Test
-	void message() throws Exception {
-		testMacroOutput("MESSAGE", "Howdy Mundo");
+	public void message() throws Exception {
+		assertThat(getMacroOutput("MESSAGE")).containsExactly("Howdy Mundo");
 	}
 
 	@Test
-	void defaultMessage() throws Exception {
-		testMacroOutput("DEFAULTMESSAGE", "hi planet");
+	public void defaultMessage() throws Exception {
+		assertThat(getMacroOutput("DEFAULTMESSAGE")).containsExactly("hi planet");
 	}
 
 	@Test
-	void messageArgs() throws Exception {
-		testMacroOutput("MESSAGEARGS", "Howdy[World]");
+	public void messageArgs() throws Exception {
+		assertThat(getMacroOutput("MESSAGEARGS")).containsExactly("Howdy[World]");
 	}
 
 	@Test
-	void messageArgsWithDefaultMessage() throws Exception {
-		testMacroOutput("MESSAGEARGSWITHDEFAULTMESSAGE", "Hi");
+	public void messageArgsWithDefaultMessage() throws Exception {
+		assertThat(getMacroOutput("MESSAGEARGSWITHDEFAULTMESSAGE")).containsExactly("Hi");
 	}
 
 	@Test
-	void url() throws Exception {
-		testMacroOutput("URL", "/springtest/aftercontext.html");
+	public void url() throws Exception {
+		assertThat(getMacroOutput("URL")).containsExactly("/springtest/aftercontext.html");
 	}
 
 	@Test
-	void urlParams() throws Exception {
-		testMacroOutput("URLPARAMS", "/springtest/aftercontext/bar?spam=bucket");
+	public void urlParams() throws Exception {
+		assertThat(getMacroOutput("URLPARAMS")).containsExactly(
+				"/springtest/aftercontext/bar?spam=bucket");
 	}
 
 	@Test
-	void formInput() throws Exception {
-		testMacroOutput("FORM1", "<input type=\"text\" id=\"name\" name=\"name\" value=\"Darren\" >");
+	public void formInput() throws Exception {
+		assertThat(getMacroOutput("FORM1")).containsExactly(
+				"<input type=\"text\" id=\"name\" name=\"name\" value=\"Darren\" >");
 	}
 
 	@Test
-	void formInputWithCss() throws Exception {
-		testMacroOutput("FORM2", "<input type=\"text\" id=\"name\" name=\"name\" value=\"Darren\" class=\"myCssClass\" >");
+	public void formInputWithCss() throws Exception {
+		assertThat(getMacroOutput("FORM2")).containsExactly(
+				"<input type=\"text\" id=\"name\" name=\"name\" value=\"Darren\" class=\"myCssClass\" >");
 	}
 
 	@Test
-	void formTextarea() throws Exception {
-		testMacroOutput("FORM3", "<textarea id=\"name\" name=\"name\" >Darren</textarea>");
+	public void formTextarea() throws Exception {
+		assertThat(getMacroOutput("FORM3")).containsExactly(
+				"<textarea id=\"name\" name=\"name\" >Darren</textarea>");
 	}
 
 	@Test
-	void formTextareaWithCustomRowsAndColumns() throws Exception {
-		testMacroOutput("FORM4", "<textarea id=\"name\" name=\"name\" rows=10 cols=30>Darren</textarea>");
+	public void formTextareaWithCustomRowsAndColumns() throws Exception {
+		assertThat(getMacroOutput("FORM4")).containsExactly(
+				"<textarea id=\"name\" name=\"name\" rows=10 cols=30>Darren</textarea>");
 	}
 
 	@Test
-	void formSingleSelectFromMap() throws Exception {
-		testMacroOutput("FORM5",
+	public void formSingleSelectFromMap() throws Exception {
+		assertThat(getMacroOutput("FORM5")).containsExactly(
 				"<select id=\"name\" name=\"name\" >", //
 				"<option value=\"Rob&amp;Harrop\">Rob Harrop</option>", //
 				"<option value=\"John\">John Doe</option>", //
@@ -193,8 +188,8 @@ class FreeMarkerMacroTests {
 	}
 
 	@Test
-	void formSingleSelectFromList() throws Exception {
-		testMacroOutput("FORM14",
+	public void formSingleSelectFromList() throws Exception {
+		assertThat(getMacroOutput("FORM14")).containsExactly(
 				"<select id=\"name\" name=\"name\" >", //
 				"<option value=\"Rob Harrop\">Rob Harrop</option>", //
 				"<option value=\"Darren Davison\">Darren Davison</option>", //
@@ -204,8 +199,8 @@ class FreeMarkerMacroTests {
 	}
 
 	@Test
-	void formMultiSelect() throws Exception {
-		testMacroOutput("FORM6",
+	public void formMultiSelect() throws Exception {
+		assertThat(getMacroOutput("FORM6")).containsExactly(
 				"<select multiple=\"multiple\" id=\"spouses\" name=\"spouses\" >", //
 				"<option value=\"Rob&amp;Harrop\">Rob Harrop</option>", //
 				"<option value=\"John\">John Doe</option>", //
@@ -215,8 +210,8 @@ class FreeMarkerMacroTests {
 	}
 
 	@Test
-	void formRadioButtons() throws Exception {
-		testMacroOutput("FORM7",
+	public void formRadioButtons() throws Exception {
+		assertThat(getMacroOutput("FORM7")).containsExactly(
 				"<input type=\"radio\" id=\"name0\" name=\"name\" value=\"Rob&amp;Harrop\" >", //
 				"<label for=\"name0\">Rob Harrop</label>", //
 				"<input type=\"radio\" id=\"name1\" name=\"name\" value=\"John\" >", //
@@ -228,29 +223,29 @@ class FreeMarkerMacroTests {
 	}
 
 	@Test
-	void formCheckboxForStringProperty() throws Exception {
-		testMacroOutput("FORM15",
+	public void formCheckboxForStringProperty() throws Exception {
+		assertThat(getMacroOutput("FORM15")).containsExactly(
 				"<input type=\"hidden\" name=\"_name\" value=\"on\"/>",
 				"<input type=\"checkbox\" id=\"name\" name=\"name\" />");
 	}
 
 	@Test
-	void formCheckboxForBooleanProperty() throws Exception {
-		testMacroOutput("FORM16",
+	public void formCheckboxForBooleanProperty() throws Exception {
+		assertThat(getMacroOutput("FORM16")).containsExactly(
 				"<input type=\"hidden\" name=\"_jedi\" value=\"on\"/>",
 				"<input type=\"checkbox\" id=\"jedi\" name=\"jedi\" checked=\"checked\" />");
 	}
 
 	@Test
-	void formCheckboxForNestedPath() throws Exception {
-		testMacroOutput("FORM18",
+	public void formCheckboxForNestedPath() throws Exception {
+		assertThat(getMacroOutput("FORM18")).containsExactly(
 				"<input type=\"hidden\" name=\"_spouses[0].jedi\" value=\"on\"/>",
 				"<input type=\"checkbox\" id=\"spouses0.jedi\" name=\"spouses[0].jedi\" checked=\"checked\" />");
 	}
 
 	@Test
-	void formCheckboxForStringArray() throws Exception {
-		testMacroOutput("FORM8",
+	public void formCheckboxForStringArray() throws Exception {
+		assertThat(getMacroOutput("FORM8")).containsExactly(
 				"<input type=\"checkbox\" id=\"stringArray0\" name=\"stringArray\" value=\"Rob&amp;Harrop\" >", //
 				"<label for=\"stringArray0\">Rob Harrop</label>", //
 				"<input type=\"checkbox\" id=\"stringArray1\" name=\"stringArray\" value=\"John\" checked=\"checked\" >", //
@@ -263,42 +258,42 @@ class FreeMarkerMacroTests {
 	}
 
 	@Test
-	void formPasswordInput() throws Exception {
-		testMacroOutput("FORM9",
+	public void formPasswordInput() throws Exception {
+		assertThat(getMacroOutput("FORM9")).containsExactly(
 				"<input type=\"password\" id=\"name\" name=\"name\" value=\"\" >");
 	}
 
 	@Test
-	void formHiddenInput() throws Exception {
-		testMacroOutput("FORM10",
+	public void formHiddenInput() throws Exception {
+		assertThat(getMacroOutput("FORM10")).containsExactly(
 				"<input type=\"hidden\" id=\"name\" name=\"name\" value=\"Darren\" >");
 	}
 
 	@Test
-	void formInputText() throws Exception {
-		testMacroOutput("FORM11",
+	public void formInputText() throws Exception {
+		assertThat(getMacroOutput("FORM11")).containsExactly(
 				"<input type=\"text\" id=\"name\" name=\"name\" value=\"Darren\" >");
 	}
 
 	@Test
-	void formInputHidden() throws Exception {
-		testMacroOutput("FORM12",
+	public void formInputHidden() throws Exception {
+		assertThat(getMacroOutput("FORM12")).containsExactly(
 				"<input type=\"hidden\" id=\"name\" name=\"name\" value=\"Darren\" >");
 	}
 
 	@Test
-	void formInputPassword() throws Exception {
-		testMacroOutput("FORM13",
+	public void formInputPassword() throws Exception {
+		assertThat(getMacroOutput("FORM13")).containsExactly(
 				"<input type=\"password\" id=\"name\" name=\"name\" value=\"\" >");
 	}
 
 	@Test
-	void forInputWithNestedPath() throws Exception {
-		testMacroOutput("FORM17",
+	public void forInputWithNestedPath() throws Exception {
+		assertThat(getMacroOutput("FORM17")).containsExactly(
 				"<input type=\"text\" id=\"spouses0.name\" name=\"spouses[0].name\" value=\"Fred\" >");
 	}
 
-	private Mono<List<String>> getMacroOutput(String name) throws Exception {
+	private List<String> getMacroOutput(String name) throws Exception {
 		String macro = fetchMacro(name);
 		assertThat(macro).isNotNull();
 		storeTemplateInTempDir(macro);
@@ -320,7 +315,7 @@ class FreeMarkerMacroTests {
 		names.put("Fred", "Fred Bloggs");
 		names.put("Rob&Harrop", "Rob Harrop");
 
-		Map<String, Object> model = new HashMap<>();
+		ModelMap model = new ExtendedModelMap();
 		DummyMacroRequestContext rc = new DummyMacroRequestContext(this.exchange, model,
 				this.applicationContext);
 		rc.setMessageMap(msgMap);
@@ -339,8 +334,9 @@ class FreeMarkerMacroTests {
 		view.setExposeSpringMacroHelpers(false);
 		view.setConfiguration(freeMarkerConfig);
 
-		return view.render(model, null, this.exchange).
-				then(Mono.fromCallable(this::getOutput));
+		view.render(model, null, this.exchange).subscribe();
+
+		return getOutput();
 	}
 
 	private static String fetchMacro(String name) throws Exception {
@@ -361,9 +357,8 @@ class FreeMarkerMacroTests {
 	}
 
 	private void storeTemplateInTempDir(String macro) throws IOException {
-		Files.writeString(this.templateLoaderPath.resolve("tmp.ftl"),
-				"<#import \"spring.ftl\" as spring />\n" + macro
-		);
+		Files.write(this.templateLoaderPath.resolve("tmp.ftl"),
+				("<#import \"spring.ftl\" as spring />\n" + macro).getBytes(UTF_8));
 	}
 
 	private List<String> getOutput() {

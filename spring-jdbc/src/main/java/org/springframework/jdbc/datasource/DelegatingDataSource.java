@@ -18,9 +18,7 @@ package org.springframework.jdbc.datasource;
 
 import java.io.PrintWriter;
 import java.sql.Connection;
-import java.sql.ConnectionBuilder;
 import java.sql.SQLException;
-import java.sql.ShardingKeyBuilder;
 import java.util.logging.Logger;
 
 import javax.sql.DataSource;
@@ -104,16 +102,6 @@ public class DelegatingDataSource implements DataSource, InitializingBean {
 	@Override
 	public Connection getConnection(String username, String password) throws SQLException {
 		return obtainTargetDataSource().getConnection(username, password);
-	}
-
-	@Override
-	public ConnectionBuilder createConnectionBuilder() throws SQLException {
-		return obtainTargetDataSource().createConnectionBuilder();
-	}
-
-	@Override
-	public ShardingKeyBuilder createShardingKeyBuilder() throws SQLException {
-		return obtainTargetDataSource().createShardingKeyBuilder();
 	}
 
 	@Override

@@ -25,6 +25,7 @@ import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
+import org.springframework.core.task.AsyncListenableTaskExecutor;
 import org.springframework.core.task.NoOpRunnable;
 import org.springframework.core.task.TaskDecorator;
 import org.springframework.util.Assert;
@@ -42,14 +43,13 @@ class ConcurrentTaskExecutorTests extends AbstractSchedulingTaskExecutorTests {
 
 
 	@Override
-	@SuppressWarnings("removal")
-	protected org.springframework.core.task.AsyncListenableTaskExecutor buildExecutor() {
+	protected AsyncListenableTaskExecutor buildExecutor() {
 		concurrentExecutor.setThreadFactory(new CustomizableThreadFactory(this.threadNamePrefix));
 		return new ConcurrentTaskExecutor(concurrentExecutor);
 	}
 
-	@AfterEach
 	@Override
+	@AfterEach
 	void shutdownExecutor() {
 		for (Runnable task : concurrentExecutor.shutdownNow()) {
 			if (task instanceof Future) {
@@ -61,7 +61,6 @@ class ConcurrentTaskExecutorTests extends AbstractSchedulingTaskExecutorTests {
 
 	@Test
 	void zeroArgCtorResultsInDefaultTaskExecutorBeingUsed() {
-		@SuppressWarnings("deprecation")
 		ConcurrentTaskExecutor executor = new ConcurrentTaskExecutor();
 		assertThatCode(() -> executor.execute(new NoOpRunnable())).doesNotThrowAnyException();
 	}
@@ -69,12 +68,11 @@ class ConcurrentTaskExecutorTests extends AbstractSchedulingTaskExecutorTests {
 	@Test
 	void passingNullExecutorToCtorResultsInDefaultTaskExecutorBeingUsed() {
 		ConcurrentTaskExecutor executor = new ConcurrentTaskExecutor(null);
-		assertThatCode(() -> executor.execute(new NoOpRunnable())).hasMessage("Executor not configured");
+		assertThatCode(() -> executor.execute(new NoOpRunnable())).doesNotThrowAnyException();
 	}
 
 	@Test
 	void earlySetConcurrentExecutorCallRespectsConfiguredTaskDecorator() {
-		@SuppressWarnings("deprecation")
 		ConcurrentTaskExecutor executor = new ConcurrentTaskExecutor();
 		executor.setConcurrentExecutor(new DecoratedExecutor());
 		executor.setTaskDecorator(new RunnableDecorator());
@@ -83,7 +81,6 @@ class ConcurrentTaskExecutorTests extends AbstractSchedulingTaskExecutorTests {
 
 	@Test
 	void lateSetConcurrentExecutorCallRespectsConfiguredTaskDecorator() {
-		@SuppressWarnings("deprecation")
 		ConcurrentTaskExecutor executor = new ConcurrentTaskExecutor();
 		executor.setTaskDecorator(new RunnableDecorator());
 		executor.setConcurrentExecutor(new DecoratedExecutor());

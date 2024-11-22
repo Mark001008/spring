@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,20 +27,23 @@ import org.junit.jupiter.api.Test;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.MediaType;
-import org.springframework.web.testfixture.http.MockHttpInputMessage;
-import org.springframework.web.testfixture.http.MockHttpOutputMessage;
+import org.springframework.http.MockHttpInputMessage;
+import org.springframework.http.MockHttpOutputMessage;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Tests for {@link BufferedImageHttpMessageConverter}.
+ * Unit tests for {@link BufferedImageHttpMessageConverter}.
  *
  * @author Arjen Poutsma
  * @author Rossen Stoyanchev
+ * @author Sam Brannen
  */
 class BufferedImageHttpMessageConverterTests {
 
 	private final BufferedImageHttpMessageConverter converter = new BufferedImageHttpMessageConverter();
+
+	private final Resource logo = new ClassPathResource("logo.jpg", getClass());
 
 
 	@Test
@@ -58,7 +61,6 @@ class BufferedImageHttpMessageConverterTests {
 
 	@Test
 	void read() throws IOException {
-		Resource logo = new ClassPathResource("logo.jpg", BufferedImageHttpMessageConverterTests.class);
 		MockHttpInputMessage inputMessage = new MockHttpInputMessage(logo.getInputStream());
 		inputMessage.getHeaders().setContentType(new MediaType("image", "jpeg"));
 		BufferedImage result = converter.read(BufferedImage.class, inputMessage);
@@ -68,13 +70,12 @@ class BufferedImageHttpMessageConverterTests {
 
 	@Test
 	void write() throws IOException {
-		Resource logo = new ClassPathResource("logo.jpg", BufferedImageHttpMessageConverterTests.class);
 		BufferedImage body = ImageIO.read(logo.getFile());
 		MockHttpOutputMessage outputMessage = new MockHttpOutputMessage();
 		MediaType contentType = new MediaType("image", "png");
 		converter.write(body, contentType, outputMessage);
-		assertThat(outputMessage.getHeaders().getContentType()).as("Invalid content type").isEqualTo(contentType);
-		assertThat(outputMessage.getBodyAsBytes()).as("Invalid size").isNotEmpty();
+		assertThat(outputMessage.getWrittenHeaders().getContentType()).as("Invalid content type").isEqualTo(contentType);
+		assertThat(outputMessage.getBodyAsBytes().length > 0).as("Invalid size").isTrue();
 		BufferedImage result = ImageIO.read(new ByteArrayInputStream(outputMessage.getBodyAsBytes()));
 		assertThat(result.getHeight()).as("Invalid height").isEqualTo(500);
 		assertThat(result.getWidth()).as("Invalid width").isEqualTo(750);
@@ -82,14 +83,13 @@ class BufferedImageHttpMessageConverterTests {
 
 	@Test
 	void writeDefaultContentType() throws IOException {
-		Resource logo = new ClassPathResource("logo.jpg", BufferedImageHttpMessageConverterTests.class);
 		MediaType contentType = new MediaType("image", "png");
 		converter.setDefaultContentType(contentType);
 		BufferedImage body = ImageIO.read(logo.getFile());
 		MockHttpOutputMessage outputMessage = new MockHttpOutputMessage();
 		converter.write(body, new MediaType("*", "*"), outputMessage);
-		assertThat(outputMessage.getHeaders().getContentType()).as("Invalid content type").isEqualTo(contentType);
-		assertThat(outputMessage.getBodyAsBytes()).as("Invalid size").isNotEmpty();
+		assertThat(outputMessage.getWrittenHeaders().getContentType()).as("Invalid content type").isEqualTo(contentType);
+		assertThat(outputMessage.getBodyAsBytes().length > 0).as("Invalid size").isTrue();
 		BufferedImage result = ImageIO.read(new ByteArrayInputStream(outputMessage.getBodyAsBytes()));
 		assertThat(result.getHeight()).as("Invalid height").isEqualTo(500);
 		assertThat(result.getWidth()).as("Invalid width").isEqualTo(750);

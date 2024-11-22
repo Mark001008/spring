@@ -64,7 +64,6 @@ public class InvalidResultSetAccessException extends InvalidDataAccessResourceUs
 	/**
 	 * Return the wrapped SQLException.
 	 */
-	@Nullable
 	public SQLException getSQLException() {
 		return (SQLException) getCause();
 	}

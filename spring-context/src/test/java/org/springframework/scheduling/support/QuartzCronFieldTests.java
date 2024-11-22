@@ -25,7 +25,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 
 /**
- * Tests for {@link QuartzCronField}.
+ * Unit tests for {@link QuartzCronField}.
  *
  * @author Arjen Poutsma
  * @author Juergen Hoeller

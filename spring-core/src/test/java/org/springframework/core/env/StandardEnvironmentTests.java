@@ -16,6 +16,9 @@
 
 package org.springframework.core.env;
 
+import java.security.AccessControlException;
+import java.security.Permission;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -24,18 +27,17 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import org.springframework.core.SpringProperties;
+import org.springframework.core.testfixture.env.EnvironmentTestUtils;
 import org.springframework.core.testfixture.env.MockPropertySource;
-import org.springframework.util.PlaceholderResolutionException;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.springframework.core.env.AbstractEnvironment.ACTIVE_PROFILES_PROPERTY_NAME;
 import static org.springframework.core.env.AbstractEnvironment.DEFAULT_PROFILES_PROPERTY_NAME;
 import static org.springframework.core.env.AbstractEnvironment.RESERVED_DEFAULT_PROFILE_NAME;
 
 /**
- * Tests for {@link StandardEnvironment}.
+ * Unit tests for {@link StandardEnvironment}.
  *
  * @author Chris Beams
  * @author Juergen Hoeller
@@ -116,7 +118,7 @@ class StandardEnvironmentTests {
 
 	@Test
 	void activeProfilesIsEmptyByDefault() {
-		assertThat(environment.getActiveProfiles()).isEmpty();
+		assertThat(environment.getActiveProfiles().length).isEqualTo(0);
 	}
 
 	@Test
@@ -173,7 +175,7 @@ class StandardEnvironmentTests {
 
 	@Test
 	void addActiveProfile() {
-		assertThat(environment.getActiveProfiles()).isEmpty();
+		assertThat(environment.getActiveProfiles().length).isEqualTo(0);
 		environment.setActiveProfiles("local", "embedded");
 		assertThat(environment.getActiveProfiles()).containsExactly("local", "embedded");
 		environment.addActiveProfile("p1");
@@ -211,9 +213,9 @@ class StandardEnvironmentTests {
 	void defaultProfileWithCircularPlaceholder() {
 		try {
 			System.setProperty(DEFAULT_PROFILES_PROPERTY_NAME, "${spring.profiles.default}");
-			assertThatExceptionOfType(PlaceholderResolutionException.class)
+			assertThatIllegalArgumentException()
 				.isThrownBy(environment::getDefaultProfiles)
-				.withMessageContaining("Circular placeholder reference 'spring.profiles.default'");
+				.withMessage("Circular placeholder reference 'spring.profiles.default' in property definitions");
 		}
 		finally {
 			System.clearProperty(DEFAULT_PROFILES_PROPERTY_NAME);
@@ -230,7 +232,7 @@ class StandardEnvironmentTests {
 	@Test
 	void setDefaultProfiles() {
 		environment.setDefaultProfiles();
-		assertThat(environment.getDefaultProfiles()).isEmpty();
+		assertThat(environment.getDefaultProfiles().length).isEqualTo(0);
 		environment.setDefaultProfiles("pd1");
 		assertThat(environment.getDefaultProfiles()).containsExactly("pd1");
 		environment.setDefaultProfiles("pd2", "pd3");
@@ -290,28 +292,78 @@ class StandardEnvironmentTests {
 	}
 
 	@Test
-	void getSystemProperties() {
+	void getSystemProperties_withAndWithoutSecurityManager() {
+		SecurityManager originalSecurityManager = System.getSecurityManager();
 		try {
 			System.setProperty(ALLOWED_PROPERTY_NAME, ALLOWED_PROPERTY_VALUE);
 			System.setProperty(DISALLOWED_PROPERTY_NAME, DISALLOWED_PROPERTY_VALUE);
 			System.getProperties().put(STRING_PROPERTY_NAME, NON_STRING_PROPERTY_VALUE);
 			System.getProperties().put(NON_STRING_PROPERTY_NAME, STRING_PROPERTY_VALUE);
 
-			Map<?, ?> systemProperties = environment.getSystemProperties();
-			assertThat(systemProperties).isNotNull();
-			assertThat(System.getProperties()).isSameAs(systemProperties);
-			assertThat(systemProperties.get(ALLOWED_PROPERTY_NAME)).isEqualTo(ALLOWED_PROPERTY_VALUE);
-			assertThat(systemProperties.get(DISALLOWED_PROPERTY_NAME)).isEqualTo(DISALLOWED_PROPERTY_VALUE);
-			assertThat(systemProperties.get(STRING_PROPERTY_NAME)).isEqualTo(NON_STRING_PROPERTY_VALUE);
-			assertThat(systemProperties.get(NON_STRING_PROPERTY_NAME)).isEqualTo(STRING_PROPERTY_VALUE);
+			{
+				Map<?, ?> systemProperties = environment.getSystemProperties();
+				assertThat(systemProperties).isNotNull();
+				assertThat(System.getProperties()).isSameAs(systemProperties);
+				assertThat(systemProperties.get(ALLOWED_PROPERTY_NAME)).isEqualTo(ALLOWED_PROPERTY_VALUE);
+				assertThat(systemProperties.get(DISALLOWED_PROPERTY_NAME)).isEqualTo(DISALLOWED_PROPERTY_VALUE);
 
-			PropertiesPropertySource systemPropertySource = (PropertiesPropertySource)
-					environment.getPropertySources().get(StandardEnvironment.SYSTEM_PROPERTIES_PROPERTY_SOURCE_NAME);
-			Set<String> expectedKeys = new HashSet<>(System.getProperties().stringPropertyNames());
-			expectedKeys.add(STRING_PROPERTY_NAME);  // filtered out by stringPropertyNames due to non-String value
-			assertThat(Set.of(systemPropertySource.getPropertyNames())).isEqualTo(expectedKeys);
+				// non-string keys and values work fine... until the security manager is introduced below
+				assertThat(systemProperties.get(STRING_PROPERTY_NAME)).isEqualTo(NON_STRING_PROPERTY_VALUE);
+				assertThat(systemProperties.get(NON_STRING_PROPERTY_NAME)).isEqualTo(STRING_PROPERTY_VALUE);
+
+				PropertiesPropertySource systemPropertySource = (PropertiesPropertySource)
+						environment.getPropertySources().get(StandardEnvironment.SYSTEM_PROPERTIES_PROPERTY_SOURCE_NAME);
+				Set<String> expectedKeys = new HashSet<>(System.getProperties().stringPropertyNames());
+				expectedKeys.add(STRING_PROPERTY_NAME);  // filtered out by stringPropertyNames due to non-String value
+				assertThat(new HashSet<>(Arrays.asList(systemPropertySource.getPropertyNames()))).isEqualTo(expectedKeys);
+			}
+
+			SecurityManager securityManager = new SecurityManager() {
+				@Override
+				public void checkPropertiesAccess() {
+					// see https://download.oracle.com/javase/1.5.0/docs/api/java/lang/System.html#getProperties()
+					throw new AccessControlException("Accessing the system properties is disallowed");
+				}
+				@Override
+				public void checkPropertyAccess(String key) {
+					// see https://download.oracle.com/javase/1.5.0/docs/api/java/lang/System.html#getProperty(java.lang.String)
+					if (DISALLOWED_PROPERTY_NAME.equals(key)) {
+						throw new AccessControlException(
+								String.format("Accessing the system property [%s] is disallowed", DISALLOWED_PROPERTY_NAME));
+					}
+				}
+				@Override
+				public void checkPermission(Permission perm) {
+					// allow everything else
+				}
+			};
+
+			System.setSecurityManager(securityManager);
+
+			{
+				Map<?, ?> systemProperties = environment.getSystemProperties();
+				assertThat(systemProperties).isNotNull();
+				assertThat(systemProperties).isInstanceOf(ReadOnlySystemAttributesMap.class);
+				assertThat(systemProperties.get(ALLOWED_PROPERTY_NAME)).isEqualTo(ALLOWED_PROPERTY_VALUE);
+				assertThat(systemProperties.get(DISALLOWED_PROPERTY_NAME)).isNull();
+
+				// nothing we can do here in terms of warning the user that there was
+				// actually a (non-string) value available. By this point, we only
+				// have access to calling System.getProperty(), which itself returns null
+				// if the value is non-string.  So we're stuck with returning a potentially
+				// misleading null.
+				assertThat(systemProperties.get(STRING_PROPERTY_NAME)).isNull();
+
+				// in the case of a non-string *key*, however, we can do better.  Alert
+				// the user that under these very special conditions (non-object key +
+				// SecurityManager that disallows access to system properties), they
+				// cannot do what they're attempting.
+				assertThatIllegalArgumentException().as("searching with non-string key against ReadOnlySystemAttributesMap")
+					.isThrownBy(() -> systemProperties.get(NON_STRING_PROPERTY_NAME));
+			}
 		}
 		finally {
+			System.setSecurityManager(originalSecurityManager);
 			System.clearProperty(ALLOWED_PROPERTY_NAME);
 			System.clearProperty(DISALLOWED_PROPERTY_NAME);
 			System.getProperties().remove(STRING_PROPERTY_NAME);
@@ -320,10 +372,48 @@ class StandardEnvironmentTests {
 	}
 
 	@Test
-	void getSystemEnvironment() {
-		Map<String, Object> systemEnvironment = environment.getSystemEnvironment();
-		assertThat(systemEnvironment).isNotNull();
-		assertThat(System.getenv()).isSameAs(systemEnvironment);
+	void getSystemEnvironment_withAndWithoutSecurityManager() {
+		EnvironmentTestUtils.getModifiableSystemEnvironment().put(ALLOWED_PROPERTY_NAME, ALLOWED_PROPERTY_VALUE);
+		EnvironmentTestUtils.getModifiableSystemEnvironment().put(DISALLOWED_PROPERTY_NAME, DISALLOWED_PROPERTY_VALUE);
+
+		{
+			Map<String, Object> systemEnvironment = environment.getSystemEnvironment();
+			assertThat(systemEnvironment).isNotNull();
+			assertThat(System.getenv()).isSameAs(systemEnvironment);
+		}
+
+		SecurityManager oldSecurityManager = System.getSecurityManager();
+		SecurityManager securityManager = new SecurityManager() {
+			@Override
+			public void checkPermission(Permission perm) {
+				//see https://download.oracle.com/javase/1.5.0/docs/api/java/lang/System.html#getenv()
+				if ("getenv.*".equals(perm.getName())) {
+					throw new AccessControlException("Accessing the system environment is disallowed");
+				}
+				//see https://download.oracle.com/javase/1.5.0/docs/api/java/lang/System.html#getenv(java.lang.String)
+				if (("getenv."+DISALLOWED_PROPERTY_NAME).equals(perm.getName())) {
+					throw new AccessControlException(
+						String.format("Accessing the system environment variable [%s] is disallowed", DISALLOWED_PROPERTY_NAME));
+				}
+			}
+		};
+
+		try {
+			System.setSecurityManager(securityManager);
+			{
+				Map<String, Object> systemEnvironment = environment.getSystemEnvironment();
+				assertThat(systemEnvironment).isNotNull();
+				assertThat(systemEnvironment).isInstanceOf(ReadOnlySystemAttributesMap.class);
+				assertThat(systemEnvironment.get(ALLOWED_PROPERTY_NAME)).isEqualTo(ALLOWED_PROPERTY_VALUE);
+				assertThat(systemEnvironment.get(DISALLOWED_PROPERTY_NAME)).isNull();
+			}
+		}
+		finally {
+			System.setSecurityManager(oldSecurityManager);
+		}
+
+		EnvironmentTestUtils.getModifiableSystemEnvironment().remove(ALLOWED_PROPERTY_NAME);
+		EnvironmentTestUtils.getModifiableSystemEnvironment().remove(DISALLOWED_PROPERTY_NAME);
 	}
 
 
@@ -466,22 +556,26 @@ class StandardEnvironmentTests {
 	class MatchesProfilesTests {
 
 		@Test
+		@SuppressWarnings("deprecation")
 		void withEmptyArgumentList() {
 			assertThatIllegalArgumentException().isThrownBy(environment::matchesProfiles);
 		}
 
 		@Test
+		@SuppressWarnings("deprecation")
 		void withNullArgumentList() {
 			assertThatIllegalArgumentException().isThrownBy(() -> environment.matchesProfiles((String[]) null));
 		}
 
 		@Test
+		@SuppressWarnings("deprecation")
 		void withNullArgument() {
 			assertThatIllegalArgumentException().isThrownBy(() -> environment.matchesProfiles((String) null));
 			assertThatIllegalArgumentException().isThrownBy(() -> environment.matchesProfiles("p1", null));
 		}
 
 		@Test
+		@SuppressWarnings("deprecation")
 		void withEmptyArgument() {
 			assertThatIllegalArgumentException().isThrownBy(() -> environment.matchesProfiles(""));
 			assertThatIllegalArgumentException().isThrownBy(() -> environment.matchesProfiles("p1", ""));
@@ -489,11 +583,13 @@ class StandardEnvironmentTests {
 		}
 
 		@Test
+		@SuppressWarnings("deprecation")
 		void withInvalidNotOperator() {
 			assertThatIllegalArgumentException().isThrownBy(() -> environment.matchesProfiles("p1", "!"));
 		}
 
 		@Test
+		@SuppressWarnings("deprecation")
 		void withInvalidCompoundExpressionGrouping() {
 			assertThatIllegalArgumentException().isThrownBy(() -> environment.matchesProfiles("p1 | p2 & p3"));
 			assertThatIllegalArgumentException().isThrownBy(() -> environment.matchesProfiles("p1 & p2 | p3"));
@@ -501,6 +597,7 @@ class StandardEnvironmentTests {
 		}
 
 		@Test
+		@SuppressWarnings("deprecation")
 		void activeProfileSetProgrammatically() {
 			assertThat(environment.matchesProfiles("p1", "p2")).isFalse();
 
@@ -515,6 +612,7 @@ class StandardEnvironmentTests {
 		}
 
 		@Test
+		@SuppressWarnings("deprecation")
 		void activeProfileSetViaProperty() {
 			assertThat(environment.matchesProfiles("p1")).isFalse();
 
@@ -523,6 +621,7 @@ class StandardEnvironmentTests {
 		}
 
 		@Test
+		@SuppressWarnings("deprecation")
 		void defaultProfile() {
 			assertThat(environment.matchesProfiles("pd")).isFalse();
 
@@ -535,6 +634,7 @@ class StandardEnvironmentTests {
 		}
 
 		@Test
+		@SuppressWarnings("deprecation")
 		void withNotOperator() {
 			assertThat(environment.matchesProfiles("p1")).isFalse();
 			assertThat(environment.matchesProfiles("!p1")).isTrue();

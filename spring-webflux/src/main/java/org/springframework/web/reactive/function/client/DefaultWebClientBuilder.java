@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,20 +22,12 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
-import java.util.function.Function;
-import java.util.function.Predicate;
-
-import io.micrometer.observation.ObservationRegistry;
-import reactor.core.publisher.Mono;
 
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatusCode;
 import org.springframework.http.client.reactive.ClientHttpConnector;
 import org.springframework.http.client.reactive.HttpComponentsClientHttpConnector;
-import org.springframework.http.client.reactive.JdkClientHttpConnector;
 import org.springframework.http.client.reactive.JettyClientHttpConnector;
 import org.springframework.http.client.reactive.ReactorClientHttpConnector;
-import org.springframework.http.client.reactive.ReactorNetty2ClientHttpConnector;
 import org.springframework.http.codec.ClientCodecConfigurer;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
@@ -55,9 +47,7 @@ import org.springframework.web.util.UriBuilderFactory;
  */
 final class DefaultWebClientBuilder implements WebClient.Builder {
 
-	private static final boolean reactorNettyClientPresent;
-
-	private static final boolean reactorNetty2ClientPresent;
+	private static final boolean reactorClientPresent;
 
 	private static final boolean jettyClientPresent;
 
@@ -65,8 +55,7 @@ final class DefaultWebClientBuilder implements WebClient.Builder {
 
 	static {
 		ClassLoader loader = DefaultWebClientBuilder.class.getClassLoader();
-		reactorNettyClientPresent = ClassUtils.isPresent("reactor.netty.http.client.HttpClient", loader);
-		reactorNetty2ClientPresent = ClassUtils.isPresent("reactor.netty5.http.client.HttpClient", loader);
+		reactorClientPresent = ClassUtils.isPresent("reactor.netty.http.client.HttpClient", loader);
 		jettyClientPresent = ClassUtils.isPresent("org.eclipse.jetty.client.HttpClient", loader);
 		httpComponentsClientPresent =
 				ClassUtils.isPresent("org.apache.hc.client5.http.impl.async.CloseableHttpAsyncClient", loader) &&
@@ -93,9 +82,6 @@ final class DefaultWebClientBuilder implements WebClient.Builder {
 	private Consumer<WebClient.RequestHeadersSpec<?>> defaultRequest;
 
 	@Nullable
-	private Map<Predicate<HttpStatusCode>, Function<ClientResponse, Mono<? extends Throwable>>> statusHandlers;
-
-	@Nullable
 	private List<ExchangeFilterFunction> filters;
 
 	@Nullable
@@ -109,11 +95,6 @@ final class DefaultWebClientBuilder implements WebClient.Builder {
 
 	@Nullable
 	private ExchangeFunction exchangeFunction;
-
-	private ObservationRegistry observationRegistry = ObservationRegistry.NOOP;
-
-	@Nullable
-	private ClientRequestObservationConvention observationConvention;
 
 
 	public DefaultWebClientBuilder() {
@@ -138,7 +119,6 @@ final class DefaultWebClientBuilder implements WebClient.Builder {
 		this.defaultCookies = (other.defaultCookies != null ?
 				new LinkedMultiValueMap<>(other.defaultCookies) : null);
 		this.defaultRequest = other.defaultRequest;
-		this.statusHandlers = (other.statusHandlers != null ? new LinkedHashMap<>(other.statusHandlers) : null);
 		this.filters = (other.filters != null ? new ArrayList<>(other.filters) : null);
 
 		this.connector = other.connector;
@@ -146,8 +126,6 @@ final class DefaultWebClientBuilder implements WebClient.Builder {
 		this.strategiesConfigurers = (other.strategiesConfigurers != null ?
 				new ArrayList<>(other.strategiesConfigurers) : null);
 		this.exchangeFunction = other.exchangeFunction;
-		this.observationRegistry = other.observationRegistry;
-		this.observationConvention = other.observationConvention;
 	}
 
 
@@ -215,15 +193,6 @@ final class DefaultWebClientBuilder implements WebClient.Builder {
 	}
 
 	@Override
-	public WebClient.Builder defaultStatusHandler(Predicate<HttpStatusCode> statusPredicate,
-			Function<ClientResponse, Mono<? extends Throwable>> exceptionFunction) {
-
-		this.statusHandlers = (this.statusHandlers != null ? this.statusHandlers : new LinkedHashMap<>());
-		this.statusHandlers.put(statusPredicate, exceptionFunction);
-		return this;
-	}
-
-	@Override
 	public WebClient.Builder filter(ExchangeFilterFunction filter) {
 		Assert.notNull(filter, "ExchangeFilterFunction must not be null");
 		initFilters().add(filter);
@@ -281,20 +250,6 @@ final class DefaultWebClientBuilder implements WebClient.Builder {
 	}
 
 	@Override
-	public WebClient.Builder observationRegistry(ObservationRegistry observationRegistry) {
-		Assert.notNull(observationRegistry, "observationRegistry must not be null");
-		this.observationRegistry = observationRegistry;
-		return this;
-	}
-
-	@Override
-	public WebClient.Builder observationConvention(ClientRequestObservationConvention observationConvention) {
-		Assert.notNull(observationConvention, "observationConvention must not be null");
-		this.observationConvention = observationConvention;
-		return this;
-	}
-
-	@Override
 	public WebClient.Builder apply(Consumer<WebClient.Builder> builderConsumer) {
 		builderConsumer.accept(this);
 		return this;
@@ -314,28 +269,24 @@ final class DefaultWebClientBuilder implements WebClient.Builder {
 				ExchangeFunctions.create(connectorToUse, initExchangeStrategies()) :
 				this.exchangeFunction);
 
-		ExchangeFilterFunction filterFunctions = (this.filters != null ? this.filters.stream()
+		ExchangeFunction filteredExchange = (this.filters != null ? this.filters.stream()
 				.reduce(ExchangeFilterFunction::andThen)
-				.orElse(null) : null);
+				.map(filter -> filter.apply(exchange))
+				.orElse(exchange) : exchange);
 
 		HttpHeaders defaultHeaders = copyDefaultHeaders();
+
 		MultiValueMap<String, String> defaultCookies = copyDefaultCookies();
 
-		return new DefaultWebClient(
-				exchange, filterFunctions,
-				initUriBuilderFactory(), defaultHeaders, defaultCookies,
-				this.defaultRequest,
-				this.statusHandlers,
-				this.observationRegistry, this.observationConvention,
-				new DefaultWebClientBuilder(this));
+		return new DefaultWebClient(filteredExchange, initUriBuilderFactory(),
+				defaultHeaders,
+				defaultCookies,
+				this.defaultRequest, new DefaultWebClientBuilder(this));
 	}
 
 	private ClientHttpConnector initConnector() {
-		if (reactorNettyClientPresent) {
+		if (reactorClientPresent) {
 			return new ReactorClientHttpConnector();
-		}
-		else if (reactorNetty2ClientPresent) {
-			return new ReactorNetty2ClientHttpConnector();
 		}
 		else if (jettyClientPresent) {
 			return new JettyClientHttpConnector();
@@ -343,9 +294,7 @@ final class DefaultWebClientBuilder implements WebClient.Builder {
 		else if (httpComponentsClientPresent) {
 			return new HttpComponentsClientHttpConnector();
 		}
-		else {
-			return new JdkClientHttpConnector();
-		}
+		throw new IllegalStateException("No suitable default ClientHttpConnector found");
 	}
 
 	private ExchangeStrategies initExchangeStrategies() {
@@ -370,22 +319,26 @@ final class DefaultWebClientBuilder implements WebClient.Builder {
 
 	@Nullable
 	private HttpHeaders copyDefaultHeaders() {
-		if (this.defaultHeaders == null) {
+		if (this.defaultHeaders != null) {
+			HttpHeaders copy = new HttpHeaders();
+			this.defaultHeaders.forEach((key, values) -> copy.put(key, new ArrayList<>(values)));
+			return HttpHeaders.readOnlyHttpHeaders(copy);
+		}
+		else {
 			return null;
 		}
-		HttpHeaders headers = new HttpHeaders();
-		this.defaultHeaders.forEach((key, values) -> headers.put(key, new ArrayList<>(values)));
-		return HttpHeaders.readOnlyHttpHeaders(headers);
 	}
 
 	@Nullable
 	private MultiValueMap<String, String> copyDefaultCookies() {
-		if (this.defaultCookies == null) {
+		if (this.defaultCookies != null) {
+			MultiValueMap<String, String> copy = new LinkedMultiValueMap<>(this.defaultCookies.size());
+			this.defaultCookies.forEach((key, values) -> copy.put(key, new ArrayList<>(values)));
+			return CollectionUtils.unmodifiableMultiValueMap(copy);
+		}
+		else {
 			return null;
 		}
-		MultiValueMap<String, String> map = new LinkedMultiValueMap<>(this.defaultCookies.size());
-		this.defaultCookies.forEach((key, values) -> map.put(key, new ArrayList<>(values)));
-		return CollectionUtils.unmodifiableMultiValueMap(map);
 	}
 
 }

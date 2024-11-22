@@ -22,7 +22,8 @@ import java.lang.annotation.RetentionPolicy;
 import java.util.List;
 import java.util.Optional;
 
-import jakarta.inject.Provider;
+import javax.inject.Provider;
+
 import org.junit.jupiter.api.Test;
 
 import org.springframework.beans.factory.BeanFactory;
@@ -30,7 +31,6 @@ import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.ObjectFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.beans.factory.parsing.BeanDefinitionParsingException;
 import org.springframework.beans.factory.support.DefaultListableBeanFactory;
 import org.springframework.beans.factory.support.RootBeanDefinition;
 import org.springframework.beans.factory.xml.XmlBeanDefinitionReader;
@@ -48,7 +48,6 @@ import org.springframework.core.io.Resource;
 import org.springframework.util.Assert;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 /**
  * System tests covering use of {@link Autowired} and {@link Value} within
@@ -189,8 +188,10 @@ class AutowiredConfigurationTests {
 
 	@Test
 	void testValueInjectionWithAccidentalAutowiredAnnotations() {
-		assertThatExceptionOfType(BeanDefinitionParsingException.class).isThrownBy(() ->
-				new AnnotationConfigApplicationContext(ValueConfigWithAccidentalAutowiredAnnotations.class));
+		AnnotationConfigApplicationContext context =
+				new AnnotationConfigApplicationContext(ValueConfigWithAccidentalAutowiredAnnotations.class);
+		doTestValueInjection(context);
+		context.close();
 	}
 
 	private void doTestValueInjection(BeanFactory context) {
@@ -243,17 +244,6 @@ class AutowiredConfigurationTests {
 		context.close();
 	}
 
-	@Test
-	void testValueInjectionWithRecord() {
-		System.setProperty("recordBeanName", "enigma");
-		try (GenericApplicationContext context = new AnnotationConfigApplicationContext(RecordBean.class)) {
-			assertThat(context.getBean(RecordBean.class).name()).isEqualTo("enigma");
-		}
-		finally {
-			System.clearProperty("recordBeanName");
-		}
-	}
-
 	private int contentLength() throws IOException {
 		return (int) new ClassPathResource("do_not_delete_me.txt").contentLength();
 	}
@@ -287,7 +277,7 @@ class AutowiredConfigurationTests {
 
 		@Bean
 		public TestBean testBean(Optional<Colour> colour, Optional<List<Colour>> colours) {
-			if (colour.isEmpty() && colours.isEmpty()) {
+			if (!colour.isPresent() && !colours.isPresent()) {
 				return new TestBean("");
 			}
 			else {
@@ -551,10 +541,6 @@ class AutowiredConfigurationTests {
 		public TestBean testBean() throws IOException {
 			return new TestBean(hostname, (int) resource.contentLength());
 		}
-	}
-
-
-	record RecordBean(@Value("${recordBeanName}") String name) {
 	}
 
 }

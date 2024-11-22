@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,7 +27,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 
 /**
- * Tests for {@link RollbackRuleAttribute}.
+ * Unit tests for the {@link RollbackRuleAttribute} class.
  *
  * @author Rod Johnson
  * @author Rick Evans
@@ -52,6 +52,15 @@ class RollbackRuleAttributeTests {
 		}
 
 		@Test
+		void alwaysFoundForThrowable() {
+			RollbackRuleAttribute rr = new RollbackRuleAttribute(Throwable.class.getName());
+			assertThat(rr.getDepth(new MyRuntimeException())).isGreaterThan(0);
+			assertThat(rr.getDepth(new IOException())).isGreaterThan(0);
+			assertThat(rr.getDepth(new FatalBeanException(null, null))).isGreaterThan(0);
+			assertThat(rr.getDepth(new RuntimeException())).isGreaterThan(0);
+		}
+
+		@Test
 		void foundImmediatelyWhenDirectMatch() {
 			RollbackRuleAttribute rr = new RollbackRuleAttribute(Exception.class.getName());
 			assertThat(rr.getDepth(new Exception())).isEqualTo(0);
@@ -65,9 +74,6 @@ class RollbackRuleAttributeTests {
 
 		@Test
 		void foundImmediatelyWhenNameOfExceptionThrownStartsWithNameOfRegisteredException() {
-			// Precondition for this use case.
-			assertThat(MyException.class.isAssignableFrom(MyException2.class)).isFalse();
-
 			RollbackRuleAttribute rr = new RollbackRuleAttribute(MyException.class.getName());
 			assertThat(rr.getDepth(new MyException2())).isEqualTo(0);
 		}
@@ -77,15 +83,6 @@ class RollbackRuleAttributeTests {
 			RollbackRuleAttribute rr = new RollbackRuleAttribute(Exception.class.getName());
 			// Exception -> RuntimeException -> NestedRuntimeException -> MyRuntimeException
 			assertThat(rr.getDepth(new MyRuntimeException())).isEqualTo(3);
-		}
-
-		@Test
-		void alwaysFoundForThrowable() {
-			RollbackRuleAttribute rr = new RollbackRuleAttribute(Throwable.class.getName());
-			assertThat(rr.getDepth(new MyRuntimeException())).isGreaterThan(0);
-			assertThat(rr.getDepth(new IOException())).isGreaterThan(0);
-			assertThat(rr.getDepth(new FatalBeanException(null, null))).isGreaterThan(0);
-			assertThat(rr.getDepth(new RuntimeException())).isGreaterThan(0);
 		}
 
 	}
@@ -106,18 +103,12 @@ class RollbackRuleAttributeTests {
 		}
 
 		@Test
-		void notFoundWhenNameOfExceptionThrownStartsWithNameOfRegisteredException() {
-			// Precondition for this use case.
-			assertThat(MyException.class.isAssignableFrom(MyException2.class)).isFalse();
-
-			RollbackRuleAttribute rr = new RollbackRuleAttribute(MyException.class);
-			assertThat(rr.getDepth(new MyException2())).isEqualTo(-1);
-		}
-
-		@Test
-		void notFoundWhenExceptionThrownIsNestedTypeOfRegisteredException() {
-			RollbackRuleAttribute rr = new RollbackRuleAttribute(EnclosingException.class);
-			assertThat(rr.getDepth(new EnclosingException.NestedException())).isEqualTo(-1);
+		void alwaysFoundForThrowable() {
+			RollbackRuleAttribute rr = new RollbackRuleAttribute(Throwable.class);
+			assertThat(rr.getDepth(new MyRuntimeException())).isGreaterThan(0);
+			assertThat(rr.getDepth(new IOException())).isGreaterThan(0);
+			assertThat(rr.getDepth(new FatalBeanException(null, null))).isGreaterThan(0);
+			assertThat(rr.getDepth(new RuntimeException())).isGreaterThan(0);
 		}
 
 		@Test
@@ -127,19 +118,22 @@ class RollbackRuleAttributeTests {
 		}
 
 		@Test
+		void foundImmediatelyWhenExceptionThrownIsNestedTypeOfRegisteredException() {
+			RollbackRuleAttribute rr = new RollbackRuleAttribute(EnclosingException.class);
+			assertThat(rr.getDepth(new EnclosingException.NestedException())).isEqualTo(0);
+		}
+
+		@Test
+		void foundImmediatelyWhenNameOfExceptionThrownStartsWithNameOfRegisteredException() {
+			RollbackRuleAttribute rr = new RollbackRuleAttribute(MyException.class);
+			assertThat(rr.getDepth(new MyException2())).isEqualTo(0);
+		}
+
+		@Test
 		void foundInSuperclassHierarchy() {
 			RollbackRuleAttribute rr = new RollbackRuleAttribute(Exception.class);
 			// Exception -> RuntimeException -> NestedRuntimeException -> MyRuntimeException
 			assertThat(rr.getDepth(new MyRuntimeException())).isEqualTo(3);
-		}
-
-		@Test
-		void alwaysFoundForThrowable() {
-			RollbackRuleAttribute rr = new RollbackRuleAttribute(Throwable.class);
-			assertThat(rr.getDepth(new MyRuntimeException())).isGreaterThan(0);
-			assertThat(rr.getDepth(new IOException())).isGreaterThan(0);
-			assertThat(rr.getDepth(new FatalBeanException(null, null))).isGreaterThan(0);
-			assertThat(rr.getDepth(new RuntimeException())).isGreaterThan(0);
 		}
 
 	}

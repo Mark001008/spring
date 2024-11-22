@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -63,13 +63,15 @@ public abstract class AbstractMessageConverter implements SmartMessageConverter 
 
 	/**
 	 * Constructor with a single MIME type.
+	 * @param supportedMimeType the supported MIME type
 	 */
 	protected AbstractMessageConverter(MimeType supportedMimeType) {
 		this(Collections.singletonList(supportedMimeType));
 	}
 
 	/**
-	 * Constructor with multiple MIME types.
+	 * Constructor with one or more MIME types via vararg.
+	 * @param supportedMimeTypes the supported MIME types
 	 * @since 5.2.2
 	 */
 	protected AbstractMessageConverter(MimeType... supportedMimeTypes) {
@@ -77,7 +79,8 @@ public abstract class AbstractMessageConverter implements SmartMessageConverter 
 	}
 
 	/**
-	 * Constructor with Collection of MIME types.
+	 * Constructor with a Collection of MIME types.
+	 * @param supportedMimeTypes the supported MIME types
 	 */
 	protected AbstractMessageConverter(Collection<MimeType> supportedMimeTypes) {
 		this.supportedMimeTypes.addAll(supportedMimeTypes);
@@ -100,21 +103,20 @@ public abstract class AbstractMessageConverter implements SmartMessageConverter 
 	}
 
 	/**
-	 * Configure a {@link ContentTypeResolver} for resolving the content type
-	 * of input messages.
-	 * <p>By default, a {@code DefaultContentTypeResolver} instance is used.
-	 * <p><strong>Note:</strong> if the resolver is set to {@code null}, then
+	 * Configure the {@link ContentTypeResolver} to use to resolve the content
+	 * type of an input message.
+	 * <p>Note that if no resolver is configured, then
 	 * {@link #setStrictContentTypeMatch(boolean) strictContentTypeMatch} should
-	 * be {@code false}, which is the default, or otherwise this converter will
+	 * be left as {@code false} (the default) or otherwise this converter will
 	 * ignore all messages.
+	 * <p>By default, a {@code DefaultContentTypeResolver} instance is used.
 	 */
 	public void setContentTypeResolver(@Nullable ContentTypeResolver resolver) {
 		this.contentTypeResolver = resolver;
 	}
 
 	/**
-	 * Return the {@link #setContentTypeResolver(ContentTypeResolver) configured}
-	 * {@code ContentTypeResolver}.
+	 * Return the configured {@link ContentTypeResolver}.
 	 */
 	@Nullable
 	public ContentTypeResolver getContentTypeResolver() {
@@ -123,11 +125,11 @@ public abstract class AbstractMessageConverter implements SmartMessageConverter 
 
 	/**
 	 * Whether this converter should convert messages for which no content type
-	 * can be resolved through the configured
+	 * could be resolved through the configured
 	 * {@link org.springframework.messaging.converter.ContentTypeResolver}.
 	 * <p>A converter can be configured to be strict only when a
 	 * {@link #setContentTypeResolver contentTypeResolver} is configured and the
-	 * list of {@link #getSupportedMimeTypes() supportedMimeTypes} is not empty.
+	 * list of {@link #getSupportedMimeTypes() supportedMimeTypes} is not be empty.
 	 * <p>When this flag is set to {@code true}, {@link #supportsMimeType(MessageHeaders)}
 	 * will return {@code false} if the {@link #setContentTypeResolver contentTypeResolver}
 	 * is not defined or if no content-type header is present.
@@ -191,9 +193,7 @@ public abstract class AbstractMessageConverter implements SmartMessageConverter 
 
 	@Override
 	@Nullable
-	public final Message<?> toMessage(
-			Object payload, @Nullable MessageHeaders headers, @Nullable Object conversionHint) {
-
+	public final Message<?> toMessage(Object payload, @Nullable MessageHeaders headers, @Nullable Object conversionHint) {
 		if (!canConvertTo(payload, headers)) {
 			return null;
 		}
@@ -251,7 +251,7 @@ public abstract class AbstractMessageConverter implements SmartMessageConverter 
 
 	@Nullable
 	protected MimeType getMimeType(@Nullable MessageHeaders headers) {
-		return (this.contentTypeResolver != null ? this.contentTypeResolver.resolve(headers) : null);
+		return (headers != null && this.contentTypeResolver != null ? this.contentTypeResolver.resolve(headers) : null);
 	}
 
 	/**
@@ -283,7 +283,7 @@ public abstract class AbstractMessageConverter implements SmartMessageConverter 
 	 * @param message the input message
 	 * @param targetClass the target class for the conversion
 	 * @param conversionHint an extra object passed to the {@link MessageConverter},
-	 * for example, the associated {@code MethodParameter} (may be {@code null}}
+	 * e.g. the associated {@code MethodParameter} (may be {@code null}}
 	 * @return the result of the conversion, or {@code null} if the converter cannot
 	 * perform the conversion
 	 * @since 4.2
@@ -300,7 +300,7 @@ public abstract class AbstractMessageConverter implements SmartMessageConverter 
 	 * @param payload the Object to convert
 	 * @param headers optional headers for the message (may be {@code null})
 	 * @param conversionHint an extra object passed to the {@link MessageConverter},
-	 * for example, the associated {@code MethodParameter} (may be {@code null}}
+	 * e.g. the associated {@code MethodParameter} (may be {@code null}}
 	 * @return the resulting payload for the message, or {@code null} if the converter
 	 * cannot perform the conversion
 	 * @since 4.2
@@ -314,7 +314,8 @@ public abstract class AbstractMessageConverter implements SmartMessageConverter 
 
 
 	static Type getResolvedType(Class<?> targetClass, @Nullable Object conversionHint) {
-		if (conversionHint instanceof MethodParameter param) {
+		if (conversionHint instanceof MethodParameter) {
+			MethodParameter param = (MethodParameter) conversionHint;
 			param = param.nestedIfOptional();
 			if (Message.class.isAssignableFrom(param.getParameterType())) {
 				param = param.nested();

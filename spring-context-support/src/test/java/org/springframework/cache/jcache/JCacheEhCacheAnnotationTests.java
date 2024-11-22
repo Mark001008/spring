@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2021 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -46,7 +46,7 @@ import org.springframework.transaction.testfixture.CallCountingTransactionManage
  * @author Stephane Nicoll
  * @author Juergen Hoeller
  */
-class JCacheEhCacheAnnotationTests extends AbstractCacheAnnotationTests {
+public class JCacheEhCacheAnnotationTests extends AbstractCacheAnnotationTests {
 
 	private final TransactionTemplate txTemplate = new TransactionTemplate(new CallCountingTransactionManager());
 
@@ -64,11 +64,11 @@ class JCacheEhCacheAnnotationTests extends AbstractCacheAnnotationTests {
 	}
 
 	protected CachingProvider getCachingProvider() {
-		return Caching.getCachingProvider("org.ehcache.jsr107.EhcacheCachingProvider");
+		return Caching.getCachingProvider("org.ehcache.jcache.JCacheCachingProvider");
 	}
 
 	@AfterEach
-	void shutdown() {
+	public void shutdown() {
 		if (jCacheManager != null) {
 			jCacheManager.close();
 		}
@@ -82,22 +82,22 @@ class JCacheEhCacheAnnotationTests extends AbstractCacheAnnotationTests {
 	}
 
 	@Test
-	void testEvictWithTransaction() {
+	public void testEvictWithTransaction() {
 		txTemplate.executeWithoutResult(s -> testEvict(this.cs, false));
 	}
 
 	@Test
-	void testEvictEarlyWithTransaction() {
+	public void testEvictEarlyWithTransaction() {
 		txTemplate.executeWithoutResult(s -> testEvictEarly(this.cs));
 	}
 
 	@Test
-	void testEvictAllWithTransaction() {
+	public void testEvictAllWithTransaction() {
 		txTemplate.executeWithoutResult(s -> testEvictAll(this.cs, false));
 	}
 
 	@Test
-	void testEvictAllEarlyWithTransaction() {
+	public void testEvictAllEarlyWithTransaction() {
 		txTemplate.executeWithoutResult(s -> testEvictAllEarly(this.cs));
 	}
 

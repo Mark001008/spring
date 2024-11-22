@@ -16,7 +16,7 @@
 
 package org.springframework.web.servlet.support;
 
-import jakarta.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletRequest;
 
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
@@ -85,8 +85,8 @@ public class ServletUriComponentsBuilder extends UriComponentsBuilder {
 	/**
 	 * Prepare a builder from the host, port, scheme, context path, and
 	 * servlet mapping of the given HttpServletRequest.
-	 * <p>If the servlet is mapped by name, for example, {@code "/main/*"}, the path
-	 * will end with "/main". If the servlet is mapped otherwise, for example,
+	 * <p>If the servlet is mapped by name, e.g. {@code "/main/*"}, the path
+	 * will end with "/main". If the servlet is mapped otherwise, e.g.
 	 * {@code "/"} or {@code "*.do"}, the result will be the same as
 	 * if calling {@link #fromContextPath(HttpServletRequest)}.
 	 */

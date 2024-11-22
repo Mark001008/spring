@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,8 +16,9 @@
 
 package org.springframework.transaction.support;
 
-import jakarta.transaction.TransactionManager;
-import jakarta.transaction.UserTransaction;
+import javax.transaction.TransactionManager;
+import javax.transaction.UserTransaction;
+
 import org.junit.jupiter.api.Test;
 
 import org.springframework.context.testfixture.jndi.SimpleNamingContextBuilder;
@@ -30,13 +31,13 @@ import static org.mockito.Mockito.mock;
 /**
  * @author Rod Johnson
  */
-class JtaTransactionManagerSerializationTests {
+public class JtaTransactionManagerSerializationTests {
 
 	@Test
-	void serializable() throws Exception {
-		UserTransaction ut1 = mock();
-		UserTransaction ut2 = mock();
-		TransactionManager tm = mock();
+	public void serializable() throws Exception {
+		UserTransaction ut1 = mock(UserTransaction.class);
+		UserTransaction ut2 = mock(UserTransaction.class);
+		TransactionManager tm = mock(TransactionManager.class);
 
 		JtaTransactionManager jtam = new JtaTransactionManager();
 		jtam.setUserTransaction(ut1);
@@ -52,7 +53,7 @@ class JtaTransactionManagerSerializationTests {
 		// should do client-side lookup
 		assertThat(serializedJtatm.logger).as("Logger must survive serialization").isNotNull();
 		assertThat(serializedJtatm
-				.getUserTransaction()).as("UserTransaction looked up on client").isSameAs(ut2);
+				.getUserTransaction() == ut2).as("UserTransaction looked up on client").isTrue();
 		assertThat(serializedJtatm
 				.getTransactionManager()).as("TransactionManager didn't survive").isNull();
 		assertThat(serializedJtatm.isRollbackOnCommitFailure()).isTrue();

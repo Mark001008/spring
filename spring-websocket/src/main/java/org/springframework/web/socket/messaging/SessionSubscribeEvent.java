@@ -23,7 +23,7 @@ import org.springframework.messaging.Message;
 
 /**
  * Event raised when a new WebSocket client using a Simple Messaging Protocol
- * (for example, STOMP) sends a subscription request.
+ * (e.g. STOMP) sends a subscription request.
  *
  * @author Rossen Stoyanchev
  * @since 4.0.3

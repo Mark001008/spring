@@ -39,13 +39,11 @@ import org.springframework.util.Assert;
  */
 public class OpDec extends Operator {
 
-	private static final String DEC = "--";
-
 	private final boolean postfix;  // false means prefix
 
 
 	public OpDec(int startPos, int endPos, boolean postfix, SpelNodeImpl... operands) {
-		super(DEC, startPos, endPos, operands);
+		super("--", startPos, endPos, operands);
 		this.postfix = postfix;
 		Assert.notEmpty(operands, "Operands must not be empty");
 	}
@@ -67,9 +65,10 @@ public class OpDec extends Operator {
 		TypedValue returnValue = operandTypedValue;
 		TypedValue newValue = null;
 
-		if (operandValue instanceof Number op1) {
-			if (op1 instanceof BigDecimal bigDecimal) {
-				newValue = new TypedValue(bigDecimal.subtract(BigDecimal.ONE), operandTypedValue.getTypeDescriptor());
+		if (operandValue instanceof Number) {
+			Number op1 = (Number) operandValue;
+			if (op1 instanceof BigDecimal) {
+				newValue = new TypedValue(((BigDecimal) op1).subtract(BigDecimal.ONE), operandTypedValue.getTypeDescriptor());
 			}
 			else if (op1 instanceof Double) {
 				newValue = new TypedValue(op1.doubleValue() - 1.0d, operandTypedValue.getTypeDescriptor());
@@ -77,8 +76,8 @@ public class OpDec extends Operator {
 			else if (op1 instanceof Float) {
 				newValue = new TypedValue(op1.floatValue() - 1.0f, operandTypedValue.getTypeDescriptor());
 			}
-			else if (op1 instanceof BigInteger bigInteger) {
-				newValue = new TypedValue(bigInteger.subtract(BigInteger.ONE), operandTypedValue.getTypeDescriptor());
+			else if (op1 instanceof BigInteger) {
+				newValue = new TypedValue(((BigInteger) op1).subtract(BigInteger.ONE), operandTypedValue.getTypeDescriptor());
 			}
 			else if (op1 instanceof Long) {
 				newValue = new TypedValue(op1.longValue() - 1L, operandTypedValue.getTypeDescriptor());
@@ -119,7 +118,7 @@ public class OpDec extends Operator {
 			lvalue.setValue(newValue.getValue());
 		}
 		catch (SpelEvaluationException see) {
-			// if unable to set the value the operand is not writable (for example, 1-- )
+			// if unable to set the value the operand is not writable (e.g. 1-- )
 			if (see.getMessageCode() == SpelMessage.SETVALUE_NOT_SUPPORTED) {
 				throw new SpelEvaluationException(operand.getStartPosition(),
 						SpelMessage.OPERAND_NOT_DECREMENTABLE);
@@ -139,8 +138,7 @@ public class OpDec extends Operator {
 
 	@Override
 	public String toStringAST() {
-		String ast = getLeftOperand().toStringAST();
-		return (this.postfix ? ast + DEC : DEC + ast);
+		return getLeftOperand().toStringAST() + "--";
 	}
 
 	@Override

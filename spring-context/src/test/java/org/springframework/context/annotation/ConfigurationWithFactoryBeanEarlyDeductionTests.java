@@ -108,13 +108,16 @@ class ConfigurationWithFactoryBeanEarlyDeductionTests {
 		beanDefinition.setFactoryBeanName("factoryBean");
 		beanDefinition.setFactoryMethodName("myBean");
 		GenericApplicationContext context = new GenericApplicationContext();
-		try (context) {
+		try {
 			context.registerBeanDefinition("factoryBean", factoryBeanDefinition);
 			context.registerBeanDefinition("myBean", beanDefinition);
 			NameCollectingBeanFactoryPostProcessor postProcessor = new NameCollectingBeanFactoryPostProcessor();
 			context.addBeanFactoryPostProcessor(postProcessor);
 			context.refresh();
 			assertContainsMyBeanName(postProcessor.getNames());
+		}
+		finally {
+			context.close();
 		}
 	}
 
@@ -127,12 +130,15 @@ class ConfigurationWithFactoryBeanEarlyDeductionTests {
 	private void assertPreFreeze(Class<?> configurationClass, BeanFactoryPostProcessor... postProcessors) {
 		NameCollectingBeanFactoryPostProcessor postProcessor = new NameCollectingBeanFactoryPostProcessor();
 		AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext();
-		try (context) {
+		try {
 			Arrays.stream(postProcessors).forEach(context::addBeanFactoryPostProcessor);
 			context.addBeanFactoryPostProcessor(postProcessor);
 			context.register(configurationClass);
 			context.refresh();
 			assertContainsMyBeanName(postProcessor.getNames());
+		}
+		finally {
+			context.close();
 		}
 	}
 
@@ -216,6 +222,8 @@ class ConfigurationWithFactoryBeanEarlyDeductionTests {
 			RootBeanDefinition definition = new RootBeanDefinition(RawWithAbstractObjectTypeFactoryBean.class);
 			definition.setTargetType(ResolvableType.forClassWithGenerics(FactoryBean.class,
 					ResolvableType.forClassWithGenerics(MyBean.class, String.class)));
+			definition.setAttribute(FactoryBean.OBJECT_TYPE_ATTRIBUTE,
+					ResolvableType.forClassWithGenerics(MyBean.class, String.class));
 			registry.registerBeanDefinition("myBean", definition);
 		}
 	}

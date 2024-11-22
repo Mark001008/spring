@@ -36,12 +36,6 @@ public class LogFactoryService extends LogFactory {
 	private final Map<String, Object> attributes = new ConcurrentHashMap<>();
 
 
-	public LogFactoryService() {
-		System.out.println("Standard Commons Logging discovery in action with spring-jcl: " +
-				"please remove commons-logging.jar from classpath in order to avoid potential conflicts");
-	}
-
-
 	@Override
 	public Log getInstance(Class<?> clazz) {
 		return getInstance(clazz.getName());

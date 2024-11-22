@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,7 +24,7 @@ import reactor.core.publisher.Mono;
 import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.core.io.buffer.DataBufferFactory;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatusCode;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
@@ -56,13 +56,12 @@ public class ServerHttpResponseDecorator implements ServerHttpResponse {
 	// ServerHttpResponse delegation methods...
 
 	@Override
-	public boolean setStatusCode(@Nullable HttpStatusCode status) {
+	public boolean setStatusCode(@Nullable HttpStatus status) {
 		return getDelegate().setStatusCode(status);
 	}
 
 	@Override
-	@Nullable
-	public HttpStatusCode getStatusCode() {
+	public HttpStatus getStatusCode() {
 		return getDelegate().getStatusCode();
 	}
 
@@ -72,9 +71,6 @@ public class ServerHttpResponseDecorator implements ServerHttpResponse {
 	}
 
 	@Override
-	@Nullable
-	@Deprecated
-	@SuppressWarnings("removal")
 	public Integer getRawStatusCode() {
 		return getDelegate().getRawStatusCode();
 	}
@@ -134,11 +130,11 @@ public class ServerHttpResponseDecorator implements ServerHttpResponse {
 	 * @since 5.3.3
 	 */
 	public static <T> T getNativeResponse(ServerHttpResponse response) {
-		if (response instanceof AbstractServerHttpResponse abstractServerHttpResponse) {
-			return abstractServerHttpResponse.getNativeResponse();
+		if (response instanceof AbstractServerHttpResponse) {
+			return ((AbstractServerHttpResponse) response).getNativeResponse();
 		}
-		else if (response instanceof ServerHttpResponseDecorator serverHttpResponseDecorator) {
-			return getNativeResponse(serverHttpResponseDecorator.getDelegate());
+		else if (response instanceof ServerHttpResponseDecorator) {
+			return getNativeResponse(((ServerHttpResponseDecorator) response).getDelegate());
 		}
 		else {
 			throw new IllegalArgumentException(

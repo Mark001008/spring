@@ -19,7 +19,7 @@ package org.springframework.web.servlet.handler;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import jakarta.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletRequest;
 
 import org.springframework.http.server.PathContainer;
 import org.springframework.lang.Nullable;
@@ -60,7 +60,7 @@ class PathPatternMatchableHandlerMapping implements MatchableHandlerMapping {
 	@Override
 	public RequestMatchResult match(HttpServletRequest request, String pattern) {
 		PathPattern pathPattern = this.pathPatternCache.computeIfAbsent(pattern, value -> {
-			Assert.state(this.pathPatternCache.size() < MAX_PATTERNS, "Max size for pattern cache exceeded.");
+			Assert.isTrue(this.pathPatternCache.size() < MAX_PATTERNS, "Max size for pattern cache exceeded.");
 			return this.parser.parse(pattern);
 		});
 		PathContainer path = ServletRequestPathUtils.getParsedRequestPath(request).pathWithinApplication();

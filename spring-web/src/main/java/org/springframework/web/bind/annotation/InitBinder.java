@@ -22,8 +22,6 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-import org.springframework.aot.hint.annotation.Reflective;
-
 /**
  * Annotation that identifies methods that initialize the
  * {@link org.springframework.web.bind.WebDataBinder} which
@@ -49,7 +47,6 @@ import org.springframework.aot.hint.annotation.Reflective;
  * or {@link java.util.Locale}, allowing to register context-specific editors.
  *
  * @author Juergen Hoeller
- * @author Sebastien Deleuze
  * @since 2.5
  * @see ControllerAdvice
  * @see org.springframework.web.bind.WebDataBinder
@@ -58,7 +55,6 @@ import org.springframework.aot.hint.annotation.Reflective;
 @Target({ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
-@Reflective
 public @interface InitBinder {
 
 	/**

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2023 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,12 +25,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import jakarta.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletRequest;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import org.springframework.beans.factory.NoSuchBeanDefinitionException;
-import org.springframework.beans.factory.config.ConfigurableBeanFactory;
 import org.springframework.cglib.core.SpringNamingPolicy;
 import org.springframework.cglib.proxy.Callback;
 import org.springframework.cglib.proxy.Enhancer;
@@ -42,7 +42,7 @@ import org.springframework.core.MethodIntrospector;
 import org.springframework.core.MethodParameter;
 import org.springframework.core.ParameterNameDiscoverer;
 import org.springframework.core.annotation.AnnotatedElementUtils;
-import org.springframework.core.annotation.AnnotatedMethod;
+import org.springframework.core.annotation.SynthesizingMethodParameter;
 import org.springframework.lang.Nullable;
 import org.springframework.objenesis.ObjenesisException;
 import org.springframework.objenesis.SpringObjenesis;
@@ -53,7 +53,6 @@ import org.springframework.util.PathMatcher;
 import org.springframework.util.ReflectionUtils;
 import org.springframework.util.ReflectionUtils.MethodFilter;
 import org.springframework.util.StringUtils;
-import org.springframework.util.SystemPropertyUtils;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.context.WebApplicationContext;
 import org.springframework.web.context.request.RequestAttributes;
@@ -183,7 +182,6 @@ public class MvcUriComponentsBuilder {
 		builder.path(prefix);
 
 		String mapping = getClassMapping(controllerType);
-		mapping = (!StringUtils.hasText(prefix + mapping) ? "/" : mapping);
 		builder.path(mapping);
 
 		return builder;
@@ -284,10 +282,10 @@ public class MvcUriComponentsBuilder {
 	 * &#064;RequestMapping("/people/{id}/addresses")
 	 * class AddressController {
 	 *
-	 *   &#064;GetMapping("/{country}")
+	 *   &#064;RequestMapping("/{country}")
 	 *   public HttpEntity&lt;Void&gt; getAddressesForCountry(&#064;PathVariable String country) { ... }
 	 *
-	 *   &#064;PostMapping
+	 *   &#064;RequestMapping(value="/", method=RequestMethod.POST)
 	 *   public void addAddress(Address address) { ... }
 	 * }
 	 * </pre>
@@ -453,7 +451,7 @@ public class MvcUriComponentsBuilder {
 	 */
 	public static MethodArgumentBuilder fromMappingName(@Nullable UriComponentsBuilder builder, String name) {
 		WebApplicationContext wac = getWebApplicationContext();
-		Assert.state(wac != null, "No WebApplicationContext");
+		Assert.notNull(wac, "No WebApplicationContext");
 		Map<String, RequestMappingInfoHandlerMapping> map = wac.getBeansOfType(RequestMappingInfoHandlerMapping.class);
 		List<HandlerMethod> handlerMethods = null;
 		for (RequestMappingInfoHandlerMapping mapping : map.values()) {
@@ -538,7 +536,6 @@ public class MvcUriComponentsBuilder {
 	private static UriComponentsBuilder fromMethodInternal(@Nullable UriComponentsBuilder builder,
 			Class<?> controllerType, Method method, Object... args) {
 
-		AnnotatedMethod annotatedMethod = new AnnotatedMethod(method);
 		builder = getBaseUrlToUse(builder);
 
 		// Externally configured prefix via PathConfigurer..
@@ -546,15 +543,12 @@ public class MvcUriComponentsBuilder {
 		builder.path(prefix);
 
 		String typePath = getClassMapping(controllerType);
-		String methodPath = getMethodMapping(annotatedMethod);
+		String methodPath = getMethodMapping(method);
 		String path = pathMatcher.combine(typePath, methodPath);
 		path = PathPatternParser.defaultInstance.initFullPathPattern(path);
-		if (!StringUtils.hasText(prefix + path)) {
-			path = "/";
-		}
 		builder.path(path);
 
-		return applyContributors(builder, annotatedMethod, args);
+		return applyContributors(builder, method, args);
 	}
 
 	private static UriComponentsBuilder getBaseUrlToUse(@Nullable UriComponentsBuilder baseUrl) {
@@ -583,28 +577,32 @@ public class MvcUriComponentsBuilder {
 		Assert.notNull(controllerType, "'controllerType' must not be null");
 		RequestMapping mapping = AnnotatedElementUtils.findMergedAnnotation(controllerType, RequestMapping.class);
 		if (mapping == null) {
-			return "";
+			return "/";
 		}
-		return getPathMapping(mapping, controllerType.getName());
-	}
-
-	private static String getMethodMapping(AnnotatedMethod annotatedMethod) {
-		RequestMapping requestMapping = annotatedMethod.getMethodAnnotation(RequestMapping.class);
-		if (requestMapping == null) {
-			throw new IllegalArgumentException("No @RequestMapping on: " + annotatedMethod.getMethod().toGenericString());
-		}
-		return getPathMapping(requestMapping, annotatedMethod.getMethod().toGenericString());
-	}
-
-	private static String getPathMapping(RequestMapping requestMapping, String source) {
-		String[] paths = requestMapping.path();
+		String[] paths = mapping.path();
 		if (ObjectUtils.isEmpty(paths) || !StringUtils.hasLength(paths[0])) {
-			return "";
+			return "/";
 		}
 		if (paths.length > 1 && logger.isTraceEnabled()) {
-			logger.trace("Using first of multiple paths on " + source);
+			logger.trace("Using first of multiple paths on " + controllerType.getName());
 		}
-		return resolveEmbeddedValue(paths[0]);
+		return paths[0];
+	}
+
+	private static String getMethodMapping(Method method) {
+		Assert.notNull(method, "'method' must not be null");
+		RequestMapping requestMapping = AnnotatedElementUtils.findMergedAnnotation(method, RequestMapping.class);
+		if (requestMapping == null) {
+			throw new IllegalArgumentException("No @RequestMapping on: " + method.toGenericString());
+		}
+		String[] paths = requestMapping.path();
+		if (ObjectUtils.isEmpty(paths) || !StringUtils.hasLength(paths[0])) {
+			return "/";
+		}
+		if (paths.length > 1 && logger.isTraceEnabled()) {
+			logger.trace("Using first of multiple paths on " + method.toGenericString());
+		}
+		return paths[0];
 	}
 
 	private static Method getMethod(Class<?> controllerType, final String methodName, final Object... args) {
@@ -628,12 +626,10 @@ public class MvcUriComponentsBuilder {
 		}
 	}
 
-	private static UriComponentsBuilder applyContributors(UriComponentsBuilder builder,
-			AnnotatedMethod annotatedMethod, Object... args) {
-
+	private static UriComponentsBuilder applyContributors(UriComponentsBuilder builder, Method method, Object... args) {
 		CompositeUriComponentsContributor contributor = getUriComponentsContributor();
 
-		int paramCount = annotatedMethod.getMethodParameters().length;
+		int paramCount = method.getParameterCount();
 		int argCount = args.length;
 		if (paramCount != argCount) {
 			throw new IllegalArgumentException("Number of method parameters " + paramCount +
@@ -642,7 +638,7 @@ public class MvcUriComponentsBuilder {
 
 		final Map<String, Object> uriVars = new HashMap<>();
 		for (int i = 0; i < paramCount; i++) {
-			MethodParameter param = annotatedMethod.getMethodParameters()[i];
+			MethodParameter param = new SynthesizingMethodParameter(method, i);
 			param.initParameterNameDiscovery(parameterNameDiscoverer);
 			contributor.contributeMethodArgument(param, args[i], builder, uriVars);
 		}
@@ -662,20 +658,6 @@ public class MvcUriComponentsBuilder {
 			}
 		}
 		return defaultUriComponentsContributor;
-	}
-
-	private static String resolveEmbeddedValue(String value) {
-		if (value.contains(SystemPropertyUtils.PLACEHOLDER_PREFIX)) {
-			WebApplicationContext webApplicationContext = getWebApplicationContext();
-			if (webApplicationContext != null
-					&& webApplicationContext.getAutowireCapableBeanFactory() instanceof ConfigurableBeanFactory cbf) {
-				String resolvedEmbeddedValue = cbf.resolveEmbeddedValue(value);
-				if (resolvedEmbeddedValue != null) {
-					return resolvedEmbeddedValue;
-				}
-			}
-		}
-		return value;
 	}
 
 	@Nullable
@@ -736,31 +718,23 @@ public class MvcUriComponentsBuilder {
 		@Nullable
 		public Object intercept(@Nullable Object obj, Method method, Object[] args, @Nullable MethodProxy proxy) {
 			switch (method.getName()) {
-				case "getControllerType" -> {
-					return this.controllerType;
+				case "getControllerType": return this.controllerType;
+				case "getControllerMethod": return this.controllerMethod;
+				case "getArgumentValues": return this.argumentValues;
+			}
+			if (ReflectionUtils.isObjectMethod(method)) {
+				return ReflectionUtils.invokeMethod(method, obj, args);
+			}
+			else {
+				this.controllerMethod = method;
+				this.argumentValues = args;
+				Class<?> returnType = method.getReturnType();
+				try {
+					return (returnType == void.class ? null : returnType.cast(initProxy(returnType, this)));
 				}
-				case "getControllerMethod" -> {
-					return this.controllerMethod;
-				}
-				case "getArgumentValues" -> {
-					return this.argumentValues;
-				}
-				default -> {
-					if (ReflectionUtils.isObjectMethod(method)) {
-						return ReflectionUtils.invokeMethod(method, obj, args);
-					}
-					else {
-						this.controllerMethod = method;
-						this.argumentValues = args;
-						Class<?> returnType = method.getReturnType();
-						try {
-							return (returnType == void.class ? null : returnType.cast(initProxy(returnType, this)));
-						}
-						catch (Throwable ex) {
-							throw new IllegalStateException(
-									"Failed to create proxy for controller method return type: " + method, ex);
-						}
-					}
+				catch (Throwable ex) {
+					throw new IllegalStateException(
+							"Failed to create proxy for controller method return type: " + method, ex);
 				}
 			}
 		}
@@ -829,7 +803,6 @@ public class MvcUriComponentsBuilder {
 				enhancer.setSuperclass(controllerType);
 				enhancer.setInterfaces(new Class<?>[] {MethodInvocationInfo.class});
 				enhancer.setNamingPolicy(SpringNamingPolicy.INSTANCE);
-				enhancer.setAttemptLoad(true);
 				enhancer.setCallbackType(MethodInterceptor.class);
 
 				Class<?> proxyClass = enhancer.createClass();
@@ -889,7 +862,7 @@ public class MvcUriComponentsBuilder {
 		public MethodArgumentBuilder(@Nullable UriComponentsBuilder baseUrl, Class<?> controllerType, Method method) {
 			Assert.notNull(controllerType, "'controllerType' is required");
 			Assert.notNull(method, "'method' is required");
-			this.baseUrl = (baseUrl != null ? baseUrl : UriComponentsBuilder.fromPath(getPath()));
+			this.baseUrl = baseUrl != null ? baseUrl : UriComponentsBuilder.fromPath(getPath());
 			this.controllerType = controllerType;
 			this.method = method;
 			this.argumentValues = new Object[method.getParameterCount()];
@@ -898,7 +871,7 @@ public class MvcUriComponentsBuilder {
 		private static String getPath() {
 			UriComponentsBuilder builder = ServletUriComponentsBuilder.fromCurrentServletMapping();
 			String path = builder.build().getPath();
-			return (path != null ? path : "");
+			return path != null ? path : "";
 		}
 
 		public MethodArgumentBuilder arg(int index, Object value) {

@@ -121,7 +121,6 @@ public class JCacheCacheManager extends AbstractTransactionSupportingCacheManage
 	}
 
 	@Override
-	@Nullable
 	protected Cache getMissingCache(String name) {
 		CacheManager cacheManager = getCacheManager();
 		Assert.state(cacheManager != null, "No CacheManager set");

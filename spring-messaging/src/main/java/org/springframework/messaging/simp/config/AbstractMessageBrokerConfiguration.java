@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,15 +21,15 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Executor;
-import java.util.function.Supplier;
 
+import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.BeanInitializationException;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.event.SmartApplicationListener;
+import org.springframework.core.task.TaskExecutor;
 import org.springframework.lang.Nullable;
 import org.springframework.messaging.MessageHandler;
 import org.springframework.messaging.converter.ByteArrayMessageConverter;
@@ -59,18 +59,15 @@ import org.springframework.messaging.support.AbstractSubscribableChannel;
 import org.springframework.messaging.support.ExecutorSubscribableChannel;
 import org.springframework.messaging.support.ImmutableMessageChannelInterceptor;
 import org.springframework.scheduling.TaskScheduler;
-import org.springframework.scheduling.concurrent.ExecutorConfigurationSupport;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
-import org.springframework.util.CustomizableThreadCreator;
 import org.springframework.util.MimeTypeUtils;
 import org.springframework.util.PathMatcher;
 import org.springframework.util.StringUtils;
 import org.springframework.validation.Errors;
 import org.springframework.validation.Validator;
-import org.springframework.validation.beanvalidation.OptionalValidatorFactoryBean;
 
 /**
  * Provides essential configuration for handling messages with simple messaging
@@ -91,7 +88,7 @@ import org.springframework.validation.beanvalidation.OptionalValidatorFactoryBea
  * into any application component to send messages.
  *
  * <p>Subclasses are responsible for the parts of the configuration that feed messages
- * to and from the client inbound/outbound channels (for example, STOMP over WebSocket).
+ * to and from the client inbound/outbound channels (e.g. STOMP over WebSocket).
  *
  * @author Rossen Stoyanchev
  * @author Brian Clozel
@@ -116,7 +113,7 @@ public abstract class AbstractMessageBrokerConfiguration implements ApplicationC
 		jackson2Present = ClassUtils.isPresent("com.fasterxml.jackson.databind.ObjectMapper", classLoader) &&
 				ClassUtils.isPresent("com.fasterxml.jackson.core.JsonGenerator", classLoader);
 		gsonPresent = ClassUtils.isPresent("com.google.gson.Gson", classLoader);
-		jsonbPresent = ClassUtils.isPresent("jakarta.json.bind.Jsonb", classLoader);
+		jsonbPresent = ClassUtils.isPresent("javax.json.bind.Jsonb", classLoader);
 		kotlinSerializationJsonPresent = ClassUtils.isPresent("kotlinx.serialization.json.Json", classLoader);
 	}
 
@@ -132,9 +129,6 @@ public abstract class AbstractMessageBrokerConfiguration implements ApplicationC
 
 	@Nullable
 	private MessageBrokerRegistry brokerRegistry;
-
-	@Nullable
-	private Integer phase;
 
 
 	/**
@@ -157,7 +151,7 @@ public abstract class AbstractMessageBrokerConfiguration implements ApplicationC
 
 	@Bean
 	public AbstractSubscribableChannel clientInboundChannel(
-			@Qualifier("clientInboundChannelExecutor") Executor executor) {
+			@Qualifier("clientInboundChannelExecutor") TaskExecutor executor) {
 
 		ExecutorSubscribableChannel channel = new ExecutorSubscribableChannel(executor);
 		channel.setLogger(SimpLogging.forLog(channel.getLogger()));
@@ -169,12 +163,10 @@ public abstract class AbstractMessageBrokerConfiguration implements ApplicationC
 	}
 
 	@Bean
-	public Executor clientInboundChannelExecutor() {
-		ChannelRegistration registration = getClientInboundChannelRegistration();
-		Executor executor = getExecutor(registration, "clientInboundChannel-", this::defaultExecutor);
-		if (executor instanceof ExecutorConfigurationSupport executorSupport) {
-			executorSupport.setPhase(getPhase());
-		}
+	public TaskExecutor clientInboundChannelExecutor() {
+		TaskExecutorRegistration reg = getClientInboundChannelRegistration().taskExecutor();
+		ThreadPoolTaskExecutor executor = reg.getTaskExecutor();
+		executor.setThreadNamePrefix("clientInboundChannel-");
 		return executor;
 	}
 
@@ -188,17 +180,6 @@ public abstract class AbstractMessageBrokerConfiguration implements ApplicationC
 		return this.clientInboundChannelRegistration;
 	}
 
-	protected final int getPhase() {
-		if (this.phase == null) {
-			this.phase = initPhase();
-		}
-		return this.phase;
-	}
-
-	protected int initPhase() {
-		return 0;
-	}
-
 	/**
 	 * A hook for subclasses to customize the message channel for inbound messages
 	 * from WebSocket clients.
@@ -208,24 +189,22 @@ public abstract class AbstractMessageBrokerConfiguration implements ApplicationC
 
 	@Bean
 	public AbstractSubscribableChannel clientOutboundChannel(
-			@Qualifier("clientOutboundChannelExecutor") Executor executor) {
+			@Qualifier("clientOutboundChannelExecutor") TaskExecutor executor) {
 
 		ExecutorSubscribableChannel channel = new ExecutorSubscribableChannel(executor);
 		channel.setLogger(SimpLogging.forLog(channel.getLogger()));
-		ChannelRegistration registration = getClientOutboundChannelRegistration();
-		if (registration.hasInterceptors()) {
-			channel.setInterceptors(registration.getInterceptors());
+		ChannelRegistration reg = getClientOutboundChannelRegistration();
+		if (reg.hasInterceptors()) {
+			channel.setInterceptors(reg.getInterceptors());
 		}
 		return channel;
 	}
 
 	@Bean
-	public Executor clientOutboundChannelExecutor() {
-		ChannelRegistration registration = getClientOutboundChannelRegistration();
-		Executor executor = getExecutor(registration, "clientOutboundChannel-", this::defaultExecutor);
-		if (executor instanceof ExecutorConfigurationSupport executorSupport) {
-			executorSupport.setPhase(getPhase());
-		}
+	public TaskExecutor clientOutboundChannelExecutor() {
+		TaskExecutorRegistration reg = getClientOutboundChannelRegistration().taskExecutor();
+		ThreadPoolTaskExecutor executor = reg.getTaskExecutor();
+		executor.setThreadNamePrefix("clientOutboundChannel-");
 		return executor;
 	}
 
@@ -249,11 +228,11 @@ public abstract class AbstractMessageBrokerConfiguration implements ApplicationC
 	@Bean
 	public AbstractSubscribableChannel brokerChannel(
 			AbstractSubscribableChannel clientInboundChannel, AbstractSubscribableChannel clientOutboundChannel,
-			@Qualifier("brokerChannelExecutor") Executor executor) {
+			@Qualifier("brokerChannelExecutor") TaskExecutor executor) {
 
 		MessageBrokerRegistry registry = getBrokerRegistry(clientInboundChannel, clientOutboundChannel);
 		ChannelRegistration registration = registry.getBrokerChannelRegistration();
-		ExecutorSubscribableChannel channel = (registration.hasExecutor() ?
+		ExecutorSubscribableChannel channel = (registration.hasTaskExecutor() ?
 				new ExecutorSubscribableChannel(executor) : new ExecutorSubscribableChannel());
 		registration.interceptors(new ImmutableMessageChannelInterceptor());
 		channel.setLogger(SimpLogging.forLog(channel.getLogger()));
@@ -262,40 +241,24 @@ public abstract class AbstractMessageBrokerConfiguration implements ApplicationC
 	}
 
 	@Bean
-	public Executor brokerChannelExecutor(
+	public TaskExecutor brokerChannelExecutor(
 			AbstractSubscribableChannel clientInboundChannel, AbstractSubscribableChannel clientOutboundChannel) {
 
 		MessageBrokerRegistry registry = getBrokerRegistry(clientInboundChannel, clientOutboundChannel);
 		ChannelRegistration registration = registry.getBrokerChannelRegistration();
-		Executor executor = getExecutor(registration, "brokerChannel-", () -> {
+		ThreadPoolTaskExecutor executor;
+		if (registration.hasTaskExecutor()) {
+			executor = registration.taskExecutor().getTaskExecutor();
+		}
+		else {
 			// Should never be used
-			ThreadPoolTaskExecutor fallbackExecutor = new ThreadPoolTaskExecutor();
-			fallbackExecutor.setCorePoolSize(0);
-			fallbackExecutor.setMaxPoolSize(1);
-			fallbackExecutor.setQueueCapacity(0);
-			return fallbackExecutor;
-		});
-		if (executor instanceof ExecutorConfigurationSupport executorSupport) {
-			executorSupport.setPhase(getPhase());
+			executor = new ThreadPoolTaskExecutor();
+			executor.setCorePoolSize(0);
+			executor.setMaxPoolSize(1);
+			executor.setQueueCapacity(0);
 		}
+		executor.setThreadNamePrefix("brokerChannel-");
 		return executor;
-	}
-
-	private Executor defaultExecutor() {
-		return new TaskExecutorRegistration().getTaskExecutor();
-	}
-
-	private static Executor getExecutor(ChannelRegistration registration,
-			String threadNamePrefix, Supplier<Executor> fallback) {
-
-		return registration.getExecutor(fallback,
-				executor -> setThreadNamePrefix(executor, threadNamePrefix));
-	}
-
-	private static void setThreadNamePrefix(Executor executor, String name) {
-		if (executor instanceof CustomizableThreadCreator ctc) {
-			ctc.setThreadNamePrefix(name);
-		}
 	}
 
 	/**
@@ -343,7 +306,6 @@ public abstract class AbstractMessageBrokerConfiguration implements ApplicationC
 		handler.setDestinationPrefixes(brokerRegistry.getApplicationDestinationPrefixes());
 		handler.setMessageConverter(brokerMessageConverter);
 		handler.setValidator(simpValidator());
-		handler.setPhase(getPhase());
 
 		List<HandlerMethodArgumentResolver> argumentResolvers = new ArrayList<>();
 		addArgumentResolvers(argumentResolvers);
@@ -357,7 +319,6 @@ public abstract class AbstractMessageBrokerConfiguration implements ApplicationC
 		if (pathMatcher != null) {
 			handler.setPathMatcher(pathMatcher);
 		}
-
 		return handler;
 	}
 
@@ -371,11 +332,8 @@ public abstract class AbstractMessageBrokerConfiguration implements ApplicationC
 			AbstractSubscribableChannel clientInboundChannel, AbstractSubscribableChannel clientOutboundChannel,
 			SimpMessagingTemplate brokerMessagingTemplate) {
 
-		SimpAnnotationMethodMessageHandler handler = new SimpAnnotationMethodMessageHandler(
+		return new SimpAnnotationMethodMessageHandler(
 				clientInboundChannel, clientOutboundChannel, brokerMessagingTemplate);
-
-		handler.setPhase(getPhase());
-		return handler;
 	}
 
 	protected void addArgumentResolvers(List<HandlerMethodArgumentResolver> argumentResolvers) {
@@ -396,7 +354,6 @@ public abstract class AbstractMessageBrokerConfiguration implements ApplicationC
 			return null;
 		}
 		updateUserDestinationResolver(handler, userDestinationResolver, registry.getUserDestinationPrefix());
-		handler.setPhase(getPhase());
 		return handler;
 	}
 
@@ -436,7 +393,6 @@ public abstract class AbstractMessageBrokerConfiguration implements ApplicationC
 		}
 		handler.setSystemSubscriptions(subscriptions);
 		updateUserDestinationResolver(handler, userDestinationResolver, registry.getUserDestinationPrefix());
-		handler.setPhase(getPhase());
 		return handler;
 	}
 
@@ -453,7 +409,6 @@ public abstract class AbstractMessageBrokerConfiguration implements ApplicationC
 		if (destination != null) {
 			handler.setBroadcastDestination(destination);
 		}
-		handler.setPhase(getPhase());
 		return handler;
 	}
 
@@ -481,7 +436,6 @@ public abstract class AbstractMessageBrokerConfiguration implements ApplicationC
 		scheduler.setThreadNamePrefix("MessageBroker-");
 		scheduler.setPoolSize(Runtime.getRuntime().availableProcessors());
 		scheduler.setRemoveOnCancelPolicy(true);
-		scheduler.setPhase(getPhase());
 		return scheduler;
 	}
 
@@ -556,13 +510,27 @@ public abstract class AbstractMessageBrokerConfiguration implements ApplicationC
 	}
 
 	@Bean
+	@SuppressWarnings("deprecation")
 	public SimpUserRegistry userRegistry(
 			AbstractSubscribableChannel clientInboundChannel, AbstractSubscribableChannel clientOutboundChannel) {
 
+		SimpUserRegistry userRegistry = createLocalUserRegistry();
 		MessageBrokerRegistry brokerRegistry = getBrokerRegistry(clientInboundChannel, clientOutboundChannel);
-		SimpUserRegistry userRegistry = createLocalUserRegistry(brokerRegistry.getUserRegistryOrder());
+		if (userRegistry == null) {
+			userRegistry = createLocalUserRegistry(brokerRegistry.getUserRegistryOrder());
+		}
 		boolean broadcast = brokerRegistry.getUserRegistryBroadcast() != null;
 		return (broadcast ? new MultiServerUserRegistry(userRegistry) : userRegistry);
+	}
+
+	/**
+	 * Create the user registry that provides access to local users.
+	 * @deprecated as of 5.1 in favor of {@link #createLocalUserRegistry(Integer)}
+	 */
+	@Deprecated
+	@Nullable
+	protected SimpUserRegistry createLocalUserRegistry() {
+		return null;
 	}
 
 	/**
@@ -591,13 +559,16 @@ public abstract class AbstractMessageBrokerConfiguration implements ApplicationC
 			if (this.applicationContext != null && this.applicationContext.containsBean(MVC_VALIDATOR_NAME)) {
 				validator = this.applicationContext.getBean(MVC_VALIDATOR_NAME, Validator.class);
 			}
-			else if (ClassUtils.isPresent("jakarta.validation.Validator", getClass().getClassLoader())) {
+			else if (ClassUtils.isPresent("javax.validation.Validator", getClass().getClassLoader())) {
+				Class<?> clazz;
 				try {
-					validator = new OptionalValidatorFactoryBean();
+					String className = "org.springframework.validation.beanvalidation.OptionalValidatorFactoryBean";
+					clazz = ClassUtils.forName(className, AbstractMessageBrokerConfiguration.class.getClassLoader());
 				}
 				catch (Throwable ex) {
-					throw new BeanInitializationException("Failed to create default validator", ex);
+					throw new BeanInitializationException("Could not find default validator class", ex);
 				}
+				validator = (Validator) BeanUtils.instantiateClass(clazz);
 			}
 			else {
 				validator = new Validator() {

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2023 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,11 +30,12 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import jakarta.servlet.DispatcherType;
-import jakarta.servlet.ServletContext;
-import jakarta.servlet.ServletException;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
+import javax.servlet.DispatcherType;
+import javax.servlet.ServletContext;
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -53,6 +54,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.server.RequestPath;
 import org.springframework.http.server.ServletServerHttpRequest;
 import org.springframework.lang.Nullable;
+import org.springframework.ui.context.ThemeSource;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.StringUtils;
 import org.springframework.web.context.WebApplicationContext;
@@ -62,11 +64,12 @@ import org.springframework.web.context.request.async.WebAsyncUtils;
 import org.springframework.web.multipart.MultipartException;
 import org.springframework.web.multipart.MultipartHttpServletRequest;
 import org.springframework.web.multipart.MultipartResolver;
+import org.springframework.web.util.NestedServletException;
 import org.springframework.web.util.ServletRequestPathUtils;
 import org.springframework.web.util.WebUtils;
 
 /**
- * Central dispatcher for HTTP request handlers/controllers, for example, for web UI controllers
+ * Central dispatcher for HTTP request handlers/controllers, e.g. for web UI controllers
  * or HTTP-based remote service exporters. Dispatches to registered handlers for processing
  * a web request, providing convenient mapping and exception handling facilities.
  *
@@ -117,7 +120,8 @@ import org.springframework.web.util.WebUtils;
  *
  * <li>The dispatcher's strategy for resolving multipart requests is determined by a
  * {@link org.springframework.web.multipart.MultipartResolver} implementation.
- * An implementation for standard Servlet multipart processing is included.
+ * Implementations for Apache Commons FileUpload and Servlet 3 are included; the typical
+ * choice is {@link org.springframework.web.multipart.commons.CommonsMultipartResolver}.
  * The MultipartResolver bean name is "multipartResolver"; default is none.
  *
  * <li>Its locale resolution strategy is determined by a {@link LocaleResolver}.
@@ -129,7 +133,6 @@ import org.springframework.web.util.WebUtils;
  * Implementations for a fixed theme and for cookie and session storage are included.
  * The ThemeResolver bean name is "themeResolver"; default is
  * {@link org.springframework.web.servlet.theme.FixedThemeResolver}.
- * Theme support is deprecated as of 6.0 with no direct replacement.
  * </ul>
  *
  * <p><b>NOTE: The {@code @RequestMapping} annotation will only be processed if a
@@ -145,9 +148,9 @@ import org.springframework.web.util.WebUtils;
  * with mappings, handlers, etc. Only the root application context as loaded by
  * {@link org.springframework.web.context.ContextLoaderListener}, if any, will be shared.
  *
- * <p>{@code DispatcherServlet} may be injected with a web application context,
- * rather than creating its own internally. This is useful in Servlet 3.0+
- * environments, which support programmatic registration of servlet instances.
+ * <p>As of Spring 3.1, {@code DispatcherServlet} may now be injected with a web
+ * application context, rather than creating its own internally. This is useful in Servlet
+ * 3.0+ environments, which support programmatic registration of servlet instances.
  * See the {@link #DispatcherServlet(WebApplicationContext)} javadoc for details.
  *
  * @author Rod Johnson
@@ -169,11 +172,7 @@ public class DispatcherServlet extends FrameworkServlet {
 	/** Well-known name for the LocaleResolver object in the bean factory for this namespace. */
 	public static final String LOCALE_RESOLVER_BEAN_NAME = "localeResolver";
 
-	/**
-	 * Well-known name for the ThemeResolver object in the bean factory for this namespace.
-	 * @deprecated as of 6.0, with no direct replacement
-	 */
-	@Deprecated
+	/** Well-known name for the ThemeResolver object in the bean factory for this namespace. */
 	public static final String THEME_RESOLVER_BEAN_NAME = "themeResolver";
 
 	/**
@@ -230,17 +229,13 @@ public class DispatcherServlet extends FrameworkServlet {
 	/**
 	 * Request attribute to hold the current ThemeResolver, retrievable by views.
 	 * @see org.springframework.web.servlet.support.RequestContextUtils#getThemeResolver
-	 * @deprecated as of 6.0, with no direct replacement
 	 */
-	@Deprecated
 	public static final String THEME_RESOLVER_ATTRIBUTE = DispatcherServlet.class.getName() + ".THEME_RESOLVER";
 
 	/**
 	 * Request attribute to hold the current ThemeSource, retrievable by views.
 	 * @see org.springframework.web.servlet.support.RequestContextUtils#getThemeSource
-	 * @deprecated as of 6.0, with no direct replacement
 	 */
-	@Deprecated
 	public static final String THEME_SOURCE_ATTRIBUTE = DispatcherServlet.class.getName() + ".THEME_SOURCE";
 
 	/**
@@ -266,7 +261,7 @@ public class DispatcherServlet extends FrameworkServlet {
 	/**
 	 * Name of request attribute that exposes an Exception resolved with a
 	 * {@link HandlerExceptionResolver} but where no view was rendered
-	 * (for example, setting the status code).
+	 * (e.g. setting the status code).
 	 */
 	public static final String EXCEPTION_ATTRIBUTE = DispatcherServlet.class.getName() + ".EXCEPTION";
 
@@ -305,7 +300,7 @@ public class DispatcherServlet extends FrameworkServlet {
 	private boolean detectAllViewResolvers = true;
 
 	/** Throw a NoHandlerFoundException if no Handler was found to process this request? *.*/
-	private boolean throwExceptionIfNoHandlerFound = true;
+	private boolean throwExceptionIfNoHandlerFound = false;
 
 	/** Perform cleanup of request attributes after include request?. */
 	private boolean cleanupAfterInclude = true;
@@ -319,7 +314,6 @@ public class DispatcherServlet extends FrameworkServlet {
 	private LocaleResolver localeResolver;
 
 	/** ThemeResolver used by this servlet. */
-	@Deprecated
 	@Nullable
 	private ThemeResolver themeResolver;
 
@@ -368,12 +362,13 @@ public class DispatcherServlet extends FrameworkServlet {
 	 * @see #DispatcherServlet(WebApplicationContext)
 	 */
 	public DispatcherServlet() {
+		super();
 		setDispatchOptionsRequest(true);
 	}
 
 	/**
 	 * Create a new {@code DispatcherServlet} with the given web application context. This
-	 * constructor is useful in Servlet environments where instance-based registration
+	 * constructor is useful in Servlet 3.0+ environments where instance-based registration
 	 * of servlets is possible through the {@link ServletContext#addServlet} API.
 	 * <p>Using this constructor indicates that the following properties / init-params
 	 * will be ignored:
@@ -466,12 +461,7 @@ public class DispatcherServlet extends FrameworkServlet {
 	 * <p>Default is "false", meaning the DispatcherServlet sends a NOT_FOUND error through the
 	 * Servlet response.
 	 * @since 4.0
-	 * @deprecated as of 6.1 this property is set to {@code true} by default, and
-	 * should not need to be customized; in effect, {@link DispatcherServlet}
-	 * should always raise {@link NoHandlerFoundException} and allow it to be
-	 * handled through a {@link HandlerExceptionResolver}.
 	 */
-	@Deprecated(since = "6.1", forRemoval = true)
 	public void setThrowExceptionIfNoHandlerFound(boolean throwExceptionIfNoHandlerFound) {
 		this.throwExceptionIfNoHandlerFound = throwExceptionIfNoHandlerFound;
 	}
@@ -571,7 +561,6 @@ public class DispatcherServlet extends FrameworkServlet {
 	 * <p>If no bean is defined with the given name in the BeanFactory for this namespace,
 	 * we default to a FixedThemeResolver.
 	 */
-	@Deprecated
 	private void initThemeResolver(ApplicationContext context) {
 		try {
 			this.themeResolver = context.getBean(THEME_RESOLVER_BEAN_NAME, ThemeResolver.class);
@@ -813,11 +802,9 @@ public class DispatcherServlet extends FrameworkServlet {
 	 * @return the ThemeSource, if any
 	 * @see #getWebApplicationContext()
 	 */
-	@Deprecated
 	@Nullable
-	public final org.springframework.ui.context.ThemeSource getThemeSource() {
-		return (getWebApplicationContext() instanceof org.springframework.ui.context.ThemeSource themeSource ?
-				themeSource : null);
+	public final ThemeSource getThemeSource() {
+		return (getWebApplicationContext() instanceof ThemeSource ? (ThemeSource) getWebApplicationContext() : null);
 	}
 
 	/**
@@ -919,12 +906,12 @@ public class DispatcherServlet extends FrameworkServlet {
 	/**
 	 * Create a default strategy.
 	 * <p>The default implementation uses
-	 * {@link org.springframework.beans.factory.config.AutowireCapableBeanFactory#createBean(Class)}.
+	 * {@link org.springframework.beans.factory.config.AutowireCapableBeanFactory#createBean}.
 	 * @param context the current WebApplicationContext
 	 * @param clazz the strategy implementation class to instantiate
 	 * @return the fully configured strategy instance
 	 * @see org.springframework.context.ApplicationContext#getAutowireCapableBeanFactory()
-	 * @see org.springframework.beans.factory.config.AutowireCapableBeanFactory#createBean(Class)
+	 * @see org.springframework.beans.factory.config.AutowireCapableBeanFactory#createBean
 	 */
 	protected Object createDefaultStrategy(ApplicationContext context, Class<?> clazz) {
 		return context.getAutowireCapableBeanFactory().createBean(clazz);
@@ -1017,13 +1004,10 @@ public class DispatcherServlet extends FrameworkServlet {
 
 			if (traceOn) {
 				List<String> values = Collections.list(request.getHeaderNames());
-				String headers;
+				String headers = values.size() > 0 ? "masked" : "";
 				if (isEnableLoggingRequestDetails()) {
 					headers = values.stream().map(name -> name + ":" + Collections.list(request.getHeaders(name)))
 							.collect(Collectors.joining(", "));
-				}
-				else {
-					headers = (!values.isEmpty() ? "masked" : "");
 				}
 				return message + ", headers={" + headers + "} in DispatcherServlet '" + getServletName() + "'";
 			}
@@ -1100,7 +1084,7 @@ public class DispatcherServlet extends FrameworkServlet {
 			catch (Throwable err) {
 				// As of 4.3, we're processing Errors thrown from handler methods as well,
 				// making them available for @ExceptionHandler methods and other scenarios.
-				dispatchException = new ServletException("Handler dispatch failed: " + err, err);
+				dispatchException = new NestedServletException("Handler dispatch failed", err);
 			}
 			processDispatchResult(processedRequest, response, mappedHandler, mv, dispatchException);
 		}
@@ -1109,7 +1093,7 @@ public class DispatcherServlet extends FrameworkServlet {
 		}
 		catch (Throwable err) {
 			triggerAfterCompletion(processedRequest, response, mappedHandler,
-					new ServletException("Handler processing failed: " + err, err));
+					new NestedServletException("Handler processing failed", err));
 		}
 		finally {
 			if (asyncManager.isConcurrentHandlingStarted()) {
@@ -1117,11 +1101,10 @@ public class DispatcherServlet extends FrameworkServlet {
 				if (mappedHandler != null) {
 					mappedHandler.applyAfterConcurrentHandlingStarted(processedRequest, response);
 				}
-				asyncManager.setMultipartRequestParsed(multipartRequestParsed);
 			}
 			else {
 				// Clean up any resources used by a multipart request.
-				if (multipartRequestParsed || asyncManager.isMultipartRequestParsed()) {
+				if (multipartRequestParsed) {
 					cleanupMultipart(processedRequest);
 				}
 			}
@@ -1151,9 +1134,9 @@ public class DispatcherServlet extends FrameworkServlet {
 		boolean errorView = false;
 
 		if (exception != null) {
-			if (exception instanceof ModelAndViewDefiningException mavDefiningException) {
+			if (exception instanceof ModelAndViewDefiningException) {
 				logger.debug("ModelAndViewDefiningException encountered", exception);
-				mv = mavDefiningException.getModelAndView();
+				mv = ((ModelAndViewDefiningException) exception).getModelAndView();
 			}
 			else {
 				Object handler = (mappedHandler != null ? mappedHandler.getHandler() : null);
@@ -1196,8 +1179,8 @@ public class DispatcherServlet extends FrameworkServlet {
 	@Override
 	protected LocaleContext buildLocaleContext(final HttpServletRequest request) {
 		LocaleResolver lr = this.localeResolver;
-		if (lr instanceof LocaleContextResolver localeContextResolver) {
-			return localeContextResolver.resolveLocaleContext(request);
+		if (lr instanceof LocaleContextResolver) {
+			return ((LocaleContextResolver) lr).resolveLocaleContext(request);
 		}
 		else {
 			return () -> (lr != null ? lr.resolveLocale(request) : request.getLocale());
@@ -1215,7 +1198,7 @@ public class DispatcherServlet extends FrameworkServlet {
 		if (this.multipartResolver != null && this.multipartResolver.isMultipart(request)) {
 			if (WebUtils.getNativeRequest(request, MultipartHttpServletRequest.class) != null) {
 				if (DispatcherType.REQUEST.equals(request.getDispatcherType())) {
-					logger.trace("Request already resolved to MultipartHttpServletRequest, for example, by MultipartFilter");
+					logger.trace("Request already resolved to MultipartHttpServletRequest, e.g. by MultipartFilter");
 				}
 			}
 			else if (hasMultipartException(request)) {
@@ -1242,9 +1225,9 @@ public class DispatcherServlet extends FrameworkServlet {
 	}
 
 	/**
-	 * Check "jakarta.servlet.error.exception" attribute for a multipart exception.
+	 * Check "javax.servlet.error.exception" attribute for a multipart exception.
 	 */
-	private static boolean hasMultipartException(HttpServletRequest request) {
+	private boolean hasMultipartException(HttpServletRequest request) {
 		Throwable error = (Throwable) request.getAttribute(WebUtils.ERROR_EXCEPTION_ATTRIBUTE);
 		while (error != null) {
 			if (error instanceof MultipartException) {
@@ -1341,14 +1324,6 @@ public class DispatcherServlet extends FrameworkServlet {
 
 		// Success and error responses may use different content types
 		request.removeAttribute(HandlerMapping.PRODUCIBLE_MEDIA_TYPES_ATTRIBUTE);
-		// Reset the response body buffer if the response is not committed already,
-		// leaving the response headers in place.
-		try {
-			response.resetBuffer();
-		}
-		catch (IllegalStateException illegalStateException) {
-			// the response is already committed, leave it to exception handlers anyway
-		}
 
 		// Check registered HandlerExceptionResolvers...
 		ModelAndView exMv = null;
@@ -1419,10 +1394,6 @@ public class DispatcherServlet extends FrameworkServlet {
 			}
 		}
 
-		if (view instanceof SmartView smartView) {
-			smartView.resolveNestedViews(this::resolveViewNameInternal, locale);
-		}
-
 		// Delegate to the View object for rendering.
 		if (logger.isTraceEnabled()) {
 			logger.trace("Rendering view [" + view + "] ");
@@ -1471,11 +1442,6 @@ public class DispatcherServlet extends FrameworkServlet {
 	protected View resolveViewName(String viewName, @Nullable Map<String, Object> model,
 			Locale locale, HttpServletRequest request) throws Exception {
 
-		return resolveViewNameInternal(viewName, locale);
-	}
-
-	@Nullable
-	private View resolveViewNameInternal(String viewName, Locale locale) throws Exception {
 		if (this.viewResolvers != null) {
 			for (ViewResolver viewResolver : this.viewResolvers) {
 				View view = viewResolver.resolveViewName(viewName, locale);
@@ -1487,7 +1453,7 @@ public class DispatcherServlet extends FrameworkServlet {
 		return null;
 	}
 
-	private static void triggerAfterCompletion(HttpServletRequest request, HttpServletResponse response,
+	private void triggerAfterCompletion(HttpServletRequest request, HttpServletResponse response,
 			@Nullable HandlerExecutionChain mappedHandler, Exception ex) throws Exception {
 
 		if (mappedHandler != null) {

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -170,9 +170,9 @@ public class JmsListenerEndpointRegistry implements DisposableBean, SmartLifecyc
 
 		MessageListenerContainer listenerContainer = factory.createListenerContainer(endpoint);
 
-		if (listenerContainer instanceof InitializingBean initializingBean) {
+		if (listenerContainer instanceof InitializingBean) {
 			try {
-				initializingBean.afterPropertiesSet();
+				((InitializingBean) listenerContainer).afterPropertiesSet();
 			}
 			catch (Exception ex) {
 				throw new BeanInitializationException("Failed to initialize message listener container", ex);
@@ -246,9 +246,9 @@ public class JmsListenerEndpointRegistry implements DisposableBean, SmartLifecyc
 	@Override
 	public void destroy() {
 		for (MessageListenerContainer listenerContainer : getListenerContainers()) {
-			if (listenerContainer instanceof DisposableBean disposableBean) {
+			if (listenerContainer instanceof DisposableBean) {
 				try {
-					disposableBean.destroy();
+					((DisposableBean) listenerContainer).destroy();
 				}
 				catch (Throwable ex) {
 					logger.warn("Failed to destroy message listener container", ex);

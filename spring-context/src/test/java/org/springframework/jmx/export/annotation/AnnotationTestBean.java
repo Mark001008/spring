@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
 
 package org.springframework.jmx.export.annotation;
 
-import org.springframework.jmx.ITestBean;
+import org.springframework.jmx.IJmxTestBean;
 import org.springframework.jmx.support.MetricType;
 import org.springframework.stereotype.Service;
 
@@ -29,7 +29,7 @@ import org.springframework.stereotype.Service;
 		logFile = "build/jmx.log", currencyTimeLimit = 15, persistPolicy = "OnUpdate", persistPeriod = 200,
 		persistLocation = "./foo", persistName = "bar.jmx")
 @ManagedNotification(name = "My Notification", notificationTypes = { "type.foo", "type.bar" })
-public class AnnotationTestBean implements ITestBean {
+public class AnnotationTestBean implements IJmxTestBean {
 
 	private String name;
 
@@ -40,13 +40,21 @@ public class AnnotationTestBean implements ITestBean {
 	private boolean isSuperman;
 
 
+	@Override
+	@ManagedAttribute(description = "The Age Attribute", currencyTimeLimit = 15)
+	public int getAge() {
+		return age;
+	}
+
+	@Override
 	public void setAge(int age) {
 		this.age = age;
 	}
 
-	@ManagedAttribute(description = "The Age Attribute", currencyTimeLimit = 15)
-	public int getAge() {
-		return this.age;
+	@Override
+	@ManagedOperation(currencyTimeLimit = 30)
+	public long myOperation() {
+		return 1L;
 	}
 
 	@Override
@@ -61,7 +69,7 @@ public class AnnotationTestBean implements ITestBean {
 	@Override
 	@ManagedAttribute(defaultValue = "foo", persistPeriod = 300)
 	public String getName() {
-		return this.name;
+		return name;
 	}
 
 	@ManagedAttribute(description = "The Nick Name Attribute")
@@ -82,11 +90,7 @@ public class AnnotationTestBean implements ITestBean {
 		return isSuperman;
 	}
 
-	@ManagedOperation(currencyTimeLimit = 30)
-	public long myOperation() {
-		return 1L;
-	}
-
+	@Override
 	@ManagedOperation(description = "Add Two Numbers Together")
 	@ManagedOperationParameter(name="x", description="Left operand")
 	@ManagedOperationParameter(name="y", description="Right operand")
@@ -95,8 +99,9 @@ public class AnnotationTestBean implements ITestBean {
 	}
 
 	/**
-	 * Method that is not exposed by the MetadataAssembler.
+	 * Test method that is not exposed by the MetadataAssembler.
 	 */
+	@Override
 	public void dontExposeMe() {
 		throw new RuntimeException();
 	}

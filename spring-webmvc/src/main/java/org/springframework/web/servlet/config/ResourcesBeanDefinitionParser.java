@@ -86,7 +86,6 @@ class ResourcesBeanDefinitionParser implements BeanDefinitionParser {
 
 
 	@Override
-	@Nullable
 	public BeanDefinition parse(Element element, ParserContext context) {
 		Object source = context.extractSource(element);
 
@@ -306,7 +305,6 @@ class ResourcesBeanDefinitionParser implements BeanDefinitionParser {
 		}
 	}
 
-	@SuppressWarnings("removal")
 	private void parseResourceResolversTransformers(boolean isAutoRegistration,
 			ManagedList<Object> resourceResolvers, ManagedList<Object> resourceTransformers,
 			ParserContext context, Element element, @Nullable Object source) {

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2021 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
 
 package org.springframework.jms.config;
 
-import jakarta.jms.MessageListener;
+import javax.jms.MessageListener;
 
 import org.springframework.jms.listener.AbstractMessageListenerContainer;
 import org.springframework.jms.listener.MessageListenerContainer;
@@ -114,8 +114,8 @@ public abstract class AbstractJmsListenerEndpoint implements JmsListenerEndpoint
 
 	/**
 	 * Set a concurrency for the listener, if any.
-	 * <p>The concurrency limits can be a "lower-upper" String, for example, "5-10", or a simple
-	 * upper limit String, for example, "10" (the lower limit will be 1 in this case).
+	 * <p>The concurrency limits can be a "lower-upper" String, e.g. "5-10", or a simple
+	 * upper limit String, e.g. "10" (the lower limit will be 1 in this case).
 	 * <p>The underlying container may or may not support all features. For instance, it
 	 * may not be able to scale: in that case only the upper value is used.
 	 */
@@ -134,8 +134,8 @@ public abstract class AbstractJmsListenerEndpoint implements JmsListenerEndpoint
 
 	@Override
 	public void setupListenerContainer(MessageListenerContainer listenerContainer) {
-		if (listenerContainer instanceof AbstractMessageListenerContainer abstractContainer) {
-			setupJmsListenerContainer(abstractContainer);
+		if (listenerContainer instanceof AbstractMessageListenerContainer) {
+			setupJmsListenerContainer((AbstractMessageListenerContainer) listenerContainer);
 		}
 		else {
 			new JcaEndpointConfigurer().configureEndpoint(listenerContainer);
@@ -194,8 +194,8 @@ public abstract class AbstractJmsListenerEndpoint implements JmsListenerEndpoint
 	private class JcaEndpointConfigurer {
 
 		public void configureEndpoint(Object listenerContainer) {
-			if (listenerContainer instanceof JmsMessageEndpointManager endpointManager) {
-				setupJcaMessageContainer(endpointManager);
+			if (listenerContainer instanceof JmsMessageEndpointManager) {
+				setupJcaMessageContainer((JmsMessageEndpointManager) listenerContainer);
 			}
 			else {
 				throw new IllegalArgumentException("Could not configure endpoint with the specified container '" +

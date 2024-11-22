@@ -22,7 +22,7 @@ import org.springframework.lang.Nullable;
 
 /**
  * A {@link Scope} implementation exposing the attributes of a SiMP session
- * (for example, WebSocket session).
+ * (e.g. WebSocket session).
  *
  * <p>Relies on a thread-bound {@link SimpAttributes} instance exported by
  * {@link org.springframework.messaging.simp.annotation.support.SimpAnnotationMethodMessageHandler}.

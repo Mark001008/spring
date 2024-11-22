@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ package org.springframework.http.codec.json;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -38,7 +39,6 @@ import org.springframework.core.ResolvableType;
 import org.springframework.core.codec.Hints;
 import org.springframework.http.HttpLogging;
 import org.springframework.http.MediaType;
-import org.springframework.http.ProblemDetail;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.http.server.reactive.ServerHttpResponse;
 import org.springframework.lang.Nullable;
@@ -48,7 +48,7 @@ import org.springframework.util.MimeType;
 import org.springframework.util.ObjectUtils;
 
 /**
- * Base class providing support methods for Jackson 2.x encoding and decoding.
+ * Base class providing support methods for Jackson 2.9 encoding and decoding.
  *
  * @author Sebastien Deleuze
  * @author Rossen Stoyanchev
@@ -75,10 +75,11 @@ public abstract class Jackson2CodecSupport {
 	private static final String JSON_VIEW_HINT_ERROR =
 			"@JsonView only supported for write hints with exactly 1 class argument: ";
 
-	private static final List<MimeType> defaultMimeTypes = List.of(
-			MediaType.APPLICATION_JSON,
-			new MediaType("application", "*+json"),
-			MediaType.APPLICATION_NDJSON);
+	private static final List<MimeType> DEFAULT_MIME_TYPES = Collections.unmodifiableList(
+			Arrays.asList(
+					MediaType.APPLICATION_JSON,
+					new MediaType("application", "*+json"),
+					MediaType.APPLICATION_NDJSON));
 
 
 	protected final Log logger = HttpLogging.forLogName(getClass());
@@ -97,7 +98,8 @@ public abstract class Jackson2CodecSupport {
 	protected Jackson2CodecSupport(ObjectMapper objectMapper, MimeType... mimeTypes) {
 		Assert.notNull(objectMapper, "ObjectMapper must not be null");
 		this.defaultObjectMapper = objectMapper;
-		this.mimeTypes = (!ObjectUtils.isEmpty(mimeTypes) ? List.of(mimeTypes) : defaultMimeTypes);
+		this.mimeTypes = !ObjectUtils.isEmpty(mimeTypes) ?
+				Collections.unmodifiableList(Arrays.asList(mimeTypes)) : DEFAULT_MIME_TYPES;
 	}
 
 
@@ -180,19 +182,7 @@ public abstract class Jackson2CodecSupport {
 				result.addAll(entry.getValue().keySet());
 			}
 		}
-		if (!CollectionUtils.isEmpty(result)) {
-			return result;
-		}
-		return (ProblemDetail.class.isAssignableFrom(elementClass) ? getMediaTypesForProblemDetail() : getMimeTypes());
-	}
-
-	/**
-	 * Return the supported media type(s) for {@link ProblemDetail}.
-	 * By default, an empty list, unless overridden in subclasses.
-	 * @since 6.0.5
-	 */
-	protected List<MimeType> getMediaTypesForProblemDetail() {
-		return Collections.emptyList();
+		return (CollectionUtils.isEmpty(result) ? getMimeTypes() : result);
 	}
 
 	protected boolean supportsMimeType(@Nullable MimeType mimeType) {
@@ -254,7 +244,7 @@ public abstract class Jackson2CodecSupport {
 
 	@Nullable
 	protected MethodParameter getParameter(ResolvableType type) {
-		return (type.getSource() instanceof MethodParameter methodParameter ? methodParameter : null);
+		return (type.getSource() instanceof MethodParameter ? (MethodParameter) type.getSource() : null);
 	}
 
 	@Nullable

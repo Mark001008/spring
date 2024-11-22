@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -55,14 +55,15 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Collections.emptyMap;
 import static java.util.Collections.singletonMap;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.params.provider.Arguments.argumentSet;
+import static org.junit.jupiter.api.Named.named;
+import static org.junit.jupiter.params.provider.Arguments.arguments;
 import static org.springframework.core.ResolvableType.forClass;
 import static org.springframework.core.io.buffer.DataBufferUtils.release;
 
 /**
  * @author Arjen Poutsma
  */
-class DefaultPartHttpMessageReaderTests {
+class DefaultPartHttpMessageReaderTests  {
 
 	private static final String LOREM_IPSUM = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer iaculis metus id vestibulum nullam.";
 
@@ -117,10 +118,6 @@ class DefaultPartHttpMessageReaderTests {
 		Flux<Part> result = reader.read(forClass(Part.class), request, emptyMap());
 
 		StepVerifier.create(result)
-				.consumeNextWith(part -> {
-					assertThat(part.headers().getFirst("Header")).isEqualTo("Value");
-					part.content().subscribe(DataBufferUtils::release);
-				})
 				.expectError(DecodingException.class)
 				.verify();
 	}
@@ -138,7 +135,7 @@ class DefaultPartHttpMessageReaderTests {
 	}
 
 	@ParameterizedDefaultPartHttpMessageReaderTest
-	void noEndHeader(DefaultPartHttpMessageReader reader) {
+	void noEndHeader(DefaultPartHttpMessageReader reader)  {
 		MockServerHttpRequest request = createRequest(
 				new ClassPathResource("no-end-header.multipart", getClass()), "boundary");
 		Flux<Part> result = reader.read(forClass(Part.class), request, emptyMap());
@@ -300,23 +297,6 @@ class DefaultPartHttpMessageReaderTests {
 		latch.await();
 	}
 
-	@ParameterizedDefaultPartHttpMessageReaderTest
-	void emptyLastPart(DefaultPartHttpMessageReader reader) throws InterruptedException {
-		MockServerHttpRequest request = createRequest(
-				new ClassPathResource("empty-part.multipart", getClass()), "LiG0chJ0k7YtLt-FzTklYFgz50i88xJCW5jD");
-
-		Flux<Part> result = reader.read(forClass(Part.class), request, emptyMap());
-
-		CountDownLatch latch = new CountDownLatch(2);
-		StepVerifier.create(result)
-				.consumeNextWith(part -> testPart(part, null, "", latch))
-				.consumeNextWith(part -> testPart(part, null, "", latch))
-				.verifyComplete();
-
-		latch.await();
-	}
-
-
 	private void testBrowser(DefaultPartHttpMessageReader reader, Resource resource, String boundary)
 			throws InterruptedException {
 
@@ -429,21 +409,27 @@ class DefaultPartHttpMessageReaderTests {
 
 	@Retention(RetentionPolicy.RUNTIME)
 	@Target(ElementType.METHOD)
-	@ParameterizedTest
+	@ParameterizedTest(name = "[{index}] {0}")
 	@MethodSource("org.springframework.http.codec.multipart.DefaultPartHttpMessageReaderTests#messageReaders()")
 	@interface ParameterizedDefaultPartHttpMessageReaderTest {
 	}
 
 	static Stream<Arguments> messageReaders() {
+		DefaultPartHttpMessageReader streaming = new DefaultPartHttpMessageReader();
+		streaming.setStreaming(true);
+
 		DefaultPartHttpMessageReader inMemory = new DefaultPartHttpMessageReader();
+		inMemory.setStreaming(false);
 		inMemory.setMaxInMemorySize(1000);
 
 		DefaultPartHttpMessageReader onDisk = new DefaultPartHttpMessageReader();
+		onDisk.setStreaming(false);
 		onDisk.setMaxInMemorySize(100);
 
 		return Stream.of(
-				argumentSet("in-memory", inMemory),
-				argumentSet("on-disk", onDisk));
+				arguments(named("streaming", streaming)),
+				arguments(named("in-memory", inMemory)),
+				arguments(named("on-disk", onDisk)));
 	}
 
 }

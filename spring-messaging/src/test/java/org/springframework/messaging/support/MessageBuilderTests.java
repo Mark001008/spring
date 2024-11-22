@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -150,28 +150,28 @@ class MessageBuilderTests {
 	}
 
 	@Test
-	void notModifiedSameMessage() {
+	void notModifiedSameMessage() throws Exception {
 		Message<?> original = MessageBuilder.withPayload("foo").build();
 		Message<?> result = MessageBuilder.fromMessage(original).build();
 		assertThat(result).isEqualTo(original);
 	}
 
 	@Test
-	void containsHeaderNotModifiedSameMessage() {
+	void containsHeaderNotModifiedSameMessage() throws Exception {
 		Message<?> original = MessageBuilder.withPayload("foo").setHeader("bar", 42).build();
 		Message<?> result = MessageBuilder.fromMessage(original).build();
 		assertThat(result).isEqualTo(original);
 	}
 
 	@Test
-	void sameHeaderValueAddedNotModifiedSameMessage() {
+	void sameHeaderValueAddedNotModifiedSameMessage() throws Exception {
 		Message<?> original = MessageBuilder.withPayload("foo").setHeader("bar", 42).build();
 		Message<?> result = MessageBuilder.fromMessage(original).setHeader("bar", 42).build();
 		assertThat(result).isEqualTo(original);
 	}
 
 	@Test
-	void copySameHeaderValuesNotModifiedSameMessage() {
+	void copySameHeaderValuesNotModifiedSameMessage() throws Exception {
 		Date current = new Date();
 		Map<String, Object> originalHeaders = new HashMap<>();
 		originalHeaders.put("b", "xyz");

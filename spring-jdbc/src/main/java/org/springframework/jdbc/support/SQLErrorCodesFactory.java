@@ -54,7 +54,7 @@ public class SQLErrorCodesFactory {
 
 	/**
 	 * The name of custom SQL error codes file, loading from the root
-	 * of the class path (for example, from the "/WEB-INF/classes" directory).
+	 * of the class path (e.g. from the "/WEB-INF/classes" directory).
 	 */
 	public static final String SQL_ERROR_CODE_OVERRIDE_PATH = "sql-error-codes.xml";
 
@@ -68,20 +68,14 @@ public class SQLErrorCodesFactory {
 
 	/**
 	 * Keep track of a single instance, so we can return it to classes that request it.
-	 * Lazily initialized in order to avoid making {@code SQLErrorCodesFactory} constructor
-	 * reachable on native images when not needed.
 	 */
-	@Nullable
-	private static SQLErrorCodesFactory instance;
+	private static final SQLErrorCodesFactory instance = new SQLErrorCodesFactory();
 
 
 	/**
 	 * Return the singleton instance.
 	 */
 	public static SQLErrorCodesFactory getInstance() {
-		if (instance == null) {
-			instance = new SQLErrorCodesFactory();
-		}
 		return instance;
 	}
 

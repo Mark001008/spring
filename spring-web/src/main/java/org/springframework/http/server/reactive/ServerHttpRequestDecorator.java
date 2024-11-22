@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2021 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,6 @@ package org.springframework.http.server.reactive;
 
 import java.net.InetSocketAddress;
 import java.net.URI;
-import java.util.Map;
 
 import reactor.core.publisher.Flux;
 
@@ -62,18 +61,19 @@ public class ServerHttpRequestDecorator implements ServerHttpRequest {
 	}
 
 	@Override
+	@Nullable
 	public HttpMethod getMethod() {
 		return getDelegate().getMethod();
 	}
 
 	@Override
-	public URI getURI() {
-		return getDelegate().getURI();
+	public String getMethodValue() {
+		return getDelegate().getMethodValue();
 	}
 
 	@Override
-	public Map<String, Object> getAttributes() {
-		return getDelegate().getAttributes();
+	public URI getURI() {
+		return getDelegate().getURI();
 	}
 
 	@Override
@@ -119,11 +119,6 @@ public class ServerHttpRequestDecorator implements ServerHttpRequest {
 		return getDelegate().getBody();
 	}
 
-	@Override
-	public String toString() {
-		return getClass().getSimpleName() + " [delegate=" + getDelegate() + "]";
-	}
-
 
 	/**
 	 * Return the native request of the underlying server API, if possible,
@@ -134,15 +129,22 @@ public class ServerHttpRequestDecorator implements ServerHttpRequest {
 	 * @since 5.3.3
 	 */
 	public static <T> T getNativeRequest(ServerHttpRequest request) {
-		if (request instanceof AbstractServerHttpRequest abstractServerHttpRequest) {
-			return abstractServerHttpRequest.getNativeRequest();
+		if (request instanceof AbstractServerHttpRequest) {
+			return ((AbstractServerHttpRequest) request).getNativeRequest();
 		}
-		else if (request instanceof ServerHttpRequestDecorator serverHttpRequestDecorator) {
-			return getNativeRequest(serverHttpRequestDecorator.getDelegate());
+		else if (request instanceof ServerHttpRequestDecorator) {
+			return getNativeRequest(((ServerHttpRequestDecorator) request).getDelegate());
 		}
 		else {
-			throw new IllegalArgumentException("Cannot find native request in " + request.getClass().getName());
+			throw new IllegalArgumentException(
+					"Can't find native request in " + request.getClass().getName());
 		}
+	}
+
+
+	@Override
+	public String toString() {
+		return getClass().getSimpleName() + " [delegate=" + getDelegate() + "]";
 	}
 
 }

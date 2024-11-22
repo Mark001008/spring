@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2023 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,6 +25,7 @@ import org.springframework.context.event.ApplicationListenerMethodAdapter;
 import org.springframework.context.event.EventListener;
 import org.springframework.context.event.GenericApplicationListener;
 import org.springframework.core.annotation.AnnotatedElementUtils;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.util.Assert;
 
 /**
@@ -49,6 +50,8 @@ public class TransactionalApplicationListenerMethodAdapter extends ApplicationLi
 
 	private final TransactionPhase transactionPhase;
 
+	private final boolean fallbackExecution;
+
 	private final List<SynchronizationCallback> callbacks = new CopyOnWriteArrayList<>();
 
 
@@ -66,6 +69,7 @@ public class TransactionalApplicationListenerMethodAdapter extends ApplicationLi
 			throw new IllegalStateException("No TransactionalEventListener annotation found on method: " + method);
 		}
 		this.transactionPhase = eventAnn.phase();
+		this.fallbackExecution = eventAnn.fallbackExecution();
 	}
 
 
@@ -83,12 +87,12 @@ public class TransactionalApplicationListenerMethodAdapter extends ApplicationLi
 
 	@Override
 	public void onApplicationEvent(ApplicationEvent event) {
-		if (TransactionalApplicationListenerSynchronization.register(event, this, this.callbacks)) {
-			if (logger.isDebugEnabled()) {
-				logger.debug("Registered transaction synchronization for " + event);
-			}
+		if (TransactionSynchronizationManager.isSynchronizationActive() &&
+				TransactionSynchronizationManager.isActualTransactionActive()) {
+			TransactionSynchronizationManager.registerSynchronization(
+					new TransactionalApplicationListenerSynchronization<>(event, this, this.callbacks));
 		}
-		else if (isDefaultExecution()) {
+		else if (this.fallbackExecution) {
 			if (getTransactionPhase() == TransactionPhase.AFTER_ROLLBACK && logger.isWarnEnabled()) {
 				logger.warn("Processing " + event + " as a fallback execution on AFTER_ROLLBACK phase");
 			}

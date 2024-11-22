@@ -77,7 +77,7 @@ public class PathEditor extends PropertyEditorSupport {
 		boolean nioPathCandidate = !text.startsWith(ResourceUtils.CLASSPATH_URL_PREFIX);
 		if (nioPathCandidate && !text.startsWith("/")) {
 			try {
-				URI uri = ResourceUtils.toURI(text);
+				URI uri = new URI(text);
 				String scheme = uri.getScheme();
 				if (scheme != null) {
 					// No NIO candidate except for "C:" style drive letters

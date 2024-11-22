@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,7 +42,7 @@ class BeforeAdviceBindingTests {
 
 	private ClassPathXmlApplicationContext ctx;
 
-	private AdviceBindingCollaborator mockCollaborator = mock();
+	private AdviceBindingCollaborator mockCollaborator;
 
 	private ITestBean testBeanProxy;
 
@@ -61,6 +61,7 @@ class BeforeAdviceBindingTests {
 
 		AdviceBindingTestAspect beforeAdviceAspect = (AdviceBindingTestAspect) ctx.getBean("testAspect");
 
+		mockCollaborator = mock(AdviceBindingCollaborator.class);
 		beforeAdviceAspect.setCollaborator(mockCollaborator);
 	}
 
@@ -101,4 +102,19 @@ class BeforeAdviceBindingTests {
 		verify(mockCollaborator).needsJoinPointStaticPart("getAge");
 	}
 
+}
+
+
+class AuthenticationLogger {
+
+	public void logAuthenticationAttempt(String username) {
+		System.out.println("User [" + username + "] attempting to authenticate");
+	}
+
+}
+
+class SecurityManager {
+	public boolean authenticate(String username, String password) {
+		return false;
+	}
 }

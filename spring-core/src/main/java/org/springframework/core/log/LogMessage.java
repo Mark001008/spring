@@ -135,7 +135,7 @@ public abstract class LogMessage implements CharSequence {
 	/**
 	 * Build a lazily formatted message from the given format string and varargs.
 	 * <p>This varargs {@code format()} variant may be costly. You should therefore
-	 * use the individual argument variants whenever possible;
+	 * use the individual argument variants whenever possible:
 	 * {@link #format(String, Object)}, {@link #format(String, Object, Object)}, etc.
 	 * @param format the format string (following {@link String#format} rules)
 	 * @param args the varargs array (can be {@code null} and can contain {@code null}
@@ -163,7 +163,7 @@ public abstract class LogMessage implements CharSequence {
 	}
 
 
-	private abstract static class FormatMessage extends LogMessage {
+	private static abstract class FormatMessage extends LogMessage {
 
 		protected final String format;
 

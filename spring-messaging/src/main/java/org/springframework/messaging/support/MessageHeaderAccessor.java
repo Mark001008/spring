@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -123,16 +123,12 @@ public class MessageHeaderAccessor {
 	@Nullable
 	private IdGenerator idGenerator;
 
-	private MessageHeaderAccessor(@Nullable MessageHeaders headers) {
-		this.headers = new MutableMessageHeaders(headers);
-	}
-
 
 	/**
 	 * A constructor to create new headers.
 	 */
 	public MessageHeaderAccessor() {
-		this((MessageHeaders) null);
+		this(null);
 	}
 
 	/**
@@ -140,26 +136,7 @@ public class MessageHeaderAccessor {
 	 * @param message a message to copy the headers from, or {@code null} if none
 	 */
 	public MessageHeaderAccessor(@Nullable Message<?> message) {
-		this(message != null ? message.getHeaders() : null);
-	}
-
-
-	/**
-	 * Create an instance from a plain {@link Map}.
-	 * @param map the raw headers
-	 * @since 6.2
-	 */
-	public static MessageHeaderAccessor fromMap(@Nullable Map<String, Object> map) {
-		return fromMessageHeaders(new MessageHeaders(map));
-	}
-
-	/**
-	 * Create an instance from an existing {@link MessageHeaders} instance.
-	 * @param headers the headers
-	 * @since 6.2
-	 */
-	public static MessageHeaderAccessor fromMessageHeaders(@Nullable MessageHeaders headers) {
-		return new MessageHeaderAccessor(headers);
+		this.headers = new MutableMessageHeaders(message != null ? message.getHeaders() : null);
 	}
 
 
@@ -439,7 +416,7 @@ public class MessageHeaderAccessor {
 		if (value == null) {
 			return null;
 		}
-		return (value instanceof UUID uuid ? uuid : UUID.fromString(value.toString()));
+		return (value instanceof UUID ? (UUID) value : UUID.fromString(value.toString()));
 	}
 
 	@Nullable
@@ -448,7 +425,7 @@ public class MessageHeaderAccessor {
 		if (value == null) {
 			return null;
 		}
-		return (value instanceof Long num ? num : Long.parseLong(value.toString()));
+		return (value instanceof Long ? (Long) value : Long.parseLong(value.toString()));
 	}
 
 	public void setContentType(MimeType contentType) {
@@ -461,7 +438,7 @@ public class MessageHeaderAccessor {
 		if (value == null) {
 			return null;
 		}
-		return (value instanceof MimeType mimeType ? mimeType : MimeType.valueOf(value.toString()));
+		return (value instanceof MimeType ? (MimeType) value : MimeType.valueOf(value.toString()));
 	}
 
 	private Charset getCharset() {
@@ -518,12 +495,14 @@ public class MessageHeaderAccessor {
 	}
 
 	protected String getShortPayloadLogMessage(Object payload) {
-		if (payload instanceof String payloadText) {
+		if (payload instanceof String) {
+			String payloadText = (String) payload;
 			return (payloadText.length() < 80) ?
 				" payload=" + payloadText :
 				" payload=" + payloadText.substring(0, 80) + "...(truncated)";
 		}
-		else if (payload instanceof byte[] bytes) {
+		else if (payload instanceof byte[]) {
+			byte[] bytes = (byte[]) payload;
 			if (isReadableContentType()) {
 				return (bytes.length < 80) ?
 						" payload=" + new String(bytes, getCharset()) :
@@ -545,7 +524,8 @@ public class MessageHeaderAccessor {
 		if (payload instanceof String) {
 			return " payload=" + payload;
 		}
-		else if (payload instanceof byte[] bytes) {
+		else if (payload instanceof byte[]) {
+			byte[] bytes = (byte[]) payload;
 			if (isReadableContentType()) {
 				return " payload=" + new String(bytes, getCharset());
 			}
@@ -621,9 +601,10 @@ public class MessageHeaderAccessor {
 	public static <T extends MessageHeaderAccessor> T getAccessor(
 			MessageHeaders messageHeaders, @Nullable Class<T> requiredType) {
 
-		if (messageHeaders instanceof MutableMessageHeaders mutableHeaders) {
+		if (messageHeaders instanceof MutableMessageHeaders) {
+			MutableMessageHeaders mutableHeaders = (MutableMessageHeaders) messageHeaders;
 			MessageHeaderAccessor headerAccessor = mutableHeaders.getAccessor();
-			if (requiredType == null || requiredType.isInstance(headerAccessor)) {
+			if (requiredType == null || requiredType.isInstance(headerAccessor))  {
 				return (T) headerAccessor;
 			}
 		}
@@ -640,7 +621,8 @@ public class MessageHeaderAccessor {
 	 * @since 4.1
 	 */
 	public static MessageHeaderAccessor getMutableAccessor(Message<?> message) {
-		if (message.getHeaders() instanceof MutableMessageHeaders mutableHeaders) {
+		if (message.getHeaders() instanceof MutableMessageHeaders) {
+			MutableMessageHeaders mutableHeaders = (MutableMessageHeaders) message.getHeaders();
 			MessageHeaderAccessor accessor = mutableHeaders.getAccessor();
 			return (accessor.isMutable() ? accessor : accessor.createAccessor(message));
 		}

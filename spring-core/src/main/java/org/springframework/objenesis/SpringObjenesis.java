@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2021 the original author or authors.
+ * Copyright 2002-2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -91,7 +91,7 @@ public class SpringObjenesis implements Objenesis {
 	 * @param clazz the class to create an instance of
 	 * @param useCache whether to use the instantiator cache
 	 * (typically {@code true} but can be set to {@code false}
-	 * for example, for reloadable classes)
+	 * e.g. for reloadable classes)
 	 * @return the new instance (never {@code null})
 	 * @throws ObjenesisException if instance creation failed
 	 */
@@ -102,12 +102,10 @@ public class SpringObjenesis implements Objenesis {
 		return getInstantiatorOf(clazz).newInstance();
 	}
 
-	@Override
 	public <T> T newInstance(Class<T> clazz) {
 		return getInstantiatorOf(clazz).newInstance();
 	}
 
-	@Override
 	@SuppressWarnings("unchecked")
 	public <T> ObjectInstantiator<T> getInstantiatorOf(Class<T> clazz) {
 		ObjectInstantiator<?> instantiator = this.cache.get(clazz);

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,7 +29,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalLong;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Consumer;
 
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -49,7 +48,6 @@ import org.springframework.util.Assert;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
-import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.reactive.function.BodyExtractor;
 import org.springframework.web.reactive.function.server.HandlerStrategies;
 import org.springframework.web.reactive.function.server.ServerRequest;
@@ -134,7 +132,6 @@ public final class MockServerRequest implements ServerRequest {
 	}
 
 	@Override
-	@Deprecated
 	public String methodName() {
 		return this.method.name();
 	}
@@ -222,20 +219,6 @@ public final class MockServerRequest implements ServerRequest {
 	}
 
 	@Override
-	@SuppressWarnings("unchecked")
-	public <T> Mono<T> bind(Class<T> bindType) {
-		Assert.state(this.body != null, "No body");
-		return (Mono<T>) this.body;
-	}
-
-	@Override
-	@SuppressWarnings("unchecked")
-	public <T> Mono<T> bind(Class<T> bindType, Consumer<WebDataBinder> dataBinderCustomizer) {
-		Assert.state(this.body != null, "No body");
-		return (Mono<T>) this.body;
-	}
-
-	@Override
 	public Map<String, Object> attributes() {
 		return this.attributes;
 	}
@@ -316,6 +299,13 @@ public final class MockServerRequest implements ServerRequest {
 		Builder pathVariables(Map<String, String> pathVariables);
 
 		Builder session(WebSession session);
+
+		/**
+		 * Sets the request {@link Principal}.
+		 * @deprecated in favor of {@link #principal(Principal)}
+		 */
+		@Deprecated
+		Builder session(Principal principal);
 
 		Builder principal(Principal principal);
 
@@ -474,6 +464,12 @@ public final class MockServerRequest implements ServerRequest {
 		}
 
 		@Override
+		@Deprecated
+		public Builder session(Principal principal) {
+			return principal(principal);
+		}
+
+		@Override
 		public Builder principal(Principal principal) {
 			Assert.notNull(principal, "'principal' must not be null");
 			this.principal = principal;
@@ -569,7 +565,6 @@ public final class MockServerRequest implements ServerRequest {
 		}
 
 		@Override
-		@Nullable
 		public InetSocketAddress host() {
 			return delegate().getHost();
 		}

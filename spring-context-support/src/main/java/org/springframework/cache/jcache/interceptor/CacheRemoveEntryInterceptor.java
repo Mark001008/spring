@@ -22,7 +22,6 @@ import org.springframework.cache.Cache;
 import org.springframework.cache.interceptor.CacheErrorHandler;
 import org.springframework.cache.interceptor.CacheOperationInvocationContext;
 import org.springframework.cache.interceptor.CacheOperationInvoker;
-import org.springframework.lang.Nullable;
 
 /**
  * Intercept methods annotated with {@link CacheRemove}.
@@ -39,7 +38,6 @@ class CacheRemoveEntryInterceptor extends AbstractKeyCacheInterceptor<CacheRemov
 
 
 	@Override
-	@Nullable
 	protected Object invoke(
 			CacheOperationInvocationContext<CacheRemoveOperation> context, CacheOperationInvoker invoker) {
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
 
 package org.springframework.web.servlet.mvc.method.annotation;
 
-import java.lang.annotation.Annotation;
 import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
@@ -25,22 +24,17 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Predicate;
-import java.util.stream.Stream;
 
-import jakarta.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletRequest;
 
 import org.springframework.context.EmbeddedValueResolverAware;
 import org.springframework.core.annotation.AnnotatedElementUtils;
 import org.springframework.core.annotation.MergedAnnotation;
-import org.springframework.core.annotation.MergedAnnotationPredicates;
 import org.springframework.core.annotation.MergedAnnotations;
-import org.springframework.core.annotation.MergedAnnotations.SearchStrategy;
-import org.springframework.core.annotation.RepeatableContainers;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Controller;
 import org.springframework.util.Assert;
 import org.springframework.util.CollectionUtils;
-import org.springframework.util.StringUtils;
 import org.springframework.util.StringValueResolver;
 import org.springframework.web.accept.ContentNegotiationManager;
 import org.springframework.web.bind.annotation.CrossOrigin;
@@ -49,7 +43,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.method.HandlerMethod;
-import org.springframework.web.service.annotation.HttpExchange;
 import org.springframework.web.servlet.handler.MatchableHandlerMapping;
 import org.springframework.web.servlet.handler.RequestMatchResult;
 import org.springframework.web.servlet.mvc.condition.AbstractRequestCondition;
@@ -62,9 +55,9 @@ import org.springframework.web.util.UrlPathHelper;
 import org.springframework.web.util.pattern.PathPatternParser;
 
 /**
- * Creates {@link RequestMappingInfo} instances from type-level and method-level
- * {@link RequestMapping @RequestMapping} and {@link HttpExchange @HttpExchange}
- * annotations in {@link Controller @Controller} classes.
+ * Creates {@link RequestMappingInfo} instances from type and method-level
+ * {@link RequestMapping @RequestMapping} annotations in
+ * {@link Controller @Controller} classes.
  *
  * <p><strong>Deprecation Note:</strong></p> In 5.2.4,
  * {@link #setUseSuffixPatternMatch(boolean) useSuffixPatternMatch} and
@@ -78,24 +71,16 @@ import org.springframework.web.util.pattern.PathPatternParser;
  * @author Arjen Poutsma
  * @author Rossen Stoyanchev
  * @author Sam Brannen
- * @author Olga Maciaszek-Sharma
  * @since 3.1
  */
 public class RequestMappingHandlerMapping extends RequestMappingInfoHandlerMapping
 		implements MatchableHandlerMapping, EmbeddedValueResolverAware {
 
-	private static final String[] EMPTY_STRING_ARRAY = new String[0];
-
-	private static final RequestMethod[] EMPTY_REQUEST_METHOD_ARRAY = new RequestMethod[0];
-
-
-	private boolean defaultPatternParser = true;
-
 	private boolean useSuffixPatternMatch = false;
 
 	private boolean useRegisteredSuffixPatternMatch = false;
 
-	private boolean useTrailingSlashMatch = false;
+	private boolean useTrailingSlashMatch = true;
 
 	private Map<String, Predicate<Class<?>>> pathPrefixes = Collections.emptyMap();
 
@@ -106,14 +91,6 @@ public class RequestMappingHandlerMapping extends RequestMappingInfoHandlerMappi
 
 	private RequestMappingInfo.BuilderConfiguration config = new RequestMappingInfo.BuilderConfiguration();
 
-
-	@Override
-	public void setPatternParser(@Nullable PathPatternParser patternParser) {
-		if (patternParser != null) {
-			this.defaultPatternParser = false;
-		}
-		super.setPatternParser(patternParser);
-	}
 
 	/**
 	 * Whether to use suffix pattern match (".*") when matching patterns to
@@ -153,12 +130,8 @@ public class RequestMappingHandlerMapping extends RequestMappingInfoHandlerMappi
 	/**
 	 * Whether to match to URLs irrespective of the presence of a trailing slash.
 	 * If enabled a method mapped to "/users" also matches to "/users/".
-	 * <p>The default was changed in 6.0 from {@code true} to {@code false} in
-	 * order to support the deprecation of the property.
-	 * @deprecated as of 6.0, see
-	 * {@link PathPatternParser#setMatchOptionalTrailingSeparator(boolean)}
+	 * <p>The default value is {@code true}.
 	 */
-	@Deprecated(since = "6.0")
 	public void setUseTrailingSlashMatch(boolean useTrailingSlashMatch) {
 		this.useTrailingSlashMatch = useTrailingSlashMatch;
 		if (getPatternParser() != null) {
@@ -169,9 +142,8 @@ public class RequestMappingHandlerMapping extends RequestMappingInfoHandlerMappi
 	/**
 	 * Configure path prefixes to apply to controller methods.
 	 * <p>Prefixes are used to enrich the mappings of every {@code @RequestMapping}
-	 * method and {@code @HttpExchange} method whose controller type is matched
-	 * by a corresponding {@code Predicate} in the map. The prefix for the first
-	 * matching predicate is used, assuming the input map has predictable order.
+	 * method whose controller type is matched by the corresponding
+	 * {@code Predicate}. The prefix for the first matching predicate is used.
 	 * <p>Consider using {@link org.springframework.web.method.HandlerTypePredicate
 	 * HandlerTypePredicate} to group controllers.
 	 * @param prefixes a map with path prefixes as key
@@ -218,12 +190,6 @@ public class RequestMappingHandlerMapping extends RequestMappingInfoHandlerMappi
 		this.config = new RequestMappingInfo.BuilderConfiguration();
 		this.config.setTrailingSlashMatch(useTrailingSlashMatch());
 		this.config.setContentNegotiationManager(getContentNegotiationManager());
-
-		if (getPatternParser() != null && this.defaultPatternParser &&
-				(this.useSuffixPatternMatch || this.useRegisteredSuffixPatternMatch)) {
-
-			setPatternParser(null);
-		}
 
 		if (getPatternParser() != null) {
 			this.config.setPatternParser(getPatternParser());
@@ -280,7 +246,7 @@ public class RequestMappingHandlerMapping extends RequestMappingInfoHandlerMappi
 	}
 
 	/**
-	 * Obtain a {@link RequestMappingInfo.BuilderConfiguration} that reflects
+	 * Obtain a {@link RequestMappingInfo.BuilderConfiguration} that can reflects
 	 * the internal configuration of this {@code HandlerMapping} and can be used
 	 * to set {@link RequestMappingInfo.Builder#options(RequestMappingInfo.BuilderConfiguration)}.
 	 * <p>This is useful for programmatic registration of request mappings via
@@ -295,19 +261,20 @@ public class RequestMappingHandlerMapping extends RequestMappingInfoHandlerMappi
 
 	/**
 	 * {@inheritDoc}
-	 * <p>Expects a handler to have a type-level @{@link Controller} annotation.
+	 * <p>Expects a handler to have either a type-level @{@link Controller}
+	 * annotation or a type-level @{@link RequestMapping} annotation.
 	 */
 	@Override
 	protected boolean isHandler(Class<?> beanType) {
-		return AnnotatedElementUtils.hasAnnotation(beanType, Controller.class);
+		return (AnnotatedElementUtils.hasAnnotation(beanType, Controller.class) ||
+				AnnotatedElementUtils.hasAnnotation(beanType, RequestMapping.class));
 	}
 
 	/**
-	 * Uses type-level and method-level {@link RequestMapping @RequestMapping}
-	 * and {@link HttpExchange @HttpExchange} annotations to create the
-	 * {@link RequestMappingInfo}.
-	 * @return the created {@code RequestMappingInfo}, or {@code null} if the method
-	 * does not have a {@code @RequestMapping} or {@code @HttpExchange} annotation
+	 * Uses method and type-level @{@link RequestMapping} annotations to create
+	 * the RequestMappingInfo.
+	 * @return the created RequestMappingInfo, or {@code null} if the method
+	 * does not have a {@code @RequestMapping} annotation.
 	 * @see #getCustomMethodCondition(Method)
 	 * @see #getCustomTypeCondition(Class)
 	 */
@@ -319,9 +286,6 @@ public class RequestMappingHandlerMapping extends RequestMappingInfoHandlerMappi
 			RequestMappingInfo typeInfo = createRequestMappingInfo(handlerType);
 			if (typeInfo != null) {
 				info = typeInfo.combine(info);
-			}
-			if (info.isEmptyMapping()) {
-				info = info.mutate().paths("", "/").options(this.config).build();
 			}
 			String prefix = getPathPrefix(handlerType);
 			if (prefix != null) {
@@ -345,37 +309,19 @@ public class RequestMappingHandlerMapping extends RequestMappingInfoHandlerMappi
 		return null;
 	}
 
+	/**
+	 * Delegates to {@link #createRequestMappingInfo(RequestMapping, RequestCondition)},
+	 * supplying the appropriate custom {@link RequestCondition} depending on whether
+	 * the supplied {@code annotatedElement} is a class or method.
+	 * @see #getCustomTypeCondition(Class)
+	 * @see #getCustomMethodCondition(Method)
+	 */
 	@Nullable
 	private RequestMappingInfo createRequestMappingInfo(AnnotatedElement element) {
-		RequestMappingInfo requestMappingInfo = null;
-		RequestCondition<?> customCondition = (element instanceof Class<?> clazz ?
-				getCustomTypeCondition(clazz) : getCustomMethodCondition((Method) element));
-
-		List<AnnotationDescriptor> descriptors = getAnnotationDescriptors(element);
-
-		List<AnnotationDescriptor> requestMappings = descriptors.stream()
-				.filter(desc -> desc.annotation instanceof RequestMapping).toList();
-		if (!requestMappings.isEmpty()) {
-			if (requestMappings.size() > 1 && logger.isWarnEnabled()) {
-				logger.warn("Multiple @RequestMapping annotations found on %s, but only the first will be used: %s"
-						.formatted(element, requestMappings));
-			}
-			requestMappingInfo = createRequestMappingInfo((RequestMapping) requestMappings.get(0).annotation, customCondition);
-		}
-
-		List<AnnotationDescriptor> httpExchanges = descriptors.stream()
-				.filter(desc -> desc.annotation instanceof HttpExchange).toList();
-		if (!httpExchanges.isEmpty()) {
-			Assert.state(requestMappingInfo == null,
-					() -> "%s is annotated with @RequestMapping and @HttpExchange annotations, but only one is allowed: %s"
-							.formatted(element, Stream.of(requestMappings, httpExchanges).flatMap(List::stream).toList()));
-			Assert.state(httpExchanges.size() == 1,
-					() -> "Multiple @HttpExchange annotations found on %s, but only one is allowed: %s"
-							.formatted(element, httpExchanges));
-			requestMappingInfo = createRequestMappingInfo((HttpExchange) httpExchanges.get(0).annotation, customCondition);
-		}
-
-		return requestMappingInfo;
+		RequestMapping requestMapping = AnnotatedElementUtils.findMergedAnnotation(element, RequestMapping.class);
+		RequestCondition<?> condition = (element instanceof Class ?
+				getCustomTypeCondition((Class<?>) element) : getCustomMethodCondition((Method) element));
+		return (requestMapping != null ? createRequestMappingInfo(requestMapping, condition) : null);
 	}
 
 	/**
@@ -412,9 +358,9 @@ public class RequestMappingHandlerMapping extends RequestMappingInfoHandlerMappi
 
 	/**
 	 * Create a {@link RequestMappingInfo} from the supplied
-	 * {@link RequestMapping @RequestMapping} annotation, meta-annotation,
-	 * or synthesized result of merging annotation attributes within an
-	 * annotation hierarchy.
+	 * {@link RequestMapping @RequestMapping} annotation, which is either
+	 * a directly declared annotation, a meta-annotation, or the synthesized
+	 * result of merging annotation attributes within an annotation hierarchy.
 	 */
 	protected RequestMappingInfo createRequestMappingInfo(
 			RequestMapping requestMapping, @Nullable RequestCondition<?> customCondition) {
@@ -427,35 +373,9 @@ public class RequestMappingHandlerMapping extends RequestMappingInfoHandlerMappi
 				.consumes(requestMapping.consumes())
 				.produces(requestMapping.produces())
 				.mappingName(requestMapping.name());
-
 		if (customCondition != null) {
 			builder.customCondition(customCondition);
 		}
-
-		return builder.options(this.config).build();
-	}
-
-	/**
-	 * Create a {@link RequestMappingInfo} from the supplied
-	 * {@link HttpExchange @HttpExchange} annotation, meta-annotation,
-	 * or synthesized result of merging annotation attributes within an
-	 * annotation hierarchy.
-	 * @since 6.1
-	 */
-	protected RequestMappingInfo createRequestMappingInfo(
-			HttpExchange httpExchange, @Nullable RequestCondition<?> customCondition) {
-
-		RequestMappingInfo.Builder builder = RequestMappingInfo
-				.paths(resolveEmbeddedValuesInPatterns(toStringArray(httpExchange.value())))
-				.methods(toMethodArray(httpExchange.method()))
-				.consumes(toStringArray(httpExchange.contentType()))
-				.produces(httpExchange.accept())
-				.headers(httpExchange.headers());
-
-		if (customCondition != null) {
-			builder.customCondition(customCondition);
-		}
-
 		return builder.options(this.config).build();
 	}
 
@@ -474,15 +394,6 @@ public class RequestMappingHandlerMapping extends RequestMappingInfoHandlerMappi
 			}
 			return resolvedPatterns;
 		}
-	}
-
-	private static String[] toStringArray(String value) {
-		return (StringUtils.hasText(value) ? new String[] {value} : EMPTY_STRING_ARRAY);
-	}
-
-	private static RequestMethod[] toMethodArray(String method) {
-		return (StringUtils.hasText(method) ?
-				new RequestMethod[] {RequestMethod.valueOf(method)} : EMPTY_REQUEST_METHOD_ARRAY);
 	}
 
 	@Override
@@ -524,9 +435,8 @@ public class RequestMappingHandlerMapping extends RequestMappingInfoHandlerMappi
 	}
 
 	@Override
-	@Nullable
 	public RequestMatchResult match(HttpServletRequest request, String pattern) {
-		Assert.state(getPatternParser() == null, "This HandlerMapping uses PathPatterns.");
+		Assert.isNull(getPatternParser(), "This HandlerMapping requires a PathPattern");
 		RequestMappingInfo info = RequestMappingInfo.paths(pattern).options(this.config).build();
 		RequestMappingInfo match = info.getMatchingCondition(request);
 		return (match != null && match.getPatternsCondition() != null ?
@@ -537,7 +447,6 @@ public class RequestMappingHandlerMapping extends RequestMappingInfoHandlerMappi
 	}
 
 	@Override
-	@Nullable
 	protected CorsConfiguration initCorsConfiguration(Object handler, Method method, RequestMappingInfo mappingInfo) {
 		HandlerMethod handlerMethod = createHandlerMethod(handler, method);
 		Class<?> beanType = handlerMethod.getBeanType();
@@ -617,43 +526,6 @@ public class RequestMappingHandlerMapping extends RequestMappingInfoHandlerMappi
 		else {
 			return value;
 		}
-	}
-
-	private static List<AnnotationDescriptor> getAnnotationDescriptors(AnnotatedElement element) {
-		return MergedAnnotations.from(element, SearchStrategy.TYPE_HIERARCHY, RepeatableContainers.none())
-				.stream()
-				.filter(MergedAnnotationPredicates.typeIn(RequestMapping.class, HttpExchange.class))
-				.filter(MergedAnnotationPredicates.firstRunOf(MergedAnnotation::getAggregateIndex))
-				.map(AnnotationDescriptor::new)
-				.distinct()
-				.toList();
-	}
-
-	private static class AnnotationDescriptor {
-
-		private final Annotation annotation;
-		private final MergedAnnotation<?> root;
-
-		AnnotationDescriptor(MergedAnnotation<Annotation> mergedAnnotation) {
-			this.annotation = mergedAnnotation.synthesize();
-			this.root = mergedAnnotation.getRoot();
-		}
-
-		@Override
-		public boolean equals(Object obj) {
-			return (obj instanceof AnnotationDescriptor that && this.annotation.equals(that.annotation));
-		}
-
-		@Override
-		public int hashCode() {
-			return this.annotation.hashCode();
-		}
-
-		@Override
-		public String toString() {
-			return this.root.synthesize().toString();
-		}
-
 	}
 
 }

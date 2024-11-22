@@ -31,7 +31,7 @@ import org.springframework.lang.Nullable;
  * <p>{@link org.springframework.context.ApplicationContext} implementations
  * such as a {@link org.springframework.web.context.WebApplicationContext}
  * may register additional standard scopes specific to their environment,
- * for example, {@link org.springframework.web.context.WebApplicationContext#SCOPE_REQUEST "request"}
+ * e.g. {@link org.springframework.web.context.WebApplicationContext#SCOPE_REQUEST "request"}
  * and {@link org.springframework.web.context.WebApplicationContext#SCOPE_SESSION "session"},
  * based on this Scope SPI.
  *
@@ -125,7 +125,7 @@ public interface Scope {
 
 	/**
 	 * Resolve the contextual object for the given key, if any.
-	 * For example, the HttpServletRequest object for key "request".
+	 * E.g. the HttpServletRequest object for key "request".
 	 * @param key the contextual key
 	 * @return the corresponding object, or {@code null} if none found
 	 * @throws IllegalStateException if the underlying scope is not currently active
@@ -138,7 +138,7 @@ public interface Scope {
 	 * <p>The exact meaning of the conversation ID depends on the underlying
 	 * storage mechanism. In the case of session-scoped objects, the
 	 * conversation ID would typically be equal to (or derived from) the
-	 * {@link jakarta.servlet.http.HttpSession#getId() session ID}; in the
+	 * {@link javax.servlet.http.HttpSession#getId() session ID}; in the
 	 * case of a custom conversation that sits within the overall session,
 	 * the specific ID for the current conversation would be appropriate.
 	 * <p><b>Note: This is an optional operation.</b> It is perfectly valid to

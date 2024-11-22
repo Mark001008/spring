@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,8 +31,6 @@ import org.springframework.core.annotation.MergedAnnotationPredicates;
 import org.springframework.core.annotation.MergedAnnotations;
 import org.springframework.core.annotation.MergedAnnotations.SearchStrategy;
 import org.springframework.core.annotation.RepeatableContainers;
-import org.springframework.core.style.DefaultToStringStyler;
-import org.springframework.core.style.SimpleValueStyler;
 import org.springframework.core.style.ToStringCreator;
 import org.springframework.lang.Nullable;
 import org.springframework.test.context.NestedTestConfiguration.EnclosingConfiguration;
@@ -47,8 +45,7 @@ import org.springframework.util.ObjectUtils;
  * and {@link AnnotatedElementUtils}, while transparently honoring
  * {@link NestedTestConfiguration @NestedTestConfiguration} semantics.
  *
- * <p>Mainly for internal use within the <em>Spring TestContext Framework</em>
- * but also supported for third-party integrations with the TestContext framework.
+ * <p>Mainly for internal use within the <em>Spring TestContext Framework</em>.
  *
  * <p>Whereas {@code AnnotationUtils} and {@code AnnotatedElementUtils} provide
  * utilities for <em>getting</em> or <em>finding</em> annotations,
@@ -67,11 +64,10 @@ import org.springframework.util.ObjectUtils;
  * example, {@link ContextConfiguration#inheritLocations}.
  *
  * @author Sam Brannen
- * @since 5.3, though originally since 4.0 as {@code org.springframework.test.util.MetaAnnotationUtils}
+ * @since 5.3, though originally since 4.0 as {@link org.springframework.test.util.MetaAnnotationUtils}
  * @see AnnotationUtils
  * @see AnnotatedElementUtils
  * @see AnnotationDescriptor
- * @see NestedTestConfiguration
  */
 public abstract class TestContextAnnotationUtils {
 
@@ -95,10 +91,7 @@ public abstract class TestContextAnnotationUtils {
 	 * @see #findMergedAnnotation(Class, Class)
 	 */
 	public static boolean hasAnnotation(Class<?> clazz, Class<? extends Annotation> annotationType) {
-		return MergedAnnotations.search(SearchStrategy.TYPE_HIERARCHY)
-				.withEnclosingClasses(TestContextAnnotationUtils::searchEnclosingClass)
-				.from(clazz)
-				.isPresent(annotationType);
+		return (findMergedAnnotation(clazz, annotationType) != null);
 	}
 
 	/**
@@ -132,11 +125,9 @@ public abstract class TestContextAnnotationUtils {
 	private static <T extends Annotation> T findMergedAnnotation(Class<?> clazz, Class<T> annotationType,
 			Predicate<Class<?>> searchEnclosingClass) {
 
-		return MergedAnnotations.search(SearchStrategy.TYPE_HIERARCHY)
-				.withEnclosingClasses(searchEnclosingClass)
-				.from(clazz)
-				.get(annotationType)
-				.synthesize(MergedAnnotation::isPresent).orElse(null);
+		AnnotationDescriptor<T> descriptor =
+				findAnnotationDescriptor(clazz, annotationType, searchEnclosingClass, new HashSet<>());
+		return (descriptor != null ? descriptor.getAnnotation() : null);
 	}
 
 	/**
@@ -250,7 +241,7 @@ public abstract class TestContextAnnotationUtils {
 			return new AnnotationDescriptor<>(clazz, clazz.getAnnotation(annotationType));
 		}
 
-		AnnotationDescriptor<T> descriptor;
+		AnnotationDescriptor<T> descriptor = null;
 
 		// Declared on a composed annotation (i.e., as a meta-annotation)?
 		for (Annotation composedAnn : clazz.getDeclaredAnnotations()) {
@@ -589,9 +580,9 @@ public abstract class TestContextAnnotationUtils {
 		 */
 		@Override
 		public String toString() {
-			return new ToStringCreator(this, new DefaultToStringStyler(new SimpleValueStyler()))
-					.append("rootDeclaringClass", this.rootDeclaringClass)
-					.append("declaringClass", this.declaringClass)
+			return new ToStringCreator(this)
+					.append("rootDeclaringClass", this.rootDeclaringClass.getName())
+					.append("declaringClass", this.declaringClass.getName())
 					.append("annotation", this.annotation)
 					.toString();
 		}

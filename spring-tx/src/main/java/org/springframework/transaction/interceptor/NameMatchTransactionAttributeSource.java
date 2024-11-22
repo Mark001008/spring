@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -62,7 +62,7 @@ public class NameMatchTransactionAttributeSource
 
 	/**
 	 * Set a name/attribute map, consisting of method names
-	 * (for example, "myMethod") and {@link TransactionAttribute} instances.
+	 * (e.g. "myMethod") and {@link TransactionAttribute} instances.
 	 * @see #setProperties
 	 * @see TransactionAttribute
 	 */
@@ -101,8 +101,8 @@ public class NameMatchTransactionAttributeSource
 		if (logger.isDebugEnabled()) {
 			logger.debug("Adding transactional method [" + methodName + "] with attribute [" + attr + "]");
 		}
-		if (this.embeddedValueResolver != null && attr instanceof DefaultTransactionAttribute dta) {
-			dta.resolveAttributeStrings(this.embeddedValueResolver);
+		if (this.embeddedValueResolver != null && attr instanceof DefaultTransactionAttribute) {
+			((DefaultTransactionAttribute) attr).resolveAttributeStrings(this.embeddedValueResolver);
 		}
 		this.nameMap.put(methodName, attr);
 	}
@@ -113,10 +113,10 @@ public class NameMatchTransactionAttributeSource
 	}
 
 	@Override
-	public void afterPropertiesSet() {
+	public void afterPropertiesSet()  {
 		for (TransactionAttribute attr : this.nameMap.values()) {
-			if (attr instanceof DefaultTransactionAttribute dta) {
-				dta.resolveAttributeStrings(this.embeddedValueResolver);
+			if (attr instanceof DefaultTransactionAttribute) {
+				((DefaultTransactionAttribute) attr).resolveAttributeStrings(this.embeddedValueResolver);
 			}
 		}
 	}
@@ -164,8 +164,14 @@ public class NameMatchTransactionAttributeSource
 
 	@Override
 	public boolean equals(@Nullable Object other) {
-		return (this == other || (other instanceof NameMatchTransactionAttributeSource otherTas &&
-				ObjectUtils.nullSafeEquals(this.nameMap, otherTas.nameMap)));
+		if (this == other) {
+			return true;
+		}
+		if (!(other instanceof NameMatchTransactionAttributeSource)) {
+			return false;
+		}
+		NameMatchTransactionAttributeSource otherTas = (NameMatchTransactionAttributeSource) other;
+		return ObjectUtils.nullSafeEquals(this.nameMap, otherTas.nameMap);
 	}
 
 	@Override

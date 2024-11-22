@@ -25,7 +25,6 @@ import org.springframework.expression.spel.ExpressionState;
 import org.springframework.expression.spel.SpelEvaluationException;
 import org.springframework.expression.spel.SpelMessage;
 import org.springframework.expression.spel.support.BooleanTypedValue;
-import org.springframework.lang.Contract;
 import org.springframework.lang.Nullable;
 
 /**
@@ -65,7 +64,6 @@ public class OpAnd extends Operator {
 		}
 	}
 
-	@Contract("null -> fail")
 	private void assertValueNotNull(@Nullable Boolean value) {
 		if (value == null) {
 			throw new SpelEvaluationException(SpelMessage.TYPE_CONVERSION_ERROR, "null", "boolean");

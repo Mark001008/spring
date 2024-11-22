@@ -16,18 +16,14 @@
 
 package org.springframework.orm.jpa;
 
-import javax.sql.DataSource;
-
-import jakarta.persistence.EntityManagerFactory;
-import jakarta.persistence.Persistence;
-import jakarta.persistence.PersistenceException;
-import jakarta.persistence.spi.PersistenceProvider;
-
-import org.springframework.lang.Nullable;
+import javax.persistence.EntityManagerFactory;
+import javax.persistence.Persistence;
+import javax.persistence.PersistenceException;
+import javax.persistence.spi.PersistenceProvider;
 
 /**
  * {@link org.springframework.beans.factory.FactoryBean} that creates a JPA
- * {@link jakarta.persistence.EntityManagerFactory} according to JPA's standard
+ * {@link javax.persistence.EntityManagerFactory} according to JPA's standard
  * <i>standalone</i> bootstrap contract. This is the simplest way to set up a
  * shared JPA EntityManagerFactory in a Spring application context; the
  * EntityManagerFactory can then be passed to JPA-based DAOs via
@@ -46,6 +42,10 @@ import org.springframework.lang.Nullable;
  * more flexible configuration options, consider using Spring's more powerful
  * {@link LocalContainerEntityManagerFactoryBean} instead.
  *
+ * <p><b>NOTE: Spring's JPA support requires JPA 2.1 or higher, as of Spring 5.0.</b>
+ * JPA 1.0/2.0 based applications are still supported; however, a JPA 2.1 compliant
+ * persistence provider is needed at runtime.
+ *
  * @author Juergen Hoeller
  * @author Rod Johnson
  * @since 2.0
@@ -55,51 +55,15 @@ import org.springframework.lang.Nullable;
  * @see LocalContainerEntityManagerFactoryBean
  * @see org.springframework.jndi.JndiObjectFactoryBean
  * @see org.springframework.orm.jpa.support.SharedEntityManagerBean
- * @see jakarta.persistence.Persistence#createEntityManagerFactory
- * @see jakarta.persistence.spi.PersistenceProvider#createEntityManagerFactory
+ * @see javax.persistence.Persistence#createEntityManagerFactory
+ * @see javax.persistence.spi.PersistenceProvider#createEntityManagerFactory
  */
 @SuppressWarnings("serial")
 public class LocalEntityManagerFactoryBean extends AbstractEntityManagerFactoryBean {
 
-	private static final String DATASOURCE_PROPERTY = "jakarta.persistence.dataSource";
-
-
-	/**
-	 * Specify the JDBC DataSource that the JPA persistence provider is supposed
-	 * to use for accessing the database. This is an alternative to keeping the
-	 * JDBC configuration in {@code persistence.xml}, passing in a Spring-managed
-	 * DataSource through the "jakarta.persistence.dataSource" property instead.
-	 * <p>When configured here, the JDBC DataSource will also get autodetected by
-	 * {@link JpaTransactionManager} for exposing JPA transactions to JDBC accessors.
-	 * @since 6.2
-	 * @see #getJpaPropertyMap()
-	 * @see JpaTransactionManager#setDataSource
-	 */
-	public void setDataSource(@Nullable DataSource dataSource) {
-		if (dataSource != null) {
-			getJpaPropertyMap().put(DATASOURCE_PROPERTY, dataSource);
-		}
-		else {
-			getJpaPropertyMap().remove(DATASOURCE_PROPERTY);
-		}
-	}
-
-	/**
-	 * Expose the JDBC DataSource from the "jakarta.persistence.dataSource"
-	 * property, if any.
-	 * @since 6.2
-	 * @see #getJpaPropertyMap()
-	 */
-	@Override
-	@Nullable
-	public DataSource getDataSource() {
-		return (DataSource) getJpaPropertyMap().get(DATASOURCE_PROPERTY);
-	}
-
-
 	/**
 	 * Initialize the EntityManagerFactory for the given configuration.
-	 * @throws jakarta.persistence.PersistenceException in case of JPA initialization errors
+	 * @throws javax.persistence.PersistenceException in case of JPA initialization errors
 	 */
 	@Override
 	protected EntityManagerFactory createNativeEntityManagerFactory() throws PersistenceException {

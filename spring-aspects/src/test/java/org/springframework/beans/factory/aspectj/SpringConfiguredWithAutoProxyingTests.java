@@ -24,10 +24,12 @@ import org.springframework.context.support.ClassPathXmlApplicationContext;
  * @author Ramnivas Laddad
  * @author Juergen Hoeller
  */
-class SpringConfiguredWithAutoProxyingTests {
+public class SpringConfiguredWithAutoProxyingTests {
 
 	@Test
-	void springConfiguredAndAutoProxyUsedTogether() {
+	@SuppressWarnings("resource")
+	public void springConfiguredAndAutoProxyUsedTogether() {
+		// instantiation is sufficient to trigger failure if this is going to fail...
 		new ClassPathXmlApplicationContext("org/springframework/beans/factory/aspectj/springConfigured.xml");
 	}
 

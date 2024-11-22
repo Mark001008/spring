@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,20 +23,22 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import jakarta.servlet.FilterChain;
-import jakarta.servlet.ServletException;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletRequestWrapper;
-import jakarta.servlet.http.HttpServletResponse;
-import jakarta.servlet.http.Part;
+import javax.servlet.FilterChain;
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletRequestWrapper;
+import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.Part;
+
 import org.junit.jupiter.api.Test;
 
 import org.springframework.http.MediaType;
 import org.springframework.http.client.MultipartBodyBuilder;
 import org.springframework.stereotype.Controller;
+import org.springframework.test.web.reactive.server.EntityExchangeResult;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import org.springframework.test.web.servlet.client.MockMvcWebTestClient;
-import org.springframework.util.CollectionUtils;
+import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -45,6 +47,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.web.multipart.MultipartFile;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
 
 /**
  * {@link MockMvcWebTestClient} equivalent of the MockMvc
@@ -58,7 +61,7 @@ public class MultipartControllerTests {
 
 
 	@Test
-	public void multipartRequestWithSingleFile() {
+	public void multipartRequestWithSingleFile() throws Exception {
 
 		byte[] fileContent = "bar".getBytes(StandardCharsets.UTF_8);
 		Map<String, String> json = Collections.singletonMap("name", "yeeeah");
@@ -67,18 +70,28 @@ public class MultipartControllerTests {
 		bodyBuilder.part("file", fileContent).filename("orig");
 		bodyBuilder.part("json", json, MediaType.APPLICATION_JSON);
 
-		testClient.post().uri("/multipartfile")
+		EntityExchangeResult<Void> exchangeResult = testClient.post().uri("/multipartfile")
 				.bodyValue(bodyBuilder.build())
 				.exchange()
 				.expectStatus().isFound()
 				.expectBody().isEmpty();
 
+		// Further assertions on the server response
+		MockMvcWebTestClient.resultActionsFor(exchangeResult)
+				.andExpect(model().attribute("fileContent", fileContent))
+				.andExpect(model().attribute("jsonContent", json));
+
 		// Now try the same with HTTP PUT
-		testClient.put().uri("/multipartfile-via-put")
+		exchangeResult = testClient.put().uri("/multipartfile-via-put")
 				.bodyValue(bodyBuilder.build())
 				.exchange()
 				.expectStatus().isFound()
 				.expectBody().isEmpty();
+
+		// Further assertions on the server response
+		MockMvcWebTestClient.resultActionsFor(exchangeResult)
+				.andExpect(model().attribute("fileContent", fileContent))
+				.andExpect(model().attribute("jsonContent", json));
 	}
 
 	@Test
@@ -89,7 +102,7 @@ public class MultipartControllerTests {
 	}
 
 	@Test
-	public void multipartRequestWithFileArray() {
+	public void multipartRequestWithFileArray() throws Exception {
 		byte[] fileContent = "bar".getBytes(StandardCharsets.UTF_8);
 		Map<String, String> json = Collections.singletonMap("name", "yeeeah");
 
@@ -98,11 +111,16 @@ public class MultipartControllerTests {
 		bodyBuilder.part("file", fileContent).filename("orig");
 		bodyBuilder.part("json", json, MediaType.APPLICATION_JSON);
 
-		testClient.post().uri("/multipartfilearray")
+		EntityExchangeResult<Void> exchangeResult = testClient.post().uri("/multipartfilearray")
 				.bodyValue(bodyBuilder.build())
 				.exchange()
 				.expectStatus().isFound()
 				.expectBody().isEmpty();
+
+		// Further assertions on the server response
+		MockMvcWebTestClient.resultActionsFor(exchangeResult)
+				.andExpect(model().attribute("fileContent", fileContent))
+				.andExpect(model().attribute("jsonContent", json));
 	}
 
 	@Test
@@ -113,7 +131,7 @@ public class MultipartControllerTests {
 	}
 
 	@Test
-	public void multipartRequestWithOptionalFile() {
+	public void multipartRequestWithOptionalFile() throws Exception {
 		byte[] fileContent = "bar".getBytes(StandardCharsets.UTF_8);
 		Map<String, String> json = Collections.singletonMap("name", "yeeeah");
 
@@ -121,60 +139,39 @@ public class MultipartControllerTests {
 		bodyBuilder.part("file", fileContent).filename("orig");
 		bodyBuilder.part("json", json, MediaType.APPLICATION_JSON);
 
-		testClient.post().uri("/optionalfile")
+		EntityExchangeResult<Void> exchangeResult = testClient.post().uri("/optionalfile")
 				.bodyValue(bodyBuilder.build())
 				.exchange()
 				.expectStatus().isFound()
 				.expectBody().isEmpty();
+
+		// Further assertions on the server response
+		MockMvcWebTestClient.resultActionsFor(exchangeResult)
+				.andExpect(model().attribute("fileContent", fileContent))
+				.andExpect(model().attribute("jsonContent", json));
 	}
 
 	@Test
-	public void multipartRequestWithOptionalFileNotPresent() {
+	public void multipartRequestWithOptionalFileNotPresent() throws Exception {
 		Map<String, String> json = Collections.singletonMap("name", "yeeeah");
 
 		MultipartBodyBuilder bodyBuilder = new MultipartBodyBuilder();
 		bodyBuilder.part("json", json, MediaType.APPLICATION_JSON);
 
-		testClient.post().uri("/optionalfile")
+		EntityExchangeResult<Void> exchangeResult = testClient.post().uri("/optionalfile")
 				.bodyValue(bodyBuilder.build())
 				.exchange()
 				.expectStatus().isFound()
 				.expectBody().isEmpty();
+
+		// Further assertions on the server response
+		MockMvcWebTestClient.resultActionsFor(exchangeResult)
+				.andExpect(model().attributeDoesNotExist("fileContent"))
+				.andExpect(model().attribute("jsonContent", json));
 	}
 
 	@Test
-	public void multipartRequestWithOptionalFileArray() {
-		byte[] fileContent = "bar".getBytes(StandardCharsets.UTF_8);
-		Map<String, String> json = Collections.singletonMap("name", "yeeeah");
-
-		MultipartBodyBuilder bodyBuilder = new MultipartBodyBuilder();
-		bodyBuilder.part("file", fileContent).filename("orig");
-		bodyBuilder.part("file", fileContent).filename("orig");
-		bodyBuilder.part("json", json, MediaType.APPLICATION_JSON);
-
-		testClient.post().uri("/optionalfilearray")
-				.bodyValue(bodyBuilder.build())
-				.exchange()
-				.expectStatus().isFound()
-				.expectBody().isEmpty();
-	}
-
-	@Test
-	public void multipartRequestWithOptionalFileArrayNotPresent() {
-		Map<String, String> json = Collections.singletonMap("name", "yeeeah");
-
-		MultipartBodyBuilder bodyBuilder = new MultipartBodyBuilder();
-		bodyBuilder.part("json", json, MediaType.APPLICATION_JSON);
-
-		testClient.post().uri("/optionalfilearray")
-				.bodyValue(bodyBuilder.build())
-				.exchange()
-				.expectStatus().isFound()
-				.expectBody().isEmpty();
-	}
-
-	@Test
-	public void multipartRequestWithOptionalFileList() {
+	public void multipartRequestWithOptionalFileArray() throws Exception {
 		byte[] fileContent = "bar".getBytes(StandardCharsets.UTF_8);
 		Map<String, String> json = Collections.singletonMap("name", "yeeeah");
 
@@ -183,29 +180,80 @@ public class MultipartControllerTests {
 		bodyBuilder.part("file", fileContent).filename("orig");
 		bodyBuilder.part("json", json, MediaType.APPLICATION_JSON);
 
-		testClient.post().uri("/optionalfilelist")
+		EntityExchangeResult<Void> exchangeResult = testClient.post().uri("/optionalfilearray")
 				.bodyValue(bodyBuilder.build())
 				.exchange()
 				.expectStatus().isFound()
 				.expectBody().isEmpty();
+
+		// Further assertions on the server response
+		MockMvcWebTestClient.resultActionsFor(exchangeResult)
+				.andExpect(model().attribute("fileContent", fileContent))
+				.andExpect(model().attribute("jsonContent", json));
 	}
 
 	@Test
-	public void multipartRequestWithOptionalFileListNotPresent() {
+	public void multipartRequestWithOptionalFileArrayNotPresent() throws Exception {
 		Map<String, String> json = Collections.singletonMap("name", "yeeeah");
 
 		MultipartBodyBuilder bodyBuilder = new MultipartBodyBuilder();
 		bodyBuilder.part("json", json, MediaType.APPLICATION_JSON);
 
-		testClient.post().uri("/optionalfilelist")
+		EntityExchangeResult<Void> exchangeResult = testClient.post().uri("/optionalfilearray")
 				.bodyValue(bodyBuilder.build())
 				.exchange()
 				.expectStatus().isFound()
 				.expectBody().isEmpty();
+
+		// Further assertions on the server response
+		MockMvcWebTestClient.resultActionsFor(exchangeResult)
+				.andExpect(model().attributeDoesNotExist("fileContent"))
+				.andExpect(model().attribute("jsonContent", json));
 	}
 
 	@Test
-	public void multipartRequestWithServletParts() {
+	public void multipartRequestWithOptionalFileList() throws Exception {
+		byte[] fileContent = "bar".getBytes(StandardCharsets.UTF_8);
+		Map<String, String> json = Collections.singletonMap("name", "yeeeah");
+
+		MultipartBodyBuilder bodyBuilder = new MultipartBodyBuilder();
+		bodyBuilder.part("file", fileContent).filename("orig");
+		bodyBuilder.part("file", fileContent).filename("orig");
+		bodyBuilder.part("json", json, MediaType.APPLICATION_JSON);
+
+		EntityExchangeResult<Void> exchangeResult = testClient.post().uri("/optionalfilelist")
+				.bodyValue(bodyBuilder.build())
+				.exchange()
+				.expectStatus().isFound()
+				.expectBody().isEmpty();
+
+		// Further assertions on the server response
+		MockMvcWebTestClient.resultActionsFor(exchangeResult)
+				.andExpect(model().attribute("fileContent", fileContent))
+				.andExpect(model().attribute("jsonContent", json));
+	}
+
+	@Test
+	public void multipartRequestWithOptionalFileListNotPresent() throws Exception {
+		Map<String, String> json = Collections.singletonMap("name", "yeeeah");
+
+		MultipartBodyBuilder bodyBuilder = new MultipartBodyBuilder();
+		bodyBuilder.part("json", json, MediaType.APPLICATION_JSON);
+
+		EntityExchangeResult<Void> exchangeResult = testClient.post().uri("/optionalfilelist")
+				.bodyValue(bodyBuilder.build())
+				.exchange()
+				.expectStatus().isFound()
+				.expectBody().isEmpty();
+
+		// Further assertions on the server response
+		MockMvcWebTestClient.resultActionsFor(exchangeResult)
+				.andExpect(model().attributeDoesNotExist("fileContent"))
+				.andExpect(model().attribute("jsonContent", json));
+	}
+
+	@Test
+	public void multipartRequestWithServletParts() throws Exception {
 		byte[] fileContent = "bar".getBytes(StandardCharsets.UTF_8);
 		Map<String, String> json = Collections.singletonMap("name", "yeeeah");
 
@@ -213,15 +261,20 @@ public class MultipartControllerTests {
 		bodyBuilder.part("file", fileContent).filename("orig");
 		bodyBuilder.part("json", json, MediaType.APPLICATION_JSON);
 
-		testClient.post().uri("/multipartfile")
+		EntityExchangeResult<Void> exchangeResult = testClient.post().uri("/multipartfile")
 				.bodyValue(bodyBuilder.build())
 				.exchange()
 				.expectStatus().isFound()
 				.expectBody().isEmpty();
+
+		// Further assertions on the server response
+		MockMvcWebTestClient.resultActionsFor(exchangeResult)
+				.andExpect(model().attribute("fileContent", fileContent))
+				.andExpect(model().attribute("jsonContent", json));
 	}
 
 	@Test
-	public void multipartRequestWrapped() {
+	public void multipartRequestWrapped() throws Exception {
 		Map<String, String> json = Collections.singletonMap("name", "yeeeah");
 
 		MultipartBodyBuilder bodyBuilder = new MultipartBodyBuilder();
@@ -231,11 +284,15 @@ public class MultipartControllerTests {
 				.filter(new RequestWrappingFilter())
 				.build();
 
-		client.post().uri("/multipartfile")
+		EntityExchangeResult<Void> exchangeResult = client.post().uri("/multipartfile")
 				.bodyValue(bodyBuilder.build())
 				.exchange()
 				.expectStatus().isFound()
 				.expectBody().isEmpty();
+
+		// Further assertions on the server response
+		MockMvcWebTestClient.resultActionsFor(exchangeResult)
+				.andExpect(model().attribute("jsonContent", json));
 	}
 
 
@@ -245,78 +302,110 @@ public class MultipartControllerTests {
 
 		@PostMapping("/multipartfile")
 		public String processMultipartFile(@RequestParam(required = false) MultipartFile file,
-				@RequestPart(required = false) Map<String, String> json) {
+				@RequestPart(required = false) Map<String, String> json, Model model) throws IOException {
+
+			if (file != null) {
+				model.addAttribute("fileContent", file.getBytes());
+			}
+			if (json != null) {
+				model.addAttribute("jsonContent", json);
+			}
 
 			return "redirect:/index";
 		}
 
 		@PutMapping("/multipartfile-via-put")
 		public String processMultipartFileViaHttpPut(@RequestParam(required = false) MultipartFile file,
-				@RequestPart(required = false) Map<String, String> json) {
+				@RequestPart(required = false) Map<String, String> json, Model model) throws IOException {
 
-			return processMultipartFile(file, json);
+			return processMultipartFile(file, json, model);
 		}
 
 		@PostMapping("/multipartfilearray")
 		public String processMultipartFileArray(@RequestParam(required = false) MultipartFile[] file,
-				@RequestPart(required = false) Map<String, String> json) throws IOException {
+				@RequestPart(required = false) Map<String, String> json, Model model) throws IOException {
 
 			if (file != null && file.length > 0) {
 				byte[] content = file[0].getBytes();
 				assertThat(file[1].getBytes()).isEqualTo(content);
+				model.addAttribute("fileContent", content);
 			}
+			if (json != null) {
+				model.addAttribute("jsonContent", json);
+			}
+
 			return "redirect:/index";
 		}
 
 		@PostMapping("/multipartfilelist")
 		public String processMultipartFileList(@RequestParam(required = false) List<MultipartFile> file,
-				@RequestPart(required = false) Map<String, String> json) throws IOException {
+				@RequestPart(required = false) Map<String, String> json, Model model) throws IOException {
 
-			if (!CollectionUtils.isEmpty(file)) {
+			if (file != null && !file.isEmpty()) {
 				byte[] content = file.get(0).getBytes();
 				assertThat(file.get(1).getBytes()).isEqualTo(content);
+				model.addAttribute("fileContent", content);
 			}
+			if (json != null) {
+				model.addAttribute("jsonContent", json);
+			}
+
 			return "redirect:/index";
 		}
 
 		@PostMapping("/optionalfile")
-		public String processOptionalFile(
-				@RequestParam Optional<MultipartFile> file, @RequestPart Map<String, String> json) {
+		public String processOptionalFile(@RequestParam Optional<MultipartFile> file,
+				@RequestPart Map<String, String> json, Model model) throws IOException {
+
+			if (file.isPresent()) {
+				model.addAttribute("fileContent", file.get().getBytes());
+			}
+			model.addAttribute("jsonContent", json);
 
 			return "redirect:/index";
 		}
 
 		@PostMapping("/optionalfilearray")
-		public String processOptionalFileArray(
-				@RequestParam Optional<MultipartFile[]> file, @RequestPart Map<String, String> json)
-				throws IOException {
+		public String processOptionalFileArray(@RequestParam Optional<MultipartFile[]> file,
+				@RequestPart Map<String, String> json, Model model) throws IOException {
 
 			if (file.isPresent()) {
 				byte[] content = file.get()[0].getBytes();
 				assertThat(file.get()[1].getBytes()).isEqualTo(content);
+				model.addAttribute("fileContent", content);
 			}
+			model.addAttribute("jsonContent", json);
+
 			return "redirect:/index";
 		}
 
 		@PostMapping("/optionalfilelist")
-		public String processOptionalFileList(
-				@RequestParam Optional<List<MultipartFile>> file, @RequestPart Map<String, String> json)
-				throws IOException {
+		public String processOptionalFileList(@RequestParam Optional<List<MultipartFile>> file,
+				@RequestPart Map<String, String> json, Model model) throws IOException {
 
 			if (file.isPresent()) {
 				byte[] content = file.get().get(0).getBytes();
 				assertThat(file.get().get(1).getBytes()).isEqualTo(content);
+				model.addAttribute("fileContent", content);
 			}
+			model.addAttribute("jsonContent", json);
+
 			return "redirect:/index";
 		}
 
 		@PostMapping("/part")
-		public String processPart(@RequestParam Part part, @RequestPart Map<String, String> json) {
+		public String processPart(@RequestParam Part part,
+				@RequestPart Map<String, String> json, Model model) throws IOException {
+
+			model.addAttribute("fileContent", part.getInputStream());
+			model.addAttribute("jsonContent", json);
+
 			return "redirect:/index";
 		}
 
 		@PostMapping("/json")
-		public String processMultipart(@RequestPart Map<String, String> json) {
+		public String processMultipart(@RequestPart Map<String, String> json, Model model) {
+			model.addAttribute("json", json);
 			return "redirect:/index";
 		}
 	}

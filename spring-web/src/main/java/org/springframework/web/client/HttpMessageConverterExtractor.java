@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,7 +29,6 @@ import org.springframework.http.client.ClientHttpResponse;
 import org.springframework.http.converter.GenericHttpMessageConverter;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.converter.HttpMessageNotReadableException;
-import org.springframework.http.converter.SmartHttpMessageConverter;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.FileCopyUtils;
@@ -72,23 +71,22 @@ public class HttpMessageConverterExtractor<T> implements ResponseExtractor<T> {
 		this(responseType, messageConverters, LogFactory.getLog(HttpMessageConverterExtractor.class));
 	}
 
-	@SuppressWarnings({"rawtypes", "unchecked"})
+	@SuppressWarnings("unchecked")
 	HttpMessageConverterExtractor(Type responseType, List<HttpMessageConverter<?>> messageConverters, Log logger) {
 		Assert.notNull(responseType, "'responseType' must not be null");
 		Assert.notEmpty(messageConverters, "'messageConverters' must not be empty");
 		Assert.noNullElements(messageConverters, "'messageConverters' must not contain null elements");
 		this.responseType = responseType;
-		this.responseClass = (responseType instanceof Class clazz ? clazz : null);
+		this.responseClass = (responseType instanceof Class ? (Class<T>) responseType : null);
 		this.messageConverters = messageConverters;
 		this.logger = logger;
 	}
 
 
 	@Override
-	@Nullable
-	@SuppressWarnings({"rawtypes", "unchecked", "resource"})
+	@SuppressWarnings({"unchecked", "rawtypes", "resource"})
 	public T extractData(ClientHttpResponse response) throws IOException {
-		IntrospectingClientHttpResponse responseWrapper = new IntrospectingClientHttpResponse(response);
+		MessageBodyClientHttpResponseWrapper responseWrapper = new MessageBodyClientHttpResponseWrapper(response);
 		if (!responseWrapper.hasMessageBody() || responseWrapper.hasEmptyMessageBody()) {
 			return null;
 		}
@@ -96,7 +94,9 @@ public class HttpMessageConverterExtractor<T> implements ResponseExtractor<T> {
 
 		try {
 			for (HttpMessageConverter<?> messageConverter : this.messageConverters) {
-				if (messageConverter instanceof GenericHttpMessageConverter genericMessageConverter) {
+				if (messageConverter instanceof GenericHttpMessageConverter) {
+					GenericHttpMessageConverter<?> genericMessageConverter =
+							(GenericHttpMessageConverter<?>) messageConverter;
 					if (genericMessageConverter.canRead(this.responseType, null, contentType)) {
 						if (logger.isDebugEnabled()) {
 							ResolvableType resolvableType = ResolvableType.forType(this.responseType);
@@ -105,21 +105,14 @@ public class HttpMessageConverterExtractor<T> implements ResponseExtractor<T> {
 						return (T) genericMessageConverter.read(this.responseType, null, responseWrapper);
 					}
 				}
-				else if (messageConverter instanceof SmartHttpMessageConverter smartMessageConverter) {
-					ResolvableType resolvableType = ResolvableType.forType(this.responseType);
-					if (smartMessageConverter.canRead(resolvableType, contentType)) {
+				if (this.responseClass != null) {
+					if (messageConverter.canRead(this.responseClass, contentType)) {
 						if (logger.isDebugEnabled()) {
-							logger.debug("Reading to [" + resolvableType + "]");
+							String className = this.responseClass.getName();
+							logger.debug("Reading to [" + className + "] as \"" + contentType + "\"");
 						}
-						return (T) smartMessageConverter.read(resolvableType, responseWrapper, null);
+						return (T) messageConverter.read((Class) this.responseClass, responseWrapper);
 					}
-				}
-				else if (this.responseClass != null && messageConverter.canRead(this.responseClass, contentType)) {
-					if (logger.isDebugEnabled()) {
-						String className = this.responseClass.getName();
-						logger.debug("Reading to [" + className + "] as \"" + contentType + "\"");
-					}
-					return (T) messageConverter.read((Class) this.responseClass, responseWrapper);
 				}
 			}
 		}
@@ -129,7 +122,7 @@ public class HttpMessageConverterExtractor<T> implements ResponseExtractor<T> {
 		}
 
 		throw new UnknownContentTypeException(this.responseType, contentType,
-				responseWrapper.getStatusCode(), responseWrapper.getStatusText(),
+				responseWrapper.getRawStatusCode(), responseWrapper.getStatusText(),
 				responseWrapper.getHeaders(), getResponseBody(responseWrapper));
 	}
 

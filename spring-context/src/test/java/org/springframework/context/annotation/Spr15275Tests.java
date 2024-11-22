@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -84,7 +84,7 @@ class Spr15275Tests {
 
 		@Bean
 		public FactoryBean<Foo> foo() {
-			return new FactoryBean<>() {
+			return new FactoryBean<Foo>() {
 				@Override
 				public Foo getObject() {
 					return new Foo("x");
@@ -109,7 +109,7 @@ class Spr15275Tests {
 
 		@Bean
 		public FactoryBean<Foo> foo() {
-			return new AbstractFactoryBean<>() {
+			return new AbstractFactoryBean<Foo>() {
 				@Override
 				public Foo createInstance() {
 					return new Foo("x");
@@ -134,7 +134,7 @@ class Spr15275Tests {
 
 		@Bean
 		public FactoryBean<FooInterface> foo() {
-			return new AbstractFactoryBean<>() {
+			return new AbstractFactoryBean<FooInterface>() {
 				@Override
 				public FooInterface createInstance() {
 					return new Foo("x");
@@ -159,7 +159,7 @@ class Spr15275Tests {
 
 		@Bean
 		public AbstractFactoryBean<FooInterface> foo() {
-			return new AbstractFactoryBean<>() {
+			return new AbstractFactoryBean<FooInterface>() {
 				@Override
 				public FooInterface createInstance() {
 					return new Foo("x");
@@ -204,7 +204,7 @@ class Spr15275Tests {
 		}
 
 		@Bean
-		public Bar bar() {
+		public Bar bar() throws Exception {
 			assertThat(foo().isSingleton()).isTrue();
 			return new Bar(foo().getObject());
 		}

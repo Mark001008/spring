@@ -19,7 +19,6 @@ package org.springframework.aop.target;
 import java.io.Serializable;
 
 import org.springframework.aop.TargetSource;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.ObjectUtils;
 
@@ -43,7 +42,6 @@ public class SingletonTargetSource implements TargetSource, Serializable {
 
 
 	/** Target cached and invoked using reflection. */
-	@SuppressWarnings("serial")
 	private final Object target;
 
 
@@ -68,6 +66,11 @@ public class SingletonTargetSource implements TargetSource, Serializable {
 	}
 
 	@Override
+	public void releaseTarget(Object target) {
+		// nothing to do
+	}
+
+	@Override
 	public boolean isStatic() {
 		return true;
 	}
@@ -78,9 +81,9 @@ public class SingletonTargetSource implements TargetSource, Serializable {
 	 * targets or the targets are equal.
 	 */
 	@Override
-	public boolean equals(@Nullable Object other) {
-		return (this == other || (other instanceof SingletonTargetSource that &&
-				this.target.equals(that.target)));
+	public boolean equals(Object other) {
+		return (this == other || (other instanceof SingletonTargetSource &&
+				this.target.equals(((SingletonTargetSource) other).target)));
 	}
 
 	/**

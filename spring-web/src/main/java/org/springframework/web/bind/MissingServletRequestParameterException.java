@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2021 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,9 +16,6 @@
 
 package org.springframework.web.bind;
 
-import org.springframework.core.MethodParameter;
-import org.springframework.lang.Nullable;
-
 /**
  * {@link ServletRequestBindingException} subclass that indicates a missing parameter.
  *
@@ -32,9 +29,6 @@ public class MissingServletRequestParameterException extends MissingRequestValue
 
 	private final String parameterType;
 
-	@Nullable
-	private final MethodParameter parameter;
-
 
 	/**
 	 * Constructor for MissingServletRequestParameterException.
@@ -42,28 +36,7 @@ public class MissingServletRequestParameterException extends MissingRequestValue
 	 * @param parameterType the expected type of the missing parameter
 	 */
 	public MissingServletRequestParameterException(String parameterName, String parameterType) {
-		super("", false, null, new Object[] {parameterName});
-		this.parameterName = parameterName;
-		this.parameterType = parameterType;
-		this.parameter = null;
-		getBody().setDetail(initBodyDetail(this.parameterName));
-	}
-
-	/**
-	 * Constructor with a {@link MethodParameter} instead of a String parameterType.
-	 * @param parameterName the name of the missing parameter
-	 * @param parameter the target method parameter for the missing value
-	 * @param missingAfterConversion whether the value became null after conversion
-	 * @since 6.1
-	 */
-	public MissingServletRequestParameterException(
-			String parameterName, MethodParameter parameter, boolean missingAfterConversion) {
-
-		super("", missingAfterConversion, null, new Object[] {parameterName});
-		this.parameterName = parameterName;
-		this.parameterType = parameter.getNestedParameterType().getSimpleName();
-		this.parameter = parameter;
-		getBody().setDetail(initBodyDetail(this.parameterName));
+		this(parameterName, parameterType, false);
 	}
 
 	/**
@@ -72,21 +45,13 @@ public class MissingServletRequestParameterException extends MissingRequestValue
 	 * @param parameterType the expected type of the missing parameter
 	 * @param missingAfterConversion whether the value became null after conversion
 	 * @since 5.3.6
-	 * @deprecated in favor of {@link #MissingServletRequestParameterException(String, MethodParameter, boolean)}
 	 */
-	@Deprecated(since = "6.1", forRemoval = true)
 	public MissingServletRequestParameterException(
 			String parameterName, String parameterType, boolean missingAfterConversion) {
 
-		super("", missingAfterConversion, null, new Object[] {parameterName});
+		super("", missingAfterConversion);
 		this.parameterName = parameterName;
 		this.parameterType = parameterType;
-		this.parameter = null;
-		getBody().setDetail(initBodyDetail(this.parameterName));
-	}
-
-	private static String initBodyDetail(String name) {
-		return "Required parameter '" + name + "' is not present.";
 	}
 
 
@@ -109,16 +74,6 @@ public class MissingServletRequestParameterException extends MissingRequestValue
 	 */
 	public final String getParameterType() {
 		return this.parameterType;
-	}
-
-	/**
-	 * Return the target {@link MethodParameter} if the exception was raised for
-	 * a controller method argument.
-	 * @since 6.1
-	 */
-	@Nullable
-	public MethodParameter getMethodParameter() {
-		return this.parameter;
 	}
 
 }

@@ -67,7 +67,8 @@ public abstract class ParameterizedTypeReference<T> {
 
 	@Override
 	public boolean equals(@Nullable Object other) {
-		return (this == other || (other instanceof ParameterizedTypeReference<?> that && this.type.equals(that.type)));
+		return (this == other || (other instanceof ParameterizedTypeReference &&
+				this.type.equals(((ParameterizedTypeReference<?>) other).type)));
 	}
 
 	@Override
@@ -84,13 +85,13 @@ public abstract class ParameterizedTypeReference<T> {
 	/**
 	 * Build a {@code ParameterizedTypeReference} wrapping the given type.
 	 * @param type a generic type (possibly obtained via reflection,
-	 * for example, from {@link java.lang.reflect.Method#getGenericReturnType()})
+	 * e.g. from {@link java.lang.reflect.Method#getGenericReturnType()})
 	 * @return a corresponding reference which may be passed into
 	 * {@code ParameterizedTypeReference}-accepting methods
 	 * @since 4.3.12
 	 */
 	public static <T> ParameterizedTypeReference<T> forType(Type type) {
-		return new ParameterizedTypeReference<>(type) {};
+		return new ParameterizedTypeReference<T>(type) {};
 	}
 
 	private static Class<?> findParameterizedTypeReferenceSubclass(Class<?> child) {

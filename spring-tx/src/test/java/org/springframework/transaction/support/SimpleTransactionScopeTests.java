@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,10 +34,11 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 /**
  * @author Juergen Hoeller
  */
-class SimpleTransactionScopeTests {
+public class SimpleTransactionScopeTests {
 
 	@Test
-	void getFromScope() {
+	@SuppressWarnings("resource")
+	public void getFromScope() throws Exception {
 		GenericApplicationContext context = new GenericApplicationContext();
 		context.getBeanFactory().registerScope("tx", new SimpleTransactionScope());
 
@@ -62,10 +63,10 @@ class SimpleTransactionScopeTests {
 				context.getBean(DerivedTestBean.class))
 			.withCauseInstanceOf(IllegalStateException.class);
 
-		TestBean bean1;
-		DerivedTestBean bean2;
-		DerivedTestBean bean2a;
-		DerivedTestBean bean2b;
+		TestBean bean1 = null;
+		DerivedTestBean bean2 = null;
+		DerivedTestBean bean2a = null;
+		DerivedTestBean bean2b = null;
 
 		TransactionSynchronizationManager.initSynchronization();
 		try {
@@ -97,7 +98,7 @@ class SimpleTransactionScopeTests {
 
 		assertThat(bean2a.wasDestroyed()).isFalse();
 		assertThat(bean2b.wasDestroyed()).isTrue();
-		assertThat(TransactionSynchronizationManager.getResourceMap()).isEmpty();
+		assertThat(TransactionSynchronizationManager.getResourceMap().isEmpty()).isTrue();
 
 		assertThatExceptionOfType(BeanCreationException.class).isThrownBy(() ->
 				context.getBean(TestBean.class))
@@ -109,7 +110,7 @@ class SimpleTransactionScopeTests {
 	}
 
 	@Test
-	void getWithTransactionManager() {
+	public void getWithTransactionManager() throws Exception {
 		try (GenericApplicationContext context = new GenericApplicationContext()) {
 			context.getBeanFactory().registerScope("tx", new SimpleTransactionScope());
 

@@ -19,7 +19,6 @@ package org.springframework.aop.target;
 import java.io.Serializable;
 
 import org.springframework.aop.TargetSource;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
 /**
@@ -43,7 +42,6 @@ public class HotSwappableTargetSource implements TargetSource, Serializable {
 
 
 	/** The current target object. */
-	@SuppressWarnings("serial")
 	private Object target;
 
 
@@ -67,8 +65,18 @@ public class HotSwappableTargetSource implements TargetSource, Serializable {
 	}
 
 	@Override
+	public final boolean isStatic() {
+		return false;
+	}
+
+	@Override
 	public synchronized Object getTarget() {
 		return this.target;
+	}
+
+	@Override
+	public void releaseTarget(Object target) {
+		// nothing to do
 	}
 
 
@@ -90,9 +98,9 @@ public class HotSwappableTargetSource implements TargetSource, Serializable {
 	 * Two HotSwappableTargetSources are equal if the current target objects are equal.
 	 */
 	@Override
-	public boolean equals(@Nullable Object other) {
-		return (this == other || (other instanceof HotSwappableTargetSource that &&
-				this.target.equals(that.target)));
+	public boolean equals(Object other) {
+		return (this == other || (other instanceof HotSwappableTargetSource &&
+				this.target.equals(((HotSwappableTargetSource) other).target)));
 	}
 
 	@Override

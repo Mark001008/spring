@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,9 +20,10 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-import jakarta.servlet.Servlet;
-import jakarta.servlet.ServletException;
-import jakarta.servlet.ServletRegistration;
+import javax.servlet.Servlet;
+import javax.servlet.ServletException;
+import javax.servlet.ServletRegistration;
+
 import org.junit.jupiter.api.Test;
 
 import org.springframework.web.context.WebApplicationContext;
@@ -37,7 +38,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  *
  * @author Arjen Poutsma
  */
-class DispatcherServletInitializerTests {
+public class DispatcherServletInitializerTests {
 
 	private static final String SERVLET_NAME = "myservlet";
 
@@ -56,10 +57,10 @@ class DispatcherServletInitializerTests {
 
 
 	@Test
-	void register() throws ServletException {
+	public void register() throws ServletException {
 		initializer.onStartup(servletContext);
 
-		assertThat(servlets).hasSize(1);
+		assertThat(servlets.size()).isEqualTo(1);
 		assertThat(servlets.get(SERVLET_NAME)).isNotNull();
 
 		DispatcherServlet servlet = (DispatcherServlet) servlets.get(SERVLET_NAME);
@@ -70,7 +71,7 @@ class DispatcherServletInitializerTests {
 		boolean condition = servletContext.getBean("bean") instanceof MyBean;
 		assertThat(condition).isTrue();
 
-		assertThat(registrations).hasSize(1);
+		assertThat(registrations.size()).isEqualTo(1);
 		assertThat(registrations.get(SERVLET_NAME)).isNotNull();
 
 		MockServletRegistration registration = registrations.get(SERVLET_NAME);

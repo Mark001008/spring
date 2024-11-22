@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2023 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,7 +39,6 @@ import org.springframework.expression.MethodResolver;
 import org.springframework.expression.TypeConverter;
 import org.springframework.expression.spel.SpelEvaluationException;
 import org.springframework.expression.spel.SpelMessage;
-import org.springframework.expression.spel.support.ReflectionHelper.ArgumentsMatchKind;
 import org.springframework.lang.Nullable;
 
 /**
@@ -64,7 +63,7 @@ public class ReflectiveMethodResolver implements MethodResolver {
 
 
 	public ReflectiveMethodResolver() {
-		this(true);
+		this.useDistance = true;
 	}
 
 	/**
@@ -101,15 +100,12 @@ public class ReflectiveMethodResolver implements MethodResolver {
 	}
 
 	/**
-	 * Locate a method on the type.
-	 * <p>There are three kinds of matches that might occur:
+	 * Locate a method on a type. There are three kinds of match that might occur:
 	 * <ol>
-	 * <li>An exact match where the types of the arguments match the types of the
-	 * method.</li>
-	 * <li>An inexact match where the types we are looking for are subtypes of
-	 * those defined on the method.</li>
-	 * <li>A match where we are able to convert the arguments into those expected
-	 * by the method, according to the registered type converter.</li>
+	 * <li>an exact match where the types of the arguments match the types of the constructor
+	 * <li>an in-exact match where the types we are looking for are subtypes of those defined on the constructor
+	 * <li>a match where we are able to convert the arguments into those expected by the constructor,
+	 * according to the registered type converter
 	 * </ol>
 	 */
 	@Override
@@ -119,7 +115,7 @@ public class ReflectiveMethodResolver implements MethodResolver {
 
 		try {
 			TypeConverter typeConverter = context.getTypeConverter();
-			Class<?> type = (targetObject instanceof Class<?> clazz ? clazz : targetObject.getClass());
+			Class<?> type = (targetObject instanceof Class ? (Class<?>) targetObject : targetObject.getClass());
 			ArrayList<Method> methods = new ArrayList<>(getMethods(type, targetObject));
 			methods.removeIf(method -> !method.getName().equals(name));
 
@@ -127,7 +123,7 @@ public class ReflectiveMethodResolver implements MethodResolver {
 			MethodFilter filter = (this.filters != null ? this.filters.get(type) : null);
 			if (filter != null) {
 				List<Method> filtered = filter.filter(methods);
-				methods = (filtered instanceof ArrayList<Method> arrayList ? arrayList : new ArrayList<>(filtered));
+				methods = (filtered instanceof ArrayList ? (ArrayList<Method>) filtered : new ArrayList<>(filtered));
 			}
 
 			// Sort methods into a sensible order
@@ -170,20 +166,20 @@ public class ReflectiveMethodResolver implements MethodResolver {
 				for (int i = 0; i < paramCount; i++) {
 					paramDescriptors.add(new TypeDescriptor(new MethodParameter(method, i)));
 				}
-				ArgumentsMatchKind matchKind = null;
+				ReflectionHelper.ArgumentsMatchInfo matchInfo = null;
 				if (method.isVarArgs() && argumentTypes.size() >= (paramCount - 1)) {
 					// *sigh* complicated
-					matchKind = ReflectionHelper.compareArgumentsVarargs(paramDescriptors, argumentTypes, typeConverter);
+					matchInfo = ReflectionHelper.compareArgumentsVarargs(paramDescriptors, argumentTypes, typeConverter);
 				}
 				else if (paramCount == argumentTypes.size()) {
 					// Name and parameter number match, check the arguments
-					matchKind = ReflectionHelper.compareArguments(paramDescriptors, argumentTypes, typeConverter);
+					matchInfo = ReflectionHelper.compareArguments(paramDescriptors, argumentTypes, typeConverter);
 				}
-				if (matchKind != null) {
-					if (matchKind.isExactMatch()) {
+				if (matchInfo != null) {
+					if (matchInfo.isExactMatch()) {
 						return new ReflectiveMethodExecutor(method, type);
 					}
-					else if (matchKind.isCloseMatch()) {
+					else if (matchInfo.isCloseMatch()) {
 						if (this.useDistance) {
 							int matchDistance = ReflectionHelper.getTypeDifferenceWeight(paramDescriptors, argumentTypes);
 							if (closeMatch == null || matchDistance < closeMatchDistance) {
@@ -199,7 +195,7 @@ public class ReflectiveMethodResolver implements MethodResolver {
 							}
 						}
 					}
-					else if (matchKind.isMatchRequiringConversion()) {
+					else if (matchInfo.isMatchRequiringConversion()) {
 						if (matchRequiringConversion != null) {
 							multipleOptions = true;
 						}
@@ -228,7 +224,7 @@ public class ReflectiveMethodResolver implements MethodResolver {
 	private Set<Method> getMethods(Class<?> type, Object targetObject) {
 		if (targetObject instanceof Class) {
 			Set<Method> result = new LinkedHashSet<>();
-			// Add these so that static methods are invocable on the type: for example, Float.valueOf(..)
+			// Add these so that static methods are invocable on the type: e.g. Float.valueOf(..)
 			for (Method method : getMethods(type)) {
 				if (Modifier.isStatic(method.getModifiers())) {
 					result.add(method);
@@ -270,7 +266,7 @@ public class ReflectiveMethodResolver implements MethodResolver {
 	/**
 	 * Return the set of methods for this type. The default implementation returns the
 	 * result of {@link Class#getMethods()} for the given {@code type}, but subclasses
-	 * may override in order to alter the results, for example, specifying static methods
+	 * may override in order to alter the results, e.g. specifying static methods
 	 * declared elsewhere.
 	 * @param type the class for which to return the methods
 	 * @since 3.1.1

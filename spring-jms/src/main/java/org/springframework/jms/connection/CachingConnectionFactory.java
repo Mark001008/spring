@@ -30,18 +30,18 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-import jakarta.jms.Connection;
-import jakarta.jms.ConnectionFactory;
-import jakarta.jms.Destination;
-import jakarta.jms.JMSException;
-import jakarta.jms.MessageConsumer;
-import jakarta.jms.MessageProducer;
-import jakarta.jms.QueueSession;
-import jakarta.jms.Session;
-import jakarta.jms.TemporaryQueue;
-import jakarta.jms.TemporaryTopic;
-import jakarta.jms.Topic;
-import jakarta.jms.TopicSession;
+import javax.jms.Connection;
+import javax.jms.ConnectionFactory;
+import javax.jms.Destination;
+import javax.jms.JMSException;
+import javax.jms.MessageConsumer;
+import javax.jms.MessageProducer;
+import javax.jms.QueueSession;
+import javax.jms.Session;
+import javax.jms.TemporaryQueue;
+import javax.jms.TemporaryTopic;
+import javax.jms.Topic;
+import javax.jms.TopicSession;
 
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
@@ -240,7 +240,6 @@ public class CachingConnectionFactory extends SingleConnectionFactory {
 	 * Checks for a cached Session for the given mode.
 	 */
 	@Override
-	@Nullable
 	protected Session getSession(Connection con, Integer mode) throws JMSException {
 		if (!this.active) {
 			return null;
@@ -256,7 +255,7 @@ public class CachingConnectionFactory extends SingleConnectionFactory {
 		if (session != null) {
 			if (logger.isTraceEnabled()) {
 				logger.trace("Found cached JMS Session for mode " + mode + ": " +
-						(session instanceof SessionProxy sessionProxy ? sessionProxy.getTargetSession() : session));
+						(session instanceof SessionProxy ? ((SessionProxy) session).getTargetSession() : session));
 			}
 		}
 		else {
@@ -366,54 +365,45 @@ public class CachingConnectionFactory extends SingleConnectionFactory {
 				}
 				else if (isCacheConsumers()) {
 					// let raw JMS invocation throw an exception if Destination (i.e. args[0]) is null
-					switch (methodName) {
-						case "createConsumer", "createReceiver", "createSubscriber" -> {
-							Destination dest = (Destination) args[0];
-							if (dest != null && !(dest instanceof TemporaryQueue || dest instanceof TemporaryTopic)) {
-								return getCachedConsumer(
-										dest,
-										(args.length > 1 ? (String) args[1] : null),
-										(args.length > 2 && (Boolean) args[2]),
-										null,
-										false
-								);
-							}
+					if ((methodName.equals("createConsumer") || methodName.equals("createReceiver") ||
+							methodName.equals("createSubscriber"))) {
+						Destination dest = (Destination) args[0];
+						if (dest != null && !(dest instanceof TemporaryQueue || dest instanceof TemporaryTopic)) {
+							return getCachedConsumer(dest,
+									(args.length > 1 ? (String) args[1] : null),
+									(args.length > 2 && (Boolean) args[2]),
+									null,
+									false);
 						}
-						case "createDurableConsumer", "createDurableSubscriber" -> {
-							Destination dest = (Destination) args[0];
-							if (dest != null) {
-								return getCachedConsumer(
-										dest,
-										(args.length > 2 ? (String) args[2] : null),
-										(args.length > 3 && (Boolean) args[3]),
-										(String) args[1],
-										true
-								);
-							}
+					}
+					else if (methodName.equals("createDurableConsumer") || methodName.equals("createDurableSubscriber")) {
+						Destination dest = (Destination) args[0];
+						if (dest != null) {
+							return getCachedConsumer(dest,
+									(args.length > 2 ? (String) args[2] : null),
+									(args.length > 3 && (Boolean) args[3]),
+									(String) args[1],
+									true);
 						}
-						case "createSharedConsumer" -> {
-							Destination dest = (Destination) args[0];
-							if (dest != null) {
-								return getCachedConsumer(
-										dest,
-										(args.length > 2 ? (String) args[2] : null),
-										null,
-										(String) args[1],
-										false
-								);
-							}
+					}
+					else if (methodName.equals("createSharedConsumer")) {
+						Destination dest = (Destination) args[0];
+						if (dest != null) {
+							return getCachedConsumer(dest,
+									(args.length > 2 ? (String) args[2] : null),
+									null,
+									(String) args[1],
+									false);
 						}
-						case "createSharedDurableConsumer" -> {
-							Destination dest = (Destination) args[0];
-							if (dest != null) {
-								return getCachedConsumer(
-										dest,
-										(args.length > 2 ? (String) args[2] : null),
-										null,
-										(String) args[1],
-										true
-								);
-							}
+					}
+					else if (methodName.equals("createSharedDurableConsumer")) {
+						Destination dest = (Destination) args[0];
+						if (dest != null) {
+							return getCachedConsumer(dest,
+									(args.length > 2 ? (String) args[2] : null),
+									null,
+									(String) args[1],
+									true);
 						}
 					}
 				}
@@ -456,15 +446,15 @@ public class CachingConnectionFactory extends SingleConnectionFactory {
 				}
 			}
 			else {
-				if (dest instanceof Topic topic) {
+				if (dest instanceof Topic) {
 					if (noLocal == null) {
 						consumer = (durable ?
-								this.target.createSharedDurableConsumer(topic, subscription, selector) :
-								this.target.createSharedConsumer(topic, subscription, selector));
+								this.target.createSharedDurableConsumer((Topic) dest, subscription, selector) :
+								this.target.createSharedConsumer((Topic) dest, subscription, selector));
 					}
 					else {
 						consumer = (durable ?
-								this.target.createDurableSubscriber(topic, subscription, selector, noLocal) :
+								this.target.createDurableSubscriber((Topic) dest, subscription, selector, noLocal) :
 								this.target.createConsumer(dest, selector, noLocal));
 					}
 				}
@@ -563,7 +553,8 @@ public class CachingConnectionFactory extends SingleConnectionFactory {
 		public boolean equals(@Nullable Object other) {
 			// Effectively checking object equality as well as toString equality.
 			// On WebSphere MQ, Destination objects do not implement equals...
-			return (this == other || (other instanceof DestinationCacheKey that && destinationEquals(that)));
+			return (this == other || (other instanceof DestinationCacheKey &&
+					destinationEquals((DestinationCacheKey) other)));
 		}
 
 		@Override
@@ -615,12 +606,18 @@ public class CachingConnectionFactory extends SingleConnectionFactory {
 
 		@Override
 		public boolean equals(@Nullable Object other) {
-			return (this == other || (other instanceof ConsumerCacheKey that &&
-					destinationEquals(that) &&
-					ObjectUtils.nullSafeEquals(this.selector, that.selector) &&
-					ObjectUtils.nullSafeEquals(this.noLocal, that.noLocal) &&
-					ObjectUtils.nullSafeEquals(this.subscription, that.subscription) &&
-					this.durable == that.durable));
+			if (this == other) {
+				return true;
+			}
+			if (!(other instanceof ConsumerCacheKey)) {
+				return false;
+			}
+			ConsumerCacheKey otherKey = (ConsumerCacheKey) other;
+			return (destinationEquals(otherKey) &&
+					ObjectUtils.nullSafeEquals(this.selector, otherKey.selector) &&
+					ObjectUtils.nullSafeEquals(this.noLocal, otherKey.noLocal) &&
+					ObjectUtils.nullSafeEquals(this.subscription, otherKey.subscription) &&
+					this.durable == otherKey.durable);
 		}
 
 		@Override

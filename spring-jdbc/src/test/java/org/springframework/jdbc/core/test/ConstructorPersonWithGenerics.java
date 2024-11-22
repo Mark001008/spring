@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,15 +29,15 @@ public class ConstructorPersonWithGenerics {
 
 	private final long age;
 
-	private final Date bd;
+	private final Date birthDate;
 
 	private final List<BigDecimal> balance;
 
 
-	public ConstructorPersonWithGenerics(String name, long age, Date birthDate, List<BigDecimal> balance) {
+	public ConstructorPersonWithGenerics(String name, long age, Date birth_date, List<BigDecimal> balance) {
 		this.name = name;
 		this.age = age;
-		this.bd = birthDate;
+		this.birthDate = birth_date;
 		this.balance = balance;
 	}
 
@@ -51,7 +51,7 @@ public class ConstructorPersonWithGenerics {
 	}
 
 	public Date birthDate() {
-		return this.bd;
+		return this.birthDate;
 	}
 
 	public List<BigDecimal> balance() {

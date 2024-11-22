@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,14 +25,14 @@ import org.junit.jupiter.api.Test;
 
 import org.springframework.beans.TypeMismatchException;
 import org.springframework.http.MediaType;
+import org.springframework.http.MockHttpInputMessage;
+import org.springframework.http.MockHttpOutputMessage;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.http.converter.HttpMessageNotWritableException;
 import org.springframework.oxm.Marshaller;
 import org.springframework.oxm.MarshallingFailureException;
 import org.springframework.oxm.Unmarshaller;
 import org.springframework.oxm.UnmarshallingFailureException;
-import org.springframework.web.testfixture.http.MockHttpInputMessage;
-import org.springframework.web.testfixture.http.MockHttpOutputMessage;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
@@ -52,7 +52,7 @@ class MarshallingHttpMessageConverterTests {
 
 	@Test
 	void canRead() {
-		Unmarshaller unmarshaller = mock();
+		Unmarshaller unmarshaller = mock(Unmarshaller.class);
 
 		given(unmarshaller.supports(Integer.class)).willReturn(false);
 		given(unmarshaller.supports(String.class)).willReturn(true);
@@ -67,7 +67,7 @@ class MarshallingHttpMessageConverterTests {
 
 	@Test
 	void canWrite() {
-		Marshaller marshaller = mock();
+		Marshaller marshaller = mock(Marshaller.class);
 
 		given(marshaller.supports(Integer.class)).willReturn(false);
 		given(marshaller.supports(String.class)).willReturn(true);
@@ -85,7 +85,7 @@ class MarshallingHttpMessageConverterTests {
 		String body = "<root>Hello World</root>";
 		MockHttpInputMessage inputMessage = new MockHttpInputMessage(body.getBytes(StandardCharsets.UTF_8));
 
-		Unmarshaller unmarshaller = mock();
+		Unmarshaller unmarshaller = mock(Unmarshaller.class);
 		given(unmarshaller.unmarshal(isA(StreamSource.class))).willReturn(body);
 
 		MarshallingHttpMessageConverter converter = new MarshallingHttpMessageConverter();
@@ -99,8 +99,8 @@ class MarshallingHttpMessageConverterTests {
 	void readWithTypeMismatchException() throws Exception {
 		MockHttpInputMessage inputMessage = new MockHttpInputMessage(new byte[0]);
 
-		Marshaller marshaller = mock();
-		Unmarshaller unmarshaller = mock();
+		Marshaller marshaller = mock(Marshaller.class);
+		Unmarshaller unmarshaller = mock(Unmarshaller.class);
 		given(unmarshaller.unmarshal(isA(StreamSource.class))).willReturn(3);
 
 		MarshallingHttpMessageConverter converter = new MarshallingHttpMessageConverter(marshaller, unmarshaller);
@@ -114,7 +114,7 @@ class MarshallingHttpMessageConverterTests {
 		MockHttpInputMessage inputMessage = new MockHttpInputMessage(new byte[0]);
 		UnmarshallingFailureException ex = new UnmarshallingFailureException("forced");
 
-		Unmarshaller unmarshaller = mock();
+		Unmarshaller unmarshaller = mock(Unmarshaller.class);
 		given(unmarshaller.unmarshal(isA(StreamSource.class))).willThrow(ex);
 
 		MarshallingHttpMessageConverter converter = new MarshallingHttpMessageConverter();
@@ -129,7 +129,7 @@ class MarshallingHttpMessageConverterTests {
 		String body = "<root>Hello World</root>";
 		MockHttpOutputMessage outputMessage = new MockHttpOutputMessage();
 
-		Marshaller marshaller = mock();
+		Marshaller marshaller = mock(Marshaller.class);
 		willDoNothing().given(marshaller).marshal(eq(body), isA(Result.class));
 
 		MarshallingHttpMessageConverter converter = new MarshallingHttpMessageConverter(marshaller);
@@ -145,7 +145,7 @@ class MarshallingHttpMessageConverterTests {
 		MockHttpOutputMessage outputMessage = new MockHttpOutputMessage();
 		MarshallingFailureException ex = new MarshallingFailureException("forced");
 
-		Marshaller marshaller = mock();
+		Marshaller marshaller = mock(Marshaller.class);
 		willThrow(ex).given(marshaller).marshal(eq(body), isA(Result.class));
 
 		MarshallingHttpMessageConverter converter = new MarshallingHttpMessageConverter(marshaller);
@@ -158,4 +158,5 @@ class MarshallingHttpMessageConverterTests {
 		assertThatExceptionOfType(UnsupportedOperationException.class).isThrownBy(() ->
 				new MarshallingHttpMessageConverter().supports(Object.class));
 	}
+
 }

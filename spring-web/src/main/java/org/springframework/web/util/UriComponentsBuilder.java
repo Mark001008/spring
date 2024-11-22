@@ -16,6 +16,7 @@
 
 package org.springframework.web.util;
 
+import java.net.InetSocketAddress;
 import java.net.URI;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
@@ -30,6 +31,7 @@ import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpRequest;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
@@ -42,22 +44,18 @@ import org.springframework.web.util.HierarchicalUriComponents.PathComponent;
 import org.springframework.web.util.UriComponents.UriTemplateVariables;
 
 /**
- * Builder for {@link UriComponents}. Use as follows:
- * <ol>
- * <li>Create a builder through a factory method, e.g. {@link #fromUriString(String)}.
- * <li>Set URI components (e.g. scheme, host, path, etc) through instance methods.
- * <li>Build the {@link UriComponents}.</li>
- * <li>Expand URI variables from a map or array or variable values.
- * <li>Encode via {@link UriComponents#encode()}.</li>
- * <li>Use {@link UriComponents#toUri()} or {@link UriComponents#toUriString()}.
- * </ol>
+ * Builder for {@link UriComponents}.
  *
- * <p>By default, URI parsing is based on the {@link ParserType#RFC RFC parser type},
- * which expects input strings to conform to RFC 3986 syntax. The alternative
- * {@link ParserType#WHAT_WG WhatWG parser type}, based on the algorithm from
- * the WhatWG <a href="https://url.spec.whatwg.org">URL Living Standard</a>
- * provides more lenient handling of a wide range of cases that occur in user
- * types URL's.
+ * <p>Typical usage involves:
+ * <ol>
+ * <li>Create a {@code UriComponentsBuilder} with one of the static factory methods
+ * (such as {@link #fromPath(String)} or {@link #fromUri(URI)})</li>
+ * <li>Set the various URI components through the respective methods ({@link #scheme(String)},
+ * {@link #userInfo(String)}, {@link #host(String)}, {@link #port(int)}, {@link #path(String)},
+ * {@link #pathSegment(String...)}, {@link #queryParam(String, Object...)}, and
+ * {@link #fragment(String)}.</li>
+ * <li>Build the {@link UriComponents} instance with the {@link #build()} method.</li>
+ * </ol>
  *
  * @author Arjen Poutsma
  * @author Rossen Stoyanchev
@@ -75,7 +73,45 @@ public class UriComponentsBuilder implements UriBuilder, Cloneable {
 
 	private static final Pattern QUERY_PARAM_PATTERN = Pattern.compile("([^&=]+)(=?)([^&]+)?");
 
+	private static final String SCHEME_PATTERN = "([^:/?#\\\\]+):";
+
+	private static final String HTTP_PATTERN = "(?i)(http|https):";
+
+	private static final String USERINFO_PATTERN = "([^/?#\\\\]*)";
+
+	private static final String HOST_IPV4_PATTERN = "[^/?#:\\\\]*";
+
+	private static final String HOST_IPV6_PATTERN = "\\[[\\p{XDigit}:.]*[%\\p{Alnum}]*]";
+
+	private static final String HOST_PATTERN = "(" + HOST_IPV6_PATTERN + "|" + HOST_IPV4_PATTERN + ")";
+
+	private static final String PORT_PATTERN = "(\\{[^}]+\\}?|[^/?#\\\\]*)";
+
+	private static final String PATH_PATTERN = "([^?#]*)";
+
+	private static final String QUERY_PATTERN = "([^#]*)";
+
+	private static final String LAST_PATTERN = "(.*)";
+
+	// Regex patterns that matches URIs. See RFC 3986, appendix B
+	private static final Pattern URI_PATTERN = Pattern.compile(
+			"^(" + SCHEME_PATTERN + ")?" + "(//(" + USERINFO_PATTERN + "@)?" + HOST_PATTERN + "(:" + PORT_PATTERN +
+					")?" + ")?" + PATH_PATTERN + "(\\?" + QUERY_PATTERN + ")?" + "(#" + LAST_PATTERN + ")?");
+
+	private static final Pattern HTTP_URL_PATTERN = Pattern.compile(
+			"^" + HTTP_PATTERN + "(//(" + USERINFO_PATTERN + "@)?" + HOST_PATTERN + "(:" + PORT_PATTERN + ")?" + ")?" +
+					PATH_PATTERN + "(\\?" + QUERY_PATTERN + ")?" + "(#" + LAST_PATTERN + ")?");
+
+	private static final String FORWARDED_VALUE = "\"?([^;,\"]+)\"?";
+
+	private static final Pattern FORWARDED_HOST_PATTERN = Pattern.compile("(?i:host)=" + FORWARDED_VALUE);
+
+	private static final Pattern FORWARDED_PROTO_PATTERN = Pattern.compile("(?i:proto)=" + FORWARDED_VALUE);
+
+	private static final Pattern FORWARDED_FOR_PATTERN = Pattern.compile("(?i:for)=" + FORWARDED_VALUE);
+
 	private static final Object[] EMPTY_VALUES = new Object[0];
+
 
 	@Nullable
 	private String scheme;
@@ -175,19 +211,7 @@ public class UriComponentsBuilder implements UriBuilder, Cloneable {
 	}
 
 	/**
-	 * Variant of {@link #fromUriString(String, ParserType)} that defaults to
-	 * the {@link ParserType#RFC} parsing.
-	 */
-	public static UriComponentsBuilder fromUriString(String uri) throws InvalidUrlException {
-		Assert.notNull(uri, "URI must not be null");
-		if (uri.isEmpty()) {
-			return new UriComponentsBuilder();
-		}
-		return fromUriString(uri, ParserType.RFC);
-	}
-
-	/**
-	 * Create a builder that is initialized by parsing the given URI string.
+	 * Create a builder that is initialized with the given URI string.
 	 * <p><strong>Note:</strong> The presence of reserved characters can prevent
 	 * correct parsing of the URI string. For example if a query parameter
 	 * contains {@code '='} or {@code '&'} characters, the query string cannot
@@ -198,28 +222,53 @@ public class UriComponentsBuilder implements UriBuilder, Cloneable {
 	 * UriComponentsBuilder.fromUriString(uriString).buildAndExpand(&quot;hot&amp;cold&quot;);
 	 * </pre>
 	 * @param uri the URI string to initialize with
-	 * @param parserType the parsing algorithm to use
 	 * @return the new {@code UriComponentsBuilder}
-	 * @throws InvalidUrlException if {@code uri} cannot be parsed
-	 * @since 6.2
 	 */
-	public static UriComponentsBuilder fromUriString(String uri, ParserType parserType) throws InvalidUrlException {
+	public static UriComponentsBuilder fromUriString(String uri) {
 		Assert.notNull(uri, "URI must not be null");
-		if (uri.isEmpty()) {
-			return new UriComponentsBuilder();
+		Matcher matcher = URI_PATTERN.matcher(uri);
+		if (matcher.matches()) {
+			UriComponentsBuilder builder = new UriComponentsBuilder();
+			String scheme = matcher.group(2);
+			String userInfo = matcher.group(5);
+			String host = matcher.group(6);
+			String port = matcher.group(8);
+			String path = matcher.group(9);
+			String query = matcher.group(11);
+			String fragment = matcher.group(13);
+			boolean opaque = false;
+			if (StringUtils.hasLength(scheme)) {
+				String rest = uri.substring(scheme.length());
+				if (!rest.startsWith(":/")) {
+					opaque = true;
+				}
+			}
+			builder.scheme(scheme);
+			if (opaque) {
+				String ssp = uri.substring(scheme.length() + 1);
+				if (StringUtils.hasLength(fragment)) {
+					ssp = ssp.substring(0, ssp.length() - (fragment.length() + 1));
+				}
+				builder.schemeSpecificPart(ssp);
+			}
+			else {
+				checkSchemeAndHost(uri, scheme, host);
+				builder.userInfo(userInfo);
+				builder.host(host);
+				if (StringUtils.hasLength(port)) {
+					builder.port(port);
+				}
+				builder.path(path);
+				builder.query(query);
+			}
+			if (StringUtils.hasText(fragment)) {
+				builder.fragment(fragment);
+			}
+			return builder;
 		}
-		UriComponentsBuilder builder = new UriComponentsBuilder();
-		return switch (parserType) {
-			case RFC -> {
-				RfcUriParser.UriRecord record = RfcUriParser.parse(uri);
-				yield builder.rfcUriRecord(record);
-			}
-			case WHAT_WG -> {
-				WhatWgUrlParser.UrlRecord record =
-						WhatWgUrlParser.parse(uri, WhatWgUrlParser.EMPTY_RECORD, null, null);
-				yield builder.whatWgUrlRecord(record);
-			}
-		};
+		else {
+			throw new IllegalArgumentException("[" + uri + "] is not a valid URI");
+		}
 	}
 
 	/**
@@ -235,12 +284,42 @@ public class UriComponentsBuilder implements UriBuilder, Cloneable {
 	 * </pre>
 	 * @param httpUrl the source URI
 	 * @return the URI components of the URI
-	 * @deprecated as of 6.2, in favor of {@link #fromUriString(String)};
-	 * scheduled for removal in 7.0.
 	 */
-	@Deprecated(since = "6.2")
-	public static UriComponentsBuilder fromHttpUrl(String httpUrl) throws InvalidUrlException {
-		return fromUriString(httpUrl);
+	public static UriComponentsBuilder fromHttpUrl(String httpUrl) {
+		Assert.notNull(httpUrl, "HTTP URL must not be null");
+		Matcher matcher = HTTP_URL_PATTERN.matcher(httpUrl);
+		if (matcher.matches()) {
+			UriComponentsBuilder builder = new UriComponentsBuilder();
+			String scheme = matcher.group(1);
+			builder.scheme(scheme != null ? scheme.toLowerCase() : null);
+			builder.userInfo(matcher.group(4));
+			String host = matcher.group(5);
+			checkSchemeAndHost(httpUrl, scheme, host);
+			builder.host(host);
+			String port = matcher.group(7);
+			if (StringUtils.hasLength(port)) {
+				builder.port(port);
+			}
+			builder.path(matcher.group(8));
+			builder.query(matcher.group(10));
+			String fragment = matcher.group(12);
+			if (StringUtils.hasText(fragment)) {
+				builder.fragment(fragment);
+			}
+			return builder;
+		}
+		else {
+			throw new IllegalArgumentException("[" + httpUrl + "] is not a valid HTTP URL");
+		}
+	}
+
+	private static void checkSchemeAndHost(String uri, @Nullable String scheme, @Nullable String host) {
+		if (StringUtils.hasLength(scheme) && scheme.startsWith("http") && !StringUtils.hasLength(host)) {
+			throw new IllegalArgumentException("[" + uri + "] is not a valid HTTP URL");
+		}
+		if (StringUtils.hasLength(host) && host.startsWith("[") && !host.endsWith("]")) {
+			throw new IllegalArgumentException("Invalid IPV6 host in [" + uri + "]");
+		}
 	}
 
 	/**
@@ -252,23 +331,88 @@ public class UriComponentsBuilder implements UriBuilder, Cloneable {
 	 * @param request the source request
 	 * @return the URI components of the URI
 	 * @since 4.1.5
-	 * @deprecated in favor of {@link ForwardedHeaderUtils#adaptFromForwardedHeaders};
-	 * to be removed in 7.0
+	 * @see #parseForwardedFor(HttpRequest, InetSocketAddress)
 	 */
-	@Deprecated(since = "6.1", forRemoval = true)
 	public static UriComponentsBuilder fromHttpRequest(HttpRequest request) {
-		return ForwardedHeaderUtils.adaptFromForwardedHeaders(request.getURI(), request.getHeaders());
+		return fromUri(request.getURI()).adaptFromForwardedHeaders(request.getHeaders());
+	}
+
+	/**
+	 * Parse the first "Forwarded: for=..." or "X-Forwarded-For" header value to
+	 * an {@code InetSocketAddress} representing the address of the client.
+	 * @param request a request with headers that may contain forwarded headers
+	 * @param remoteAddress the current remoteAddress
+	 * @return an {@code InetSocketAddress} with the extracted host and port, or
+	 * {@code null} if the headers are not present.
+	 * @since 5.3
+	 * @see <a href="https://tools.ietf.org/html/rfc7239#section-5.2">RFC 7239, Section 5.2</a>
+	 */
+	@Nullable
+	public static InetSocketAddress parseForwardedFor(
+			HttpRequest request, @Nullable InetSocketAddress remoteAddress) {
+
+		int port = (remoteAddress != null ?
+				remoteAddress.getPort() : "https".equals(request.getURI().getScheme()) ? 443 : 80);
+
+		String forwardedHeader = request.getHeaders().getFirst("Forwarded");
+		if (StringUtils.hasText(forwardedHeader)) {
+			String forwardedToUse = StringUtils.tokenizeToStringArray(forwardedHeader, ",")[0];
+			Matcher matcher = FORWARDED_FOR_PATTERN.matcher(forwardedToUse);
+			if (matcher.find()) {
+				String value = matcher.group(1).trim();
+				String host = value;
+				int portSeparatorIdx = value.lastIndexOf(':');
+				int squareBracketIdx = value.lastIndexOf(']');
+				if (portSeparatorIdx > squareBracketIdx) {
+					if (squareBracketIdx == -1 && value.indexOf(':') != portSeparatorIdx) {
+						throw new IllegalArgumentException("Invalid IPv4 address: " + value);
+					}
+					host = value.substring(0, portSeparatorIdx);
+					try {
+						port = Integer.parseInt(value.substring(portSeparatorIdx + 1));
+					}
+					catch (NumberFormatException ex) {
+						throw new IllegalArgumentException(
+								"Failed to parse a port from \"forwarded\"-type header value: " + value);
+					}
+				}
+				return InetSocketAddress.createUnresolved(host, port);
+			}
+		}
+
+		String forHeader = request.getHeaders().getFirst("X-Forwarded-For");
+		if (StringUtils.hasText(forHeader)) {
+			String host = StringUtils.tokenizeToStringArray(forHeader, ",")[0];
+			return InetSocketAddress.createUnresolved(host, port);
+		}
+
+		return null;
 	}
 
 	/**
 	 * Create an instance by parsing the "Origin" header of an HTTP request.
 	 * @see <a href="https://tools.ietf.org/html/rfc6454">RFC 6454</a>
-	 * @deprecated in favor of {@link UriComponentsBuilder#fromUriString(String)};
-	 * to be removed in 7.0
 	 */
-	@Deprecated(since = "6.2", forRemoval = true)
 	public static UriComponentsBuilder fromOriginHeader(String origin) {
-		return fromUriString(origin);
+		Matcher matcher = URI_PATTERN.matcher(origin);
+		if (matcher.matches()) {
+			UriComponentsBuilder builder = new UriComponentsBuilder();
+			String scheme = matcher.group(2);
+			String host = matcher.group(6);
+			String port = matcher.group(8);
+			if (StringUtils.hasLength(scheme)) {
+				builder.scheme(scheme);
+			}
+			builder.host(host);
+			if (StringUtils.hasLength(port)) {
+				builder.port(port);
+			}
+			checkSchemeAndHost(origin, scheme, host);
+			return builder;
+		}
+		else {
+			throw new IllegalArgumentException("[" + origin + "] is not a valid \"Origin\" header value");
+		}
 	}
 
 
@@ -341,9 +485,8 @@ public class UriComponentsBuilder implements UriBuilder, Cloneable {
 			result = new OpaqueUriComponents(this.scheme, this.ssp, this.fragment);
 		}
 		else {
-			MultiValueMap<String, String> queryParams = new LinkedMultiValueMap<>(this.queryParams);
 			HierarchicalUriComponents uric = new HierarchicalUriComponents(this.scheme, this.fragment,
-					this.userInfo, this.host, this.port, this.pathBuilder.build(), queryParams,
+					this.userInfo, this.host, this.port, this.pathBuilder.build(), this.queryParams,
 					hint == EncodingHint.FULLY_ENCODED);
 			result = (hint == EncodingHint.ENCODE_TEMPLATE ? uric.encodeTemplate(this.charset) : uric);
 		}
@@ -401,10 +544,8 @@ public class UriComponentsBuilder implements UriBuilder, Cloneable {
 	 * @since 4.1
 	 * @see UriComponents#toUriString()
 	 */
-	@Override
 	public String toUriString() {
-		return (this.uriVariables.isEmpty() ?
-				build().encode().toUriString() :
+		return (this.uriVariables.isEmpty() ? build().encode().toUriString() :
 				buildInternal(EncodingHint.ENCODE_TEMPLATE).toUriString());
 	}
 
@@ -461,58 +602,6 @@ public class UriComponentsBuilder implements UriBuilder, Cloneable {
 	public UriComponentsBuilder uriComponents(UriComponents uriComponents) {
 		Assert.notNull(uriComponents, "UriComponents must not be null");
 		uriComponents.copyToUriComponentsBuilder(this);
-		return this;
-	}
-
-	/**
-	 * Internal method to initialize this builder from an RFC {@code UriRecord}.
-	 */
-	private UriComponentsBuilder rfcUriRecord(RfcUriParser.UriRecord record) {
-		scheme(record.scheme());
-		if (record.isOpaque()) {
-			if (record.path() != null) {
-				schemeSpecificPart(record.path());
-			}
-		}
-		else {
-			userInfo(record.user());
-			host(record.host());
-			port(record.port());
-			if (record.path() != null) {
-				path(record.path());
-			}
-			query(record.query());
-		}
-		fragment(record.fragment());
-		return this;
-	}
-
-	/**
-	 * Internal method to initialize this builder from a WhatWG {@code UrlRecord}.
-	 */
-	private UriComponentsBuilder whatWgUrlRecord(WhatWgUrlParser.UrlRecord record) {
-		if (!record.scheme().isEmpty()) {
-			scheme(record.scheme());
-		}
-		if (record.path().isOpaque()) {
-			String ssp = record.path() + record.search();
-			schemeSpecificPart(ssp);
-		}
-		else {
-			userInfo(record.userInfo());
-			String hostname = record.hostname();
-			if (StringUtils.hasText(hostname)) {
-				host(hostname);
-			}
-			if (record.port() != null) {
-				port(record.portString());
-			}
-			path(record.path().toString());
-			query(record.query());
-		}
-		if (StringUtils.hasText(record.fragment())) {
-			fragment(record.fragment());
-		}
 		return this;
 	}
 
@@ -624,7 +713,7 @@ public class UriComponentsBuilder implements UriBuilder, Cloneable {
 	}
 
 	@Override
-	public UriComponentsBuilder queryParam(String name, @Nullable Object... values) {
+	public UriComponentsBuilder queryParam(String name, Object... values) {
 		Assert.notNull(name, "Name must not be null");
 		if (!ObjectUtils.isEmpty(values)) {
 			for (Object value : values) {
@@ -642,8 +731,8 @@ public class UriComponentsBuilder implements UriBuilder, Cloneable {
 	@Nullable
 	private String getQueryParamValue(@Nullable Object value) {
 		if (value != null) {
-			return (value instanceof Optional<?> optional ?
-					optional.map(Object::toString).orElse(null) :
+			return (value instanceof Optional ?
+					((Optional<?>) value).map(Object::toString).orElse(null) :
 					value.toString());
 		}
 		return null;
@@ -656,12 +745,12 @@ public class UriComponentsBuilder implements UriBuilder, Cloneable {
 
 	@Override
 	public UriComponentsBuilder queryParamIfPresent(String name, Optional<?> value) {
-		value.ifPresent(v -> {
-			if (v instanceof Collection<?> values) {
-				queryParam(name, values);
+		value.ifPresent(o -> {
+			if (o instanceof Collection) {
+				queryParam(name, (Collection<?>) o);
 			}
 			else {
-				queryParam(name, v);
+				queryParam(name, o);
 			}
 		});
 		return this;
@@ -740,6 +829,94 @@ public class UriComponentsBuilder implements UriBuilder, Cloneable {
 		return this;
 	}
 
+	/**
+	 * Adapt this builder's scheme+host+port from the given headers, specifically
+	 * "Forwarded" (<a href="https://tools.ietf.org/html/rfc7239">RFC 7239</a>,
+	 * or "X-Forwarded-Host", "X-Forwarded-Port", and "X-Forwarded-Proto" if
+	 * "Forwarded" is not found.
+	 * <p><strong>Note:</strong> this method uses values from forwarded headers,
+	 * if present, in order to reflect the client-originated protocol and address.
+	 * Consider using the {@code ForwardedHeaderFilter} in order to choose from a
+	 * central place whether to extract and use, or to discard such headers.
+	 * See the Spring Framework reference for more on this filter.
+	 * @param headers the HTTP headers to consider
+	 * @return this UriComponentsBuilder
+	 * @since 4.2.7
+	 */
+	UriComponentsBuilder adaptFromForwardedHeaders(HttpHeaders headers) {
+		try {
+			String forwardedHeader = headers.getFirst("Forwarded");
+			if (StringUtils.hasText(forwardedHeader)) {
+				Matcher matcher = FORWARDED_PROTO_PATTERN.matcher(forwardedHeader);
+				if (matcher.find()) {
+					scheme(matcher.group(1).trim());
+					port(null);
+				}
+				else if (isForwardedSslOn(headers)) {
+					scheme("https");
+					port(null);
+				}
+				matcher = FORWARDED_HOST_PATTERN.matcher(forwardedHeader);
+				if (matcher.find()) {
+					adaptForwardedHost(matcher.group(1).trim());
+				}
+			}
+			else {
+				String protocolHeader = headers.getFirst("X-Forwarded-Proto");
+				if (StringUtils.hasText(protocolHeader)) {
+					scheme(StringUtils.tokenizeToStringArray(protocolHeader, ",")[0]);
+					port(null);
+				}
+				else if (isForwardedSslOn(headers)) {
+					scheme("https");
+					port(null);
+				}
+				String hostHeader = headers.getFirst("X-Forwarded-Host");
+				if (StringUtils.hasText(hostHeader)) {
+					adaptForwardedHost(StringUtils.tokenizeToStringArray(hostHeader, ",")[0]);
+				}
+				String portHeader = headers.getFirst("X-Forwarded-Port");
+				if (StringUtils.hasText(portHeader)) {
+					port(Integer.parseInt(StringUtils.tokenizeToStringArray(portHeader, ",")[0]));
+				}
+			}
+		}
+		catch (NumberFormatException ex) {
+			throw new IllegalArgumentException("Failed to parse a port from \"forwarded\"-type headers. " +
+					"If not behind a trusted proxy, consider using ForwardedHeaderFilter " +
+					"with the removeOnly=true. Request headers: " + headers);
+		}
+
+		if (this.scheme != null &&
+				(((this.scheme.equals("http") || this.scheme.equals("ws")) && "80".equals(this.port)) ||
+				((this.scheme.equals("https") || this.scheme.equals("wss")) && "443".equals(this.port)))) {
+			port(null);
+		}
+
+		return this;
+	}
+
+	private boolean isForwardedSslOn(HttpHeaders headers) {
+		String forwardedSsl = headers.getFirst("X-Forwarded-Ssl");
+		return StringUtils.hasText(forwardedSsl) && forwardedSsl.equalsIgnoreCase("on");
+	}
+
+	private void adaptForwardedHost(String rawValue) {
+		int portSeparatorIdx = rawValue.lastIndexOf(':');
+		int squareBracketIdx = rawValue.lastIndexOf(']');
+		if (portSeparatorIdx > squareBracketIdx) {
+			if (squareBracketIdx == -1 && rawValue.indexOf(':') != portSeparatorIdx) {
+				throw new IllegalArgumentException("Invalid IPv4 address: " + rawValue);
+			}
+			host(rawValue.substring(0, portSeparatorIdx));
+			port(Integer.parseInt(rawValue.substring(portSeparatorIdx + 1)));
+		}
+		else {
+			host(rawValue);
+			port(null);
+		}
+	}
+
 	private void resetHierarchicalComponents() {
 		this.userInfo = null;
 		this.host = null;
@@ -750,14 +927,6 @@ public class UriComponentsBuilder implements UriBuilder, Cloneable {
 
 	private void resetSchemeSpecificPart() {
 		this.ssp = null;
-	}
-
-	void resetPortIfDefaultForScheme() {
-		if (this.scheme != null &&
-				(((this.scheme.equals("http") || this.scheme.equals("ws")) && "80".equals(this.port)) ||
-						((this.scheme.equals("https") || this.scheme.equals("wss")) && "443".equals(this.port)))) {
-			port(null);
-		}
 	}
 
 
@@ -777,30 +946,6 @@ public class UriComponentsBuilder implements UriBuilder, Cloneable {
 	 */
 	public UriComponentsBuilder cloneBuilder() {
 		return new UriComponentsBuilder(this);
-	}
-
-
-	/**
-	 * Enum to provide a choice of URI parsers to use in {@link #fromUriString(String, ParserType)}.
-	 * @since 6.2
-	 */
-	public enum ParserType {
-
-		/**
-		 * This parser type expects URI's to conform to RFC 3986 syntax.
-		 */
-		RFC,
-
-		/**
-		 * This parser follows the
-		 * <a href="https://url.spec.whatwg.org/#url-parsing">URL parsing algorithm</a>
-		 * in the WhatWG URL Living standard that browsers implement to align on
-		 * lenient handling of user typed URL's that may not conform to RFC syntax.
-		 * @see <a href="https://url.spec.whatwg.org">URL Living Standard</a>
-		 * @see <a href="https://github.com/web-platform-tests/wpt/tree/master/url">URL tests</a>
-		 */
-		WHAT_WG
-
 	}
 
 
@@ -898,9 +1043,8 @@ public class UriComponentsBuilder implements UriBuilder, Cloneable {
 		}
 
 		@Override
-		@Nullable
 		public PathComponent build() {
-			if (this.path.isEmpty()) {
+			if (this.path.length() == 0) {
 				return null;
 			}
 			String sanitized = getSanitizedPath(this.path);
@@ -949,7 +1093,6 @@ public class UriComponentsBuilder implements UriBuilder, Cloneable {
 		}
 
 		@Override
-		@Nullable
 		public PathComponent build() {
 			return (this.pathSegments.isEmpty() ? null :
 					new HierarchicalUriComponents.PathSegmentComponent(this.pathSegments));

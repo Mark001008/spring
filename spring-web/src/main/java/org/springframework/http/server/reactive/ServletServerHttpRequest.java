@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,13 +26,14 @@ import java.util.Enumeration;
 import java.util.Locale;
 import java.util.Map;
 
-import jakarta.servlet.AsyncContext;
-import jakarta.servlet.AsyncEvent;
-import jakarta.servlet.AsyncListener;
-import jakarta.servlet.ReadListener;
-import jakarta.servlet.ServletInputStream;
-import jakarta.servlet.http.Cookie;
-import jakarta.servlet.http.HttpServletRequest;
+import javax.servlet.AsyncContext;
+import javax.servlet.AsyncEvent;
+import javax.servlet.AsyncListener;
+import javax.servlet.ReadListener;
+import javax.servlet.ServletInputStream;
+import javax.servlet.http.Cookie;
+import javax.servlet.http.HttpServletRequest;
+
 import org.apache.commons.logging.Log;
 import reactor.core.publisher.Flux;
 
@@ -41,7 +42,6 @@ import org.springframework.core.io.buffer.DataBufferFactory;
 import org.springframework.core.io.buffer.DefaultDataBufferFactory;
 import org.springframework.http.HttpCookie;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.lang.NonNull;
 import org.springframework.lang.Nullable;
@@ -51,13 +51,11 @@ import org.springframework.util.LinkedCaseInsensitiveMap;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.util.StringUtils;
-import org.springframework.web.util.UriComponentsBuilder;
 
 /**
  * Adapt {@link ServerHttpRequest} to the Servlet {@link HttpServletRequest}.
  *
  * @author Rossen Stoyanchev
- * @author Juergen Hoeller
  * @since 5.0
  */
 class ServletServerHttpRequest extends AbstractServerHttpRequest {
@@ -66,8 +64,6 @@ class ServletServerHttpRequest extends AbstractServerHttpRequest {
 
 
 	private final HttpServletRequest request;
-
-	private final ServletInputStream inputStream;
 
 	private final RequestBodyPublisher bodyPublisher;
 
@@ -91,8 +87,7 @@ class ServletServerHttpRequest extends AbstractServerHttpRequest {
 			AsyncContext asyncContext, String servletPath, DataBufferFactory bufferFactory, int bufferSize)
 			throws IOException, URISyntaxException {
 
-		super(HttpMethod.valueOf(request.getMethod()), initUri(request),
-				request.getContextPath() + servletPath, initHeaders(headers, request));
+		super(initUri(request), request.getContextPath() + servletPath, initHeaders(headers, request));
 
 		Assert.notNull(bufferFactory, "'bufferFactory' must not be null");
 		Assert.isTrue(bufferSize > 0, "'bufferSize' must be greater than 0");
@@ -104,15 +99,15 @@ class ServletServerHttpRequest extends AbstractServerHttpRequest {
 		this.asyncListener = new RequestAsyncListener();
 
 		// Tomcat expects ReadListener registration on initial thread
-		this.inputStream = request.getInputStream();
-		this.bodyPublisher = new RequestBodyPublisher(this.inputStream);
+		ServletInputStream inputStream = request.getInputStream();
+		this.bodyPublisher = new RequestBodyPublisher(inputStream);
 		this.bodyPublisher.registerReadListener();
 	}
 
 
 	private static MultiValueMap<String, String> createDefaultHttpHeaders(HttpServletRequest request) {
 		MultiValueMap<String, String> headers =
-				CollectionUtils.toMultiValueMap(new LinkedCaseInsensitiveMap<>(8, Locale.ROOT));
+				CollectionUtils.toMultiValueMap(new LinkedCaseInsensitiveMap<>(8, Locale.ENGLISH));
 		for (Enumeration<?> names = request.getHeaderNames(); names.hasMoreElements(); ) {
 			String name = (String) names.nextElement();
 			for (Enumeration<?> values = request.getHeaders(name); values.hasMoreElements(); ) {
@@ -122,45 +117,16 @@ class ServletServerHttpRequest extends AbstractServerHttpRequest {
 		return headers;
 	}
 
-	@SuppressWarnings("JavaExistingMethodCanBeUsed")
-	private static URI initUri(HttpServletRequest servletRequest) {
-		Assert.notNull(servletRequest, "'request' must not be null");
-		String urlString = null;
-		String query = null;
-		boolean hasQuery = false;
-		try {
-			StringBuffer requestURL = servletRequest.getRequestURL();
-			query = servletRequest.getQueryString();
-			hasQuery = StringUtils.hasText(query);
-			if (hasQuery) {
-				requestURL.append('?').append(query);
-			}
-			urlString = requestURL.toString();
-			return new URI(urlString);
+	private static URI initUri(HttpServletRequest request) throws URISyntaxException {
+		Assert.notNull(request, "'request' must not be null");
+		StringBuffer url = request.getRequestURL();
+		String query = request.getQueryString();
+		if (StringUtils.hasText(query)) {
+			url.append('?').append(query);
 		}
-		catch (URISyntaxException ex) {
-			if (hasQuery) {
-				try {
-					// Maybe malformed query, try to parse and encode it
-					query = UriComponentsBuilder.fromUriString("?" + query).build().toUri().getRawQuery();
-					return new URI(servletRequest.getRequestURL().toString() + "?" + query);
-				}
-				catch (URISyntaxException ex2) {
-					try {
-						// Try leaving it out
-						return new URI(servletRequest.getRequestURL().toString());
-					}
-					catch (URISyntaxException ex3) {
-						// ignore
-					}
-				}
-			}
-			throw new IllegalStateException(
-					"Could not resolve HttpServletRequest as URI: " + urlString, ex);
-		}
+		return new URI(url.toString());
 	}
 
-	@SuppressWarnings("NullAway")
 	private static MultiValueMap<String, String> initHeaders(
 			MultiValueMap<String, String> headerValues, HttpServletRequest request) {
 
@@ -191,6 +157,12 @@ class ServletServerHttpRequest extends AbstractServerHttpRequest {
 			}
 		}
 		return (headers != null ? headers : headerValues);
+	}
+
+
+	@Override
+	public String getMethodValue() {
+		return this.request.getMethod();
 	}
 
 	@Override
@@ -231,12 +203,12 @@ class ServletServerHttpRequest extends AbstractServerHttpRequest {
 
 	@Nullable
 	private String getSslSessionId() {
-		return (String) this.request.getAttribute("jakarta.servlet.request.ssl_session_id");
+		return (String) this.request.getAttribute("javax.servlet.request.ssl_session_id");
 	}
 
 	@Nullable
 	private X509Certificate[] getX509Certificates() {
-		return (X509Certificate[]) this.request.getAttribute("jakarta.servlet.request.X509Certificate");
+		return (X509Certificate[]) this.request.getAttribute("javax.servlet.request.X509Certificate");
 	}
 
 	@Override
@@ -261,13 +233,6 @@ class ServletServerHttpRequest extends AbstractServerHttpRequest {
 	}
 
 	/**
-	 * Return the {@link ServletInputStream} for the current response.
-	 */
-	protected final ServletInputStream getInputStream() {
-		return this.inputStream;
-	}
-
-	/**
 	 * Read from the request body InputStream and return a DataBuffer.
 	 * Invoked only when {@link ServletInputStream#isReady()} returns "true".
 	 * @return a DataBuffer with data read, or
@@ -275,7 +240,7 @@ class ServletServerHttpRequest extends AbstractServerHttpRequest {
 	 * or {@link #EOF_BUFFER} if the input stream returned -1.
 	 */
 	DataBuffer readFromInputStream() throws IOException {
-		int read = this.inputStream.read(this.buffer);
+		int read = this.request.getInputStream().read(this.buffer);
 		logBytesRead(read);
 
 		if (read > 0) {

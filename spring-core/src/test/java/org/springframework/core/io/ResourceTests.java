@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,17 +24,13 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
-import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.ByteBuffer;
 import java.nio.channels.ReadableByteChannel;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Base64;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.HashSet;
 import java.util.stream.Stream;
 
 import okhttp3.mockwebserver.Dispatcher;
@@ -42,6 +38,7 @@ import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Named;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -50,14 +47,11 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 import org.springframework.util.FileCopyUtils;
 
-import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
-import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
-import static org.junit.jupiter.params.provider.Arguments.argumentSet;
 
 /**
- * Tests for various {@link Resource} implementations.
+ * Unit tests for various {@link Resource} implementations.
  *
  * @author Juergen Hoeller
  * @author Chris Beams
@@ -66,79 +60,91 @@ import static org.junit.jupiter.params.provider.Arguments.argumentSet;
  */
 class ResourceTests {
 
-	@ParameterizedTest
+
+	@ParameterizedTest(name = "{index}: {0}")
 	@MethodSource("resource")
 	void resourceIsValid(Resource resource) throws Exception {
-		assertThat(resource.getFilename()).isEqualTo("ResourceTests.class");
-		assertThat(resource.getURL().getFile()).endsWith("ResourceTests.class");
+		assertThat(resource.getFilename()).isEqualTo("Resource.class");
+		assertThat(resource.getURL().getFile().endsWith("Resource.class")).isTrue();
 		assertThat(resource.exists()).isTrue();
 		assertThat(resource.isReadable()).isTrue();
-		assertThat(resource.contentLength()).isGreaterThan(0);
-		assertThat(resource.lastModified()).isGreaterThan(0);
-		assertThat(resource.getContentAsByteArray()).containsExactly(Files.readAllBytes(Path.of(resource.getURI())));
+		assertThat(resource.contentLength() > 0).isTrue();
+		assertThat(resource.lastModified() > 0).isTrue();
 	}
 
-	@ParameterizedTest
+	@ParameterizedTest(name = "{index}: {0}")
 	@MethodSource("resource")
 	void resourceCreateRelative(Resource resource) throws Exception {
-		Resource relative1 = resource.createRelative("ClassPathResourceTests.class");
-		assertThat(relative1.getFilename()).isEqualTo("ClassPathResourceTests.class");
-		assertThat(relative1.getURL().getFile().endsWith("ClassPathResourceTests.class")).isTrue();
+		Resource relative1 = resource.createRelative("ClassPathResource.class");
+		assertThat(relative1.getFilename()).isEqualTo("ClassPathResource.class");
+		assertThat(relative1.getURL().getFile().endsWith("ClassPathResource.class")).isTrue();
 		assertThat(relative1.exists()).isTrue();
 		assertThat(relative1.isReadable()).isTrue();
-		assertThat(relative1.contentLength()).isGreaterThan(0);
-		assertThat(relative1.lastModified()).isGreaterThan(0);
+		assertThat(relative1.contentLength() > 0).isTrue();
+		assertThat(relative1.lastModified() > 0).isTrue();
 	}
 
-	@ParameterizedTest
+	@ParameterizedTest(name = "{index}: {0}")
 	@MethodSource("resource")
 	void resourceCreateRelativeWithFolder(Resource resource) throws Exception {
-		Resource relative2 = resource.createRelative("support/PathMatchingResourcePatternResolverTests.class");
-		assertThat(relative2.getFilename()).isEqualTo("PathMatchingResourcePatternResolverTests.class");
-		assertThat(relative2.getURL().getFile()).endsWith("PathMatchingResourcePatternResolverTests.class");
+		Resource relative2 = resource.createRelative("support/ResourcePatternResolver.class");
+		assertThat(relative2.getFilename()).isEqualTo("ResourcePatternResolver.class");
+		assertThat(relative2.getURL().getFile().endsWith("ResourcePatternResolver.class")).isTrue();
 		assertThat(relative2.exists()).isTrue();
 		assertThat(relative2.isReadable()).isTrue();
-		assertThat(relative2.contentLength()).isGreaterThan(0);
-		assertThat(relative2.lastModified()).isGreaterThan(0);
+		assertThat(relative2.contentLength() > 0).isTrue();
+		assertThat(relative2.lastModified() > 0).isTrue();
 	}
 
-	@ParameterizedTest
+	@ParameterizedTest(name = "{index}: {0}")
 	@MethodSource("resource")
 	void resourceCreateRelativeWithDotPath(Resource resource) throws Exception {
-		Resource relative3 = resource.createRelative("../CollectionFactoryTests.class");
-		assertThat(relative3.getFilename()).isEqualTo("CollectionFactoryTests.class");
-		assertThat(relative3.getURL().getFile()).endsWith("CollectionFactoryTests.class");
+		Resource relative3 = resource.createRelative("../SpringVersion.class");
+		assertThat(relative3.getFilename()).isEqualTo("SpringVersion.class");
+		assertThat(relative3.getURL().getFile().endsWith("SpringVersion.class")).isTrue();
 		assertThat(relative3.exists()).isTrue();
 		assertThat(relative3.isReadable()).isTrue();
-		assertThat(relative3.contentLength()).isGreaterThan(0);
-		assertThat(relative3.lastModified()).isGreaterThan(0);
+		assertThat(relative3.contentLength() > 0).isTrue();
+		assertThat(relative3.lastModified() > 0).isTrue();
 	}
 
-	@ParameterizedTest
+	@ParameterizedTest(name = "{index}: {0}")
 	@MethodSource("resource")
 	void resourceCreateRelativeUnknown(Resource resource) throws Exception {
 		Resource relative4 = resource.createRelative("X.class");
 		assertThat(relative4.exists()).isFalse();
 		assertThat(relative4.isReadable()).isFalse();
-		assertThatExceptionOfType(FileNotFoundException.class).isThrownBy(relative4::contentLength);
-		assertThatExceptionOfType(FileNotFoundException.class).isThrownBy(relative4::lastModified);
-		assertThatExceptionOfType(FileNotFoundException.class).isThrownBy(relative4::getInputStream);
-		assertThatExceptionOfType(FileNotFoundException.class).isThrownBy(relative4::readableChannel);
-		assertThatExceptionOfType(FileNotFoundException.class).isThrownBy(relative4::getContentAsByteArray);
-		assertThatExceptionOfType(FileNotFoundException.class).isThrownBy(() -> relative4.getContentAsString(UTF_8));
+		assertThatExceptionOfType(FileNotFoundException.class).isThrownBy(
+				relative4::contentLength);
+		assertThatExceptionOfType(FileNotFoundException.class).isThrownBy(
+				relative4::lastModified);
+	}
+
+	@ParameterizedTest(name = "{index}: {0}")
+	@MethodSource("resource")
+	void loadingMissingResourceFails(Resource resource) {
+		assertThatExceptionOfType(FileNotFoundException.class).isThrownBy(() ->
+				resource.createRelative("X").getInputStream());
+	}
+
+	@ParameterizedTest(name = "{index}: {0}")
+	@MethodSource("resource")
+	void readingMissingResourceFails(Resource resource) {
+		assertThatExceptionOfType(FileNotFoundException.class).isThrownBy(() ->
+				resource.createRelative("X").readableChannel());
 	}
 
 	private static Stream<Arguments> resource() throws URISyntaxException {
-		URL resourceClass = ResourceTests.class.getResource("ResourceTests.class");
+		URL resourceClass = ResourceTests.class.getResource("Resource.class");
 		Path resourceClassFilePath = Paths.get(resourceClass.toURI());
 		return Stream.of(
-				argumentSet("ClassPathResource", new ClassPathResource("org/springframework/core/io/ResourceTests.class")),
-				argumentSet("ClassPathResource with ClassLoader", new ClassPathResource("org/springframework/core/io/ResourceTests.class", ResourceTests.class.getClassLoader())),
-				argumentSet("ClassPathResource with Class", new ClassPathResource("ResourceTests.class", ResourceTests.class)),
-				argumentSet("FileSystemResource", new FileSystemResource(resourceClass.getFile())),
-				argumentSet("FileSystemResource with File", new FileSystemResource(new File(resourceClass.getFile()))),
-				argumentSet("FileSystemResource with File path", new FileSystemResource(resourceClassFilePath)),
-				argumentSet("UrlResource", new UrlResource(resourceClass))
+				Arguments.of(Named.of("ClassPathResource", new ClassPathResource("org/springframework/core/io/Resource.class"))),
+				Arguments.of(Named.of("ClassPathResource with ClassLoader", new ClassPathResource("org/springframework/core/io/Resource.class", ResourceTests.class.getClassLoader()))),
+				Arguments.of(Named.of("ClassPathResource with Class", new ClassPathResource("Resource.class", ResourceTests.class))),
+				Arguments.of(Named.of("FileSystemResource", new FileSystemResource(resourceClass.getFile()))),
+				Arguments.of(Named.of("FileSystemResource with File", new FileSystemResource(new File(resourceClass.getFile())))),
+				Arguments.of(Named.of("FileSystemResource with File path", new FileSystemResource(resourceClassFilePath))),
+				Arguments.of(Named.of("UrlResource", new UrlResource(resourceClass)))
 		);
 	}
 
@@ -148,18 +154,12 @@ class ResourceTests {
 
 		@Test
 		void hasContent() throws Exception {
-			String testString = "testString";
-			byte[] testBytes = testString.getBytes();
-			Resource resource = new ByteArrayResource(testBytes);
+			Resource resource = new ByteArrayResource("testString".getBytes());
 			assertThat(resource.exists()).isTrue();
 			assertThat(resource.isOpen()).isFalse();
-			byte[] contentBytes = resource.getContentAsByteArray();
-			assertThat(contentBytes).containsExactly(testBytes);
-			String contentString = resource.getContentAsString(StandardCharsets.US_ASCII);
-			assertThat(contentString).isEqualTo(testString);
-			contentString = FileCopyUtils.copyToString(new InputStreamReader(resource.getInputStream()));
-			assertThat(contentString).isEqualTo(testString);
-			assertThat(new ByteArrayResource(testBytes)).isEqualTo(resource);
+			String content = FileCopyUtils.copyToString(new InputStreamReader(resource.getInputStream()));
+			assertThat(content).isEqualTo("testString");
+			assertThat(new ByteArrayResource("testString".getBytes())).isEqualTo(resource);
 		}
 
 		@Test
@@ -172,39 +172,21 @@ class ResourceTests {
 		@Test
 		void hasDescription() {
 			Resource resource = new ByteArrayResource("testString".getBytes(), "my description");
-			assertThat(resource.getDescription()).contains("my description");
+			assertThat(resource.getDescription().contains("my description")).isTrue();
 		}
-	}
 
+	}
 
 	@Nested
 	class InputStreamResourceTests {
 
 		@Test
 		void hasContent() throws Exception {
-			String testString = "testString";
-			byte[] testBytes = testString.getBytes();
-			InputStream is = new ByteArrayInputStream(testBytes);
-			Resource resource1 = new InputStreamResource(is);
-			String content = FileCopyUtils.copyToString(new InputStreamReader(resource1.getInputStream()));
-			assertThat(content).isEqualTo(testString);
-			assertThat(new InputStreamResource(is)).isEqualTo(resource1);
-			assertThat(new InputStreamResource(() -> is)).isNotEqualTo(resource1);
-			assertThatIllegalStateException().isThrownBy(resource1::getInputStream);
-
-			Resource resource2 = new InputStreamResource(new ByteArrayInputStream(testBytes));
-			assertThat(resource2.getContentAsByteArray()).containsExactly(testBytes);
-			assertThatIllegalStateException().isThrownBy(resource2::getContentAsByteArray);
-
-			AtomicBoolean obtained = new AtomicBoolean();
-			Resource resource3 = new InputStreamResource(() -> {
-				obtained.set(true);
-				return new ByteArrayInputStream(testBytes);
-			});
-			assertThat(obtained).isFalse();
-			assertThat(resource3.getContentAsString(StandardCharsets.US_ASCII)).isEqualTo(testString);
-			assertThat(obtained).isTrue();
-			assertThatIllegalStateException().isThrownBy(() -> resource3.getContentAsString(StandardCharsets.US_ASCII));
+			InputStream is = new ByteArrayInputStream("testString".getBytes());
+			Resource resource = new InputStreamResource(is);
+			String content = FileCopyUtils.copyToString(new InputStreamReader(resource.getInputStream()));
+			assertThat(content).isEqualTo("testString");
+			assertThat(new InputStreamResource(is)).isEqualTo(resource);
 		}
 
 		@Test
@@ -213,52 +195,78 @@ class ResourceTests {
 			Resource resource = new InputStreamResource(is);
 			assertThat(resource.exists()).isTrue();
 			assertThat(resource.isOpen()).isTrue();
-
-			resource = new InputStreamResource(() -> is);
-			assertThat(resource.exists()).isTrue();
-			assertThat(resource.isOpen()).isTrue();
 		}
 
 		@Test
 		void hasDescription() {
 			InputStream is = new ByteArrayInputStream("testString".getBytes());
 			Resource resource = new InputStreamResource(is, "my description");
-			assertThat(resource.getDescription()).contains("my description");
-
-			resource = new InputStreamResource(() -> is, "my description");
-			assertThat(resource.getDescription()).contains("my description");
+			assertThat(resource.getDescription().contains("my description")).isTrue();
 		}
 	}
 
+
+	@Nested
+	class ClassPathResourceTests {
+
+		@Test
+		void equalsAndHashCode() {
+			Resource resource = new ClassPathResource("org/springframework/core/io/Resource.class");
+			Resource resource2 = new ClassPathResource("org/springframework/core/../core/io/./Resource.class");
+			Resource resource3 = new ClassPathResource("org/springframework/core/").createRelative("../core/io/./Resource.class");
+			assertThat(resource2).isEqualTo(resource);
+			assertThat(resource3).isEqualTo(resource);
+			// Check whether equal/hashCode works in a HashSet.
+			HashSet<Resource> resources = new HashSet<>();
+			resources.add(resource);
+			resources.add(resource2);
+			assertThat(resources.size()).isEqualTo(1);
+		}
+
+		@Test
+		void resourcesWithDifferentPathsAreEqual() {
+			Resource resource = new ClassPathResource("org/springframework/core/io/Resource.class", getClass().getClassLoader());
+			ClassPathResource sameResource = new ClassPathResource("org/springframework/core/../core/io/./Resource.class", getClass().getClassLoader());
+			assertThat(sameResource).isEqualTo(resource);
+		}
+
+		@Test
+		void relativeResourcesAreEqual() throws Exception {
+			Resource resource = new ClassPathResource("dir/");
+			Resource relative = resource.createRelative("subdir");
+			assertThat(relative).isEqualTo(new ClassPathResource("dir/subdir"));
+		}
+
+	}
 
 	@Nested
 	class FileSystemResourceTests {
 
 		@Test
 		void sameResourceIsEqual() {
-			String file = getClass().getResource("ResourceTests.class").getFile();
+			String file = getClass().getResource("Resource.class").getFile();
 			Resource resource = new FileSystemResource(file);
 			assertThat(resource).isEqualTo(new FileSystemResource(file));
 		}
 
 		@Test
 		void sameResourceFromFileIsEqual() {
-			File file = new File(getClass().getResource("ResourceTests.class").getFile());
+			File file = new File(getClass().getResource("Resource.class").getFile());
 			Resource resource = new FileSystemResource(file);
 			assertThat(resource).isEqualTo(new FileSystemResource(file));
 		}
 
 		@Test
 		void sameResourceFromFilePathIsEqual() throws Exception {
-			Path filePath = Paths.get(getClass().getResource("ResourceTests.class").toURI());
+			Path filePath = Paths.get(getClass().getResource("Resource.class").toURI());
 			Resource resource = new FileSystemResource(filePath);
 			assertThat(resource).isEqualTo(new FileSystemResource(filePath));
 		}
 
 		@Test
 		void sameResourceFromDotPathIsEqual() {
-			Resource resource = new FileSystemResource("core/io/ResourceTests.class");
-			assertThat(new FileSystemResource("core/../core/io/./ResourceTests.class")).isEqualTo(resource);
+			Resource resource = new FileSystemResource("core/io/Resource.class");
+			assertThat(new FileSystemResource("core/../core/io/./Resource.class")).isEqualTo(resource);
 		}
 
 		@Test
@@ -270,38 +278,16 @@ class ResourceTests {
 
 		@Test
 		void readableChannelProvidesContent() throws Exception {
-			Resource resource = new FileSystemResource(getClass().getResource("ResourceTests.class").getFile());
+			Resource resource = new FileSystemResource(getClass().getResource("Resource.class").getFile());
 			try (ReadableByteChannel channel = resource.readableChannel()) {
 				ByteBuffer buffer = ByteBuffer.allocate((int) resource.contentLength());
 				channel.read(buffer);
 				buffer.rewind();
-				assertThat(buffer.limit()).isGreaterThan(0);
+				assertThat(buffer.limit() > 0).isTrue();
 			}
 		}
 
-		@Test
-		void urlAndUriAreNormalizedWhenCreatedFromFile() throws Exception {
-			Path path = Path.of("src/test/resources/scanned-resources/resource#test1.txt").toAbsolutePath();
-			assertUrlAndUriBehavior(new FileSystemResource(path.toFile()));
-		}
-
-		@Test
-		void urlAndUriAreNormalizedWhenCreatedFromPath() throws Exception {
-			Path path = Path.of("src/test/resources/scanned-resources/resource#test1.txt").toAbsolutePath();
-			assertUrlAndUriBehavior(new FileSystemResource(path));
-		}
-
-		/**
-		 * The following assertions serve as regression tests for the lack of the
-		 * "authority component" (//) in the returned URI/URL. For example, we are
-		 * expecting file:/my/path (or file:/C:/My/Path) instead of file:///my/path.
-		 */
-		private void assertUrlAndUriBehavior(Resource resource) throws IOException {
-			assertThat(resource.getURL().toString()).matches("^file:\\/[^\\/].+test1\\.txt$");
-			assertThat(resource.getURI().toString()).matches("^file:\\/[^\\/].+test1\\.txt$");
-		}
 	}
-
 
 	@Nested
 	class UrlResourceTests {
@@ -310,63 +296,15 @@ class ResourceTests {
 
 		@Test
 		void sameResourceWithRelativePathIsEqual() throws Exception {
-			Resource resource = new UrlResource("file:core/io/ResourceTests.class");
-			assertThat(new UrlResource("file:core/../core/io/./ResourceTests.class")).isEqualTo(resource);
+			Resource resource = new UrlResource("file:core/io/Resource.class");
+			assertThat(new UrlResource("file:core/../core/io/./Resource.class")).isEqualTo(resource);
 		}
 
 		@Test
 		void filenameIsExtractedFromFilePath() throws Exception {
-			assertThat(new UrlResource("file:test?argh").getFilename()).isEqualTo("test");
-			assertThat(new UrlResource("file:/test?argh").getFilename()).isEqualTo("test");
-			assertThat(new UrlResource("file:test.txt?argh").getFilename()).isEqualTo("test.txt");
-			assertThat(new UrlResource("file:/test.txt?argh").getFilename()).isEqualTo("test.txt");
-			assertThat(new UrlResource("file:/dir/test?argh").getFilename()).isEqualTo("test");
 			assertThat(new UrlResource("file:/dir/test.txt?argh").getFilename()).isEqualTo("test.txt");
 			assertThat(new UrlResource("file:\\dir\\test.txt?argh").getFilename()).isEqualTo("test.txt");
 			assertThat(new UrlResource("file:\\dir/test.txt?argh").getFilename()).isEqualTo("test.txt");
-		}
-
-		@Test
-		void filenameIsExtractedFromURL() throws Exception {
-			assertThat(new UrlResource(new URL("file:test?argh")).getFilename()).isEqualTo("test");
-			assertThat(new UrlResource(new URL("file:/test?argh")).getFilename()).isEqualTo("test");
-			assertThat(new UrlResource(new URL("file:test.txt?argh")).getFilename()).isEqualTo("test.txt");
-			assertThat(new UrlResource(new URL("file:/test.txt?argh")).getFilename()).isEqualTo("test.txt");
-			assertThat(new UrlResource(new URL("file:/dir/test?argh")).getFilename()).isEqualTo("test");
-			assertThat(new UrlResource(new URL("file:/dir/test.txt?argh")).getFilename()).isEqualTo("test.txt");
-			assertThat(new UrlResource(new URL("file:\\dir\\test.txt?argh")).getFilename()).isEqualTo("test.txt");
-			assertThat(new UrlResource(new URL("file:\\dir/test.txt?argh")).getFilename()).isEqualTo("test.txt");
-		}
-
-		@Test
-		void filenameContainingHashTagIsExtractedFromFilePathUnencoded() throws Exception {
-			String unencodedPath = "/dir/test#1.txt";
-			String encodedPath = "/dir/test%231.txt";
-
-			URI uri = new URI("file", unencodedPath, null);
-			URL url = uri.toURL();
-			assertThat(uri.getPath()).isEqualTo(unencodedPath);
-			assertThat(uri.getRawPath()).isEqualTo(encodedPath);
-			assertThat(url.getPath()).isEqualTo(encodedPath);
-
-			UrlResource urlResource = new UrlResource(url);
-			assertThat(urlResource.getURI().getPath()).isEqualTo(unencodedPath);
-			assertThat(urlResource.getFilename()).isEqualTo("test#1.txt");
-		}
-
-		@Test
-		void factoryMethodsProduceEqualResources() throws Exception {
-			Resource resource1 = new UrlResource("file:core/io/ResourceTests.class");
-			Resource resource2 = UrlResource.from("file:core/io/ResourceTests.class");
-			Resource resource3 = UrlResource.from(resource1.getURI());
-
-			assertThat(resource2.getURL()).isEqualTo(resource1.getURL());
-			assertThat(resource3.getURL()).isEqualTo(resource1.getURL());
-
-			assertThat(UrlResource.from("file:core/../core/io/./ResourceTests.class")).isEqualTo(resource1);
-			assertThat(UrlResource.from("file:/dir/test.txt?argh").getFilename()).isEqualTo("test.txt");
-			assertThat(UrlResource.from("file:\\dir\\test.txt?argh").getFilename()).isEqualTo("test.txt");
-			assertThat(UrlResource.from("file:\\dir/test.txt?argh").getFilename()).isEqualTo("test.txt");
 		}
 
 		@Test
@@ -374,13 +312,6 @@ class ResourceTests {
 			Resource resource = new UrlResource("file:dir/");
 			Resource relative = resource.createRelative("subdir");
 			assertThat(relative).isEqualTo(new UrlResource("file:dir/subdir"));
-		}
-
-		@Test
-		void unusualRelativeResourcesAreEqual() throws Exception {
-			Resource resource = new UrlResource("file:dir/");
-			Resource relative = resource.createRelative("https://spring.io");
-			assertThat(relative).isEqualTo(new UrlResource("file:dir/https://spring.io"));
 		}
 
 		@Test
@@ -418,19 +349,6 @@ class ResourceTests {
 			assertThat(request.getHeader("Framework-Name")).isEqualTo("Spring");
 		}
 
-		@Test
-		void useUserInfoToSetBasicAuth() throws Exception {
-			startServer();
-			UrlResource resource = new UrlResource(
-					"http://alice:secret@localhost:" + this.server.getPort() + "/resource");
-			assertThat(resource.getInputStream()).hasContent("Spring");
-			RecordedRequest request = this.server.takeRequest();
-			String authorization = request.getHeader("Authorization");
-			assertThat(authorization).isNotNull().startsWith("Basic ");
-			assertThat(new String(Base64.getDecoder().decode(authorization.substring(6)),
-					StandardCharsets.ISO_8859_1)).isEqualTo("alice:secret");
-		}
-
 		@AfterEach
 		void shutdown() throws Exception {
 			this.server.shutdown();
@@ -449,7 +367,7 @@ class ResourceTests {
 			}
 
 			@Override
-			protected void customizeConnection(HttpURLConnection con) {
+			protected void customizeConnection(HttpURLConnection con) throws IOException {
 				con.setRequestProperty("Framework-Name", "Spring");
 			}
 		}
@@ -457,23 +375,23 @@ class ResourceTests {
 		class ResourceDispatcher extends Dispatcher {
 
 			@Override
-			public MockResponse dispatch(RecordedRequest request) {
+			public MockResponse dispatch(RecordedRequest request) throws InterruptedException {
 				if (request.getPath().equals("/resource")) {
-					return switch (request.getMethod()) {
-						case "HEAD" -> new MockResponse()
+					switch (request.getMethod()) {
+						case "HEAD":
+							return new MockResponse()
 									.addHeader("Content-Length", "6");
-						case "GET" -> new MockResponse()
+						case "GET":
+							return new MockResponse()
 									.addHeader("Content-Length", "6")
 									.addHeader("Content-Type", "text/plain")
 									.setBody("Spring");
-						default -> new MockResponse().setResponseCode(404);
-					};
+					}
 				}
 				return new MockResponse().setResponseCode(404);
 			}
 		}
 	}
-
 
 	@Nested
 	class AbstractResourceTests {
@@ -487,6 +405,7 @@ class ResourceTests {
 				public String getDescription() {
 					return name;
 				}
+
 				@Override
 				public InputStream getInputStream() throws IOException {
 					throw new FileNotFoundException();
@@ -499,9 +418,6 @@ class ResourceTests {
 					.withMessageContaining(name);
 			assertThatExceptionOfType(FileNotFoundException.class).isThrownBy(() ->
 					resource.createRelative("/testing")).withMessageContaining(name);
-			assertThatExceptionOfType(FileNotFoundException.class).isThrownBy(resource::getContentAsByteArray);
-			assertThatExceptionOfType(FileNotFoundException.class).isThrownBy(
-					() -> resource.getContentAsString(StandardCharsets.US_ASCII));
 			assertThat(resource.getFilename()).isNull();
 		}
 
@@ -512,6 +428,7 @@ class ResourceTests {
 				public InputStream getInputStream() {
 					return new ByteArrayInputStream(new byte[] {'a', 'b', 'c'});
 				}
+
 				@Override
 				public String getDescription() {
 					return "";
@@ -519,6 +436,7 @@ class ResourceTests {
 			};
 			assertThat(resource.contentLength()).isEqualTo(3L);
 		}
+
 	}
 
 }

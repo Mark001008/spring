@@ -36,7 +36,6 @@ import org.springframework.util.Assert;
  * @author Rossen Stoyanchev
  * @since 5.0
  */
-@SuppressWarnings("NullAway")
 class WriteResultPublisher implements Publisher<Void> {
 
 	/**

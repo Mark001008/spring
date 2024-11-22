@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,11 +21,11 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 
-import org.springframework.context.support.StaticApplicationContext;
 import org.springframework.core.MethodParameter;
-import org.springframework.core.annotation.AnnotatedElementUtils;
 import org.springframework.http.HttpInputMessage;
 import org.springframework.http.MediaType;
 import org.springframework.http.converter.HttpMessageConverter;
@@ -46,33 +46,45 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.mock;
 
 /**
- * Tests for {@link RequestResponseBodyAdviceChain}.
+ * Unit tests for {@link RequestResponseBodyAdviceChain}.
  *
  * @author Rossen Stoyanchev
  * @since 4.2
  */
-class RequestResponseBodyAdviceChainTests {
+public class RequestResponseBodyAdviceChainTests {
 
-	private String body = "body";
+	private String body;
 
-	private MediaType contentType = MediaType.TEXT_PLAIN;
+	private MediaType contentType;
 
-	private Class<? extends HttpMessageConverter<?>> converterType = StringHttpMessageConverter.class;
+	private Class<? extends HttpMessageConverter<?>> converterType;
 
-	private MethodParameter paramType = new MethodParameter(ClassUtils.getMethod(this.getClass(), "handle", String.class), 0);
-	private MethodParameter returnType = new MethodParameter(ClassUtils.getMethod(this.getClass(), "handle", String.class), -1);
+	private MethodParameter paramType;
+	private MethodParameter returnType;
 
-	private ServerHttpRequest request = new ServletServerHttpRequest(new MockHttpServletRequest());
-	private ServerHttpResponse response = new ServletServerHttpResponse(new MockHttpServletResponse());
+	private ServerHttpRequest request;
+	private ServerHttpResponse response;
 
 
+	@BeforeEach
+	public void setup() {
+		this.body = "body";
+		this.contentType = MediaType.TEXT_PLAIN;
+		this.converterType = StringHttpMessageConverter.class;
+		this.paramType = new MethodParameter(ClassUtils.getMethod(this.getClass(), "handle", String.class), 0);
+		this.returnType = new MethodParameter(ClassUtils.getMethod(this.getClass(), "handle", String.class), -1);
+		this.request = new ServletServerHttpRequest(new MockHttpServletRequest());
+		this.response = new ServletServerHttpResponse(new MockHttpServletResponse());
+	}
+
+
+	@SuppressWarnings("unchecked")
 	@Test
-	void requestBodyAdvice() throws IOException {
-		RequestBodyAdvice requestAdvice = mock();
-		ResponseBodyAdvice<String> responseAdvice = mock();
+	public void requestBodyAdvice() throws IOException {
+		RequestBodyAdvice requestAdvice = Mockito.mock(RequestBodyAdvice.class);
+		ResponseBodyAdvice<String> responseAdvice = Mockito.mock(ResponseBodyAdvice.class);
 		List<Object> advice = Arrays.asList(requestAdvice, responseAdvice);
 		RequestResponseBodyAdviceChain chain = new RequestResponseBodyAdviceChain(advice);
 
@@ -91,10 +103,11 @@ class RequestResponseBodyAdviceChainTests {
 				String.class, this.converterType)).isEqualTo(modified);
 	}
 
+	@SuppressWarnings("unchecked")
 	@Test
-	void responseBodyAdvice() {
-		RequestBodyAdvice requestAdvice = mock();
-		ResponseBodyAdvice<String> responseAdvice = mock();
+	public void responseBodyAdvice() {
+		RequestBodyAdvice requestAdvice = Mockito.mock(RequestBodyAdvice.class);
+		ResponseBodyAdvice<String> responseAdvice = Mockito.mock(ResponseBodyAdvice.class);
 		List<Object> advice = Arrays.asList(requestAdvice, responseAdvice);
 		RequestResponseBodyAdviceChain chain = new RequestResponseBodyAdviceChain(advice);
 
@@ -110,8 +123,8 @@ class RequestResponseBodyAdviceChainTests {
 	}
 
 	@Test
-	void controllerAdvice() {
-		Object adviceBean = createControllerAdviceBean(MyControllerAdvice.class);
+	public void controllerAdvice() {
+		Object adviceBean = new ControllerAdviceBean(new MyControllerAdvice());
 		RequestResponseBodyAdviceChain chain = new RequestResponseBodyAdviceChain(Collections.singletonList(adviceBean));
 
 		String actual = (String) chain.beforeBodyWrite(this.body, this.returnType, this.contentType,
@@ -121,21 +134,14 @@ class RequestResponseBodyAdviceChainTests {
 	}
 
 	@Test
-	void controllerAdviceNotApplicable() {
-		Object adviceBean = createControllerAdviceBean(TargetedControllerAdvice.class);
+	public void controllerAdviceNotApplicable() {
+		Object adviceBean = new ControllerAdviceBean(new TargetedControllerAdvice());
 		RequestResponseBodyAdviceChain chain = new RequestResponseBodyAdviceChain(Collections.singletonList(adviceBean));
 
 		String actual = (String) chain.beforeBodyWrite(this.body, this.returnType, this.contentType,
 				this.converterType, this.request, this.response);
 
 		assertThat(actual).isEqualTo(this.body);
-	}
-
-	private ControllerAdviceBean createControllerAdviceBean(Class<?> beanType) {
-		StaticApplicationContext applicationContext = new StaticApplicationContext();
-		applicationContext.registerSingleton(beanType.getSimpleName(), beanType);
-		ControllerAdvice controllerAdvice = AnnotatedElementUtils.findMergedAnnotation(beanType, ControllerAdvice.class);
-		return new ControllerAdviceBean(beanType.getSimpleName(), applicationContext, controllerAdvice);
 	}
 
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2021 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,7 +21,6 @@ import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Predicate;
@@ -40,7 +39,6 @@ import org.springframework.core.annotation.AnnotationAwareOrderComparator;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
-import org.springframework.util.CollectionUtils;
 import org.springframework.util.ObjectUtils;
 
 /**
@@ -54,8 +52,8 @@ import org.springframework.util.ObjectUtils;
  *
  * <p>Implementing ApplicationEventMulticaster's actual {@link #multicastEvent} method
  * is left to subclasses. {@link SimpleApplicationEventMulticaster} simply multicasts
- * all events to all registered listeners, invoking them in the calling thread by
- * default. Alternative implementations could be more sophisticated in those respects.
+ * all events to all registered listeners, invoking them in the calling thread.
+ * Alternative implementations could be more sophisticated in those respects.
  *
  * @author Juergen Hoeller
  * @author Stephane Nicoll
@@ -84,10 +82,10 @@ public abstract class AbstractApplicationEventMulticaster
 
 	@Override
 	public void setBeanFactory(BeanFactory beanFactory) {
-		if (!(beanFactory instanceof ConfigurableBeanFactory cbf)) {
+		if (!(beanFactory instanceof ConfigurableBeanFactory)) {
 			throw new IllegalStateException("Not running in a ConfigurableBeanFactory: " + beanFactory);
 		}
-		this.beanFactory = cbf;
+		this.beanFactory = (ConfigurableBeanFactory) beanFactory;
 		if (this.beanClassLoader == null) {
 			this.beanClassLoader = this.beanFactory.getBeanClassLoader();
 		}
@@ -230,7 +228,6 @@ public abstract class AbstractApplicationEventMulticaster
 	 * @param retriever the ListenerRetriever, if supposed to populate one (for caching purposes)
 	 * @return the pre-filtered list of application listeners for the given event and source type
 	 */
-	@SuppressWarnings("NullAway")
 	private Collection<ApplicationListener<?>> retrieveApplicationListeners(
 			ResolvableType eventType, @Nullable Class<?> sourceType, @Nullable CachedListenerRetriever retriever) {
 
@@ -265,24 +262,6 @@ public abstract class AbstractApplicationEventMulticaster
 					if (supportsEvent(beanFactory, listenerBeanName, eventType)) {
 						ApplicationListener<?> listener =
 								beanFactory.getBean(listenerBeanName, ApplicationListener.class);
-
-						// Despite best efforts to avoid it, unwrapped proxies (singleton targets) can end up in the
-						// list of programmatically registered listeners. In order to avoid duplicates, we need to find
-						// and replace them by their proxy counterparts, because if both a proxy and its target end up
-						// in 'allListeners', listeners will fire twice.
-						ApplicationListener<?> unwrappedListener =
-								(ApplicationListener<?>) AopProxyUtils.getSingletonTarget(listener);
-						if (listener != unwrappedListener) {
-							if (filteredListeners != null && filteredListeners.contains(unwrappedListener)) {
-								filteredListeners.remove(unwrappedListener);
-								filteredListeners.add(listener);
-							}
-							if (allListeners.contains(unwrappedListener)) {
-								allListeners.remove(unwrappedListener);
-								allListeners.add(listener);
-							}
-						}
-
 						if (!allListeners.contains(listener) && supportsEvent(listener, eventType, sourceType)) {
 							if (retriever != null) {
 								if (beanFactory.isSingleton(listenerBeanName)) {
@@ -298,7 +277,7 @@ public abstract class AbstractApplicationEventMulticaster
 					else {
 						// Remove non-matching listeners that originally came from
 						// ApplicationListenerDetector, possibly ruled out by additional
-						// BeanDefinition metadata (for example, factory method generics) above.
+						// BeanDefinition metadata (e.g. factory method generics) above.
 						Object listener = beanFactory.getSingleton(listenerBeanName);
 						if (retriever != null) {
 							filteredListeners.remove(listener);
@@ -315,7 +294,7 @@ public abstract class AbstractApplicationEventMulticaster
 
 		AnnotationAwareOrderComparator.sort(allListeners);
 		if (retriever != null) {
-			if (CollectionUtils.isEmpty(filteredListenerBeans)) {
+			if (filteredListenerBeans.isEmpty()) {
 				retriever.applicationListeners = new LinkedHashSet<>(allListeners);
 				retriever.applicationListenerBeans = filteredListenerBeans;
 			}
@@ -394,8 +373,8 @@ public abstract class AbstractApplicationEventMulticaster
 	protected boolean supportsEvent(
 			ApplicationListener<?> listener, ResolvableType eventType, @Nullable Class<?> sourceType) {
 
-		GenericApplicationListener smartListener = (listener instanceof GenericApplicationListener gal ? gal :
-				new GenericApplicationListenerAdapter(listener));
+		GenericApplicationListener smartListener = (listener instanceof GenericApplicationListener ?
+				(GenericApplicationListener) listener : new GenericApplicationListenerAdapter(listener));
 		return (smartListener.supportsEventType(eventType) && smartListener.supportsSourceType(sourceType));
 	}
 
@@ -418,14 +397,20 @@ public abstract class AbstractApplicationEventMulticaster
 
 		@Override
 		public boolean equals(@Nullable Object other) {
-			return (this == other || (other instanceof ListenerCacheKey that &&
-					this.eventType.equals(that.eventType) &&
-					ObjectUtils.nullSafeEquals(this.sourceType, that.sourceType)));
+			if (this == other) {
+				return true;
+			}
+			if (!(other instanceof ListenerCacheKey)) {
+				return false;
+			}
+			ListenerCacheKey otherKey = (ListenerCacheKey) other;
+			return (this.eventType.equals(otherKey.eventType) &&
+					ObjectUtils.nullSafeEquals(this.sourceType, otherKey.sourceType));
 		}
 
 		@Override
 		public int hashCode() {
-			return Objects.hash(this.eventType, this.sourceType);
+			return this.eventType.hashCode() * 29 + ObjectUtils.nullSafeHashCode(this.sourceType);
 		}
 
 		@Override

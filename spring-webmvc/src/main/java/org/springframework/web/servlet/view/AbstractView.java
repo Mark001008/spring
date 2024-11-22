@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,16 +18,18 @@ package org.springframework.web.servlet.view;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.StringTokenizer;
 
-import jakarta.servlet.ServletOutputStream;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
+import javax.servlet.ServletOutputStream;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 
 import org.springframework.beans.factory.BeanNameAware;
 import org.springframework.http.MediaType;
@@ -92,7 +94,7 @@ public abstract class AbstractView extends WebApplicationObjectSupport implement
 	 * Set the content type for this view.
 	 * Default is "text/html;charset=ISO-8859-1".
 	 * <p>May be ignored by subclasses if the view itself is assumed
-	 * to set the content type, for example, in case of JSPs.
+	 * to set the content type, e.g. in case of JSPs.
 	 */
 	public void setContentType(@Nullable String contentType) {
 		this.contentType = contentType;
@@ -271,7 +273,7 @@ public abstract class AbstractView extends WebApplicationObjectSupport implement
 	 * flag on but do not list specific bean names for this property.
 	 */
 	public void setExposedContextBeanNames(String... exposedContextBeanNames) {
-		this.exposedContextBeanNames = Set.of(exposedContextBeanNames);
+		this.exposedContextBeanNames = new HashSet<>(Arrays.asList(exposedContextBeanNames));
 	}
 
 	/**
@@ -386,7 +388,7 @@ public abstract class AbstractView extends WebApplicationObjectSupport implement
 	 * generating download content that requires temporary caching on the
 	 * client side, typically via the response OutputStream.
 	 * @see #prepareResponse
-	 * @see jakarta.servlet.http.HttpServletResponse#getOutputStream()
+	 * @see javax.servlet.http.HttpServletResponse#getOutputStream()
 	 */
 	protected boolean generatesDownloadContent() {
 		return false;
@@ -430,7 +432,7 @@ public abstract class AbstractView extends WebApplicationObjectSupport implement
 	/**
 	 * Expose the model objects in the given map as request attributes.
 	 * Names will be taken from the model Map.
-	 * This method is suitable for all resources reachable by {@link jakarta.servlet.RequestDispatcher}.
+	 * This method is suitable for all resources reachable by {@link javax.servlet.RequestDispatcher}.
 	 * @param model a Map of model objects to expose
 	 * @param request current HTTP request
 	 */
@@ -495,7 +497,7 @@ public abstract class AbstractView extends WebApplicationObjectSupport implement
 	}
 
 	protected String formatViewName() {
-		return (getBeanName() != null ? "name [" + getBeanName() + "]" : "[" + getClass().getSimpleName() + "]");
+		return (getBeanName() != null ? "name '" + getBeanName() + "'" : "[" + getClass().getSimpleName() + "]");
 	}
 
 }

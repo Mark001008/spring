@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -219,11 +219,11 @@ public class ScriptFactoryPostProcessor implements SmartInstantiationAwareBeanPo
 
 	@Override
 	public void setBeanFactory(BeanFactory beanFactory) {
-		if (!(beanFactory instanceof ConfigurableBeanFactory cbf)) {
+		if (!(beanFactory instanceof ConfigurableBeanFactory)) {
 			throw new IllegalStateException("ScriptFactoryPostProcessor doesn't work with " +
 					"non-ConfigurableBeanFactory: " + beanFactory.getClass());
 		}
-		this.beanFactory = cbf;
+		this.beanFactory = (ConfigurableBeanFactory) beanFactory;
 
 		// Required so that references (up container hierarchies) are correctly resolved.
 		this.scriptBeanFactory.setParentBeanFactory(this.beanFactory);
@@ -233,7 +233,8 @@ public class ScriptFactoryPostProcessor implements SmartInstantiationAwareBeanPo
 
 		// Filter out BeanPostProcessors that are part of the AOP infrastructure,
 		// since those are only meant to apply to beans defined in the original factory.
-		this.scriptBeanFactory.getBeanPostProcessors().removeIf(AopInfrastructureBean.class::isInstance);
+		this.scriptBeanFactory.getBeanPostProcessors().removeIf(beanPostProcessor ->
+				beanPostProcessor instanceof AopInfrastructureBean);
 	}
 
 	@Override
@@ -281,8 +282,8 @@ public class ScriptFactoryPostProcessor implements SmartInstantiationAwareBeanPo
 			}
 		}
 		catch (Exception ex) {
-			if (ex instanceof BeanCreationException bce &&
-					bce.getMostSpecificCause() instanceof BeanCurrentlyInCreationException) {
+			if (ex instanceof BeanCreationException &&
+					((BeanCreationException) ex).getMostSpecificCause() instanceof BeanCurrentlyInCreationException) {
 				if (logger.isTraceEnabled()) {
 					logger.trace("Could not determine scripted object type for bean '" + beanName + "': " +
 							ex.getMessage());
@@ -304,7 +305,6 @@ public class ScriptFactoryPostProcessor implements SmartInstantiationAwareBeanPo
 	}
 
 	@Override
-	@Nullable
 	public Object postProcessBeforeInstantiation(Class<?> beanClass, String beanName) {
 		// We only apply special treatment to ScriptFactory implementations here.
 		if (!ScriptFactory.class.isAssignableFrom(beanClass)) {
@@ -406,11 +406,11 @@ public class ScriptFactoryPostProcessor implements SmartInstantiationAwareBeanPo
 	protected long resolveRefreshCheckDelay(BeanDefinition beanDefinition) {
 		long refreshCheckDelay = this.defaultRefreshCheckDelay;
 		Object attributeValue = beanDefinition.getAttribute(REFRESH_CHECK_DELAY_ATTRIBUTE);
-		if (attributeValue instanceof Number number) {
-			refreshCheckDelay = number.longValue();
+		if (attributeValue instanceof Number) {
+			refreshCheckDelay = ((Number) attributeValue).longValue();
 		}
-		else if (attributeValue instanceof String text) {
-			refreshCheckDelay = Long.parseLong(text);
+		else if (attributeValue instanceof String) {
+			refreshCheckDelay = Long.parseLong((String) attributeValue);
 		}
 		else if (attributeValue != null) {
 			throw new BeanDefinitionStoreException("Invalid refresh check delay attribute [" +
@@ -423,11 +423,11 @@ public class ScriptFactoryPostProcessor implements SmartInstantiationAwareBeanPo
 	protected boolean resolveProxyTargetClass(BeanDefinition beanDefinition) {
 		boolean proxyTargetClass = this.defaultProxyTargetClass;
 		Object attributeValue = beanDefinition.getAttribute(PROXY_TARGET_CLASS_ATTRIBUTE);
-		if (attributeValue instanceof Boolean boo) {
-			proxyTargetClass = boo;
+		if (attributeValue instanceof Boolean) {
+			proxyTargetClass = (Boolean) attributeValue;
 		}
-		else if (attributeValue instanceof String text) {
-			proxyTargetClass = Boolean.parseBoolean(text);
+		else if (attributeValue instanceof String) {
+			proxyTargetClass = Boolean.parseBoolean((String) attributeValue);
 		}
 		else if (attributeValue != null) {
 			throw new BeanDefinitionStoreException("Invalid proxy target class attribute [" +
@@ -510,7 +510,7 @@ public class ScriptFactoryPostProcessor implements SmartInstantiationAwareBeanPo
 			Signature signature = new Signature(setterName, Type.VOID_TYPE, new Type[] {Type.getType(propertyType)});
 			maker.add(signature, new Type[0]);
 		}
-		if (StringUtils.hasText(bd.getInitMethodName())) {
+		if (bd.getInitMethodName() != null) {
 			Signature signature = new Signature(bd.getInitMethodName(), Type.VOID_TYPE, new Type[0]);
 			maker.add(signature, new Type[0]);
 		}

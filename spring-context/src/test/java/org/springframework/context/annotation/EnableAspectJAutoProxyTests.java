@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,7 +23,6 @@ import example.scannable.FooDao;
 import example.scannable.FooService;
 import example.scannable.FooServiceImpl;
 import example.scannable.ServiceInvocationCounter;
-import example.scannable.StubFooDao;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Before;
 import org.junit.jupiter.api.Test;
@@ -124,7 +123,7 @@ class EnableAspectJAutoProxyTests {
 	}
 
 
-	@Import({ ServiceInvocationCounter.class, StubFooDao.class })
+	@ComponentScan("example.scannable")
 	@EnableAspectJAutoProxy(exposeProxy = true)
 	static class ConfigWithExposedProxy {
 

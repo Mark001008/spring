@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,6 @@ package org.springframework.jdbc.core.namedparam;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.Locale;
 import java.util.Map;
 
 import org.springframework.jdbc.core.SqlParameterValue;
@@ -60,12 +59,12 @@ public abstract class SqlParameterSourceUtils {
 	 * @see BeanPropertySqlParameterSource
 	 * @see NamedParameterJdbcTemplate#batchUpdate(String, SqlParameterSource[])
 	 */
-	@SuppressWarnings({"rawtypes", "unchecked"})
+	@SuppressWarnings("unchecked")
 	public static SqlParameterSource[] createBatch(Collection<?> candidates) {
 		SqlParameterSource[] batch = new SqlParameterSource[candidates.size()];
 		int i = 0;
 		for (Object candidate : candidates) {
-			batch[i] = (candidate instanceof Map map ? new MapSqlParameterSource(map) :
+			batch[i] = (candidate instanceof Map ? new MapSqlParameterSource((Map<String, ?>) candidate) :
 					new BeanPropertySqlParameterSource(candidate));
 			i++;
 		}
@@ -116,7 +115,7 @@ public abstract class SqlParameterSourceUtils {
 		String[] paramNames = parameterSource.getParameterNames();
 		if (paramNames != null) {
 			for (String name : paramNames) {
-				caseInsensitiveParameterNames.put(name.toLowerCase(Locale.ROOT), name);
+				caseInsensitiveParameterNames.put(name.toLowerCase(), name);
 			}
 		}
 		return caseInsensitiveParameterNames;

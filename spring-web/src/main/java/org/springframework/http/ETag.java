@@ -29,16 +29,33 @@ import org.springframework.util.StringUtils;
  *
  * @author Rossen Stoyanchev
  * @since 5.3.38
- * @param tag the unquoted tag value
- * @param weak whether the entity tag is for weak or strong validation
  * @see <a href="https://datatracker.ietf.org/doc/html/rfc7232">RFC 7232</a>
  */
-public record ETag(String tag, boolean weak) {
+public class ETag {
 
 	private static final Log logger = LogFactory.getLog(ETag.class);
 
 	private static final ETag WILDCARD = new ETag("*", false);
 
+
+	private final String tag;
+
+	private final boolean weak;
+
+
+	public ETag(String tag, boolean weak) {
+		this.tag = tag;
+		this.weak = weak;
+	}
+
+
+	public String tag() {
+		return this.tag;
+	}
+
+	public boolean weak() {
+		return this.weak;
+	}
 
 	/**
 	 * Whether this a wildcard tag matching to any entity tag value.
@@ -48,36 +65,13 @@ public record ETag(String tag, boolean weak) {
 	}
 
 	/**
-	 * Perform a strong or weak comparison to another {@link ETag}.
-	 * @param other the ETag to compare to
-	 * @param strong whether to perform strong or weak comparison
-	 * @return whether there is a match or not
-	 * @since 6.2
-	 * @see <a href="https://datatracker.ietf.org/doc/html/rfc9110#section-8.8.3.2">RFC 9110, Section 8.8.3.2</a>
+	 * Return the fully formatted tag including "W/" prefix and quotes.
 	 */
-	public boolean compare(ETag other, boolean strong) {
-		if (!StringUtils.hasLength(tag()) || !StringUtils.hasLength(other.tag())) {
-			return false;
+	public String formattedTag() {
+		if (this == WILDCARD) {
+			return "*";
 		}
-
-		if (strong && (weak() || other.weak())) {
-			return false;
-		}
-
-		return tag().equals(other.tag());
-	}
-
-	@Override
-	public boolean equals(Object other) {
-		return (this == other ||
-				(other instanceof ETag oet && this.tag.equals(oet.tag) && this.weak == oet.weak));
-	}
-
-	@Override
-	public int hashCode() {
-		int result = this.tag.hashCode();
-		result = 31 * result + Boolean.hashCode(this.weak);
-		return result;
+		return (this.weak ? "W/" : "") + "\"" + this.tag + "\"";
 	}
 
 	@Override
@@ -85,33 +79,6 @@ public record ETag(String tag, boolean weak) {
 		return formattedTag();
 	}
 
-	/**
-	 * Return the fully formatted tag including "W/" prefix and quotes.
-	 */
-	public String formattedTag() {
-		if (isWildcard()) {
-			return "*";
-		}
-		return (this.weak ? "W/" : "") + "\"" + this.tag + "\"";
-	}
-
-
-	/**
-	 * Create an {@link ETag} instance from a String representation.
-	 * @param rawValue the formatted ETag value
-	 * @return the created instance
-	 * @since 6.2
-	 */
-	public static ETag create(String rawValue) {
-		boolean weak = rawValue.startsWith("W/");
-		if (weak) {
-			rawValue = rawValue.substring(2);
-		}
-		if (rawValue.length() > 2 && rawValue.startsWith("\"") && rawValue.endsWith("\"")) {
-			rawValue = rawValue.substring(1, rawValue.length() - 1);
-		}
-		return new ETag(rawValue, weak);
-	}
 
 	/**
 	 * Parse entity tags from an "If-Match" or "If-None-Match" header.
@@ -182,26 +149,6 @@ public record ETag(String tag, boolean weak) {
 		}
 
 		return result;
-	}
-
-	/**
-	 * Add quotes around the ETag value if not present already.
-	 * @param tag the ETag value
-	 * @return the resulting, quoted value
-	 * @since 6.2
-	 */
-	public static String quoteETagIfNecessary(String tag) {
-		if (tag.startsWith("W/\"")) {
-			if (tag.length() > 3 && tag.endsWith("\"")) {
-				return tag;
-			}
-		}
-		else if (tag.startsWith("\"")) {
-			if (tag.length() > 1 && tag.endsWith("\"")) {
-				return tag;
-			}
-		}
-		return ("\"" + tag + "\"");
 	}
 
 

@@ -58,8 +58,14 @@ public class HttpCookie {
 
 	@Override
 	public boolean equals(@Nullable Object other) {
-		return (this == other || (other instanceof HttpCookie that &&
-				this.name.equalsIgnoreCase(that.getName())));
+		if (this == other) {
+			return true;
+		}
+		if (!(other instanceof HttpCookie)) {
+			return false;
+		}
+		HttpCookie otherCookie = (HttpCookie) other;
+		return (this.name.equalsIgnoreCase(otherCookie.getName()));
 	}
 
 	@Override

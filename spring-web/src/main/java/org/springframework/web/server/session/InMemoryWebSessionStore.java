@@ -82,7 +82,7 @@ public class InMemoryWebSessionStore implements WebSessionStore {
 	 * Configure the {@link Clock} to use to set lastAccessTime on every created
 	 * session and to calculate if it is expired.
 	 * <p>This may be useful to align to different timezone or to set the clock
-	 * back in a test, for example, {@code Clock.offset(clock, Duration.ofMinutes(-31))}
+	 * back in a test, e.g. {@code Clock.offset(clock, Duration.ofMinutes(-31))}
 	 * in order to simulate session expiration.
 	 * <p>By default this is {@code Clock.system(ZoneId.of("GMT"))}.
 	 * @param clock the clock to use
@@ -189,7 +189,6 @@ public class InMemoryWebSessionStore implements WebSessionStore {
 		}
 
 		@Override
-		@SuppressWarnings("NullAway")
 		public String getId() {
 			return this.id.get();
 		}
@@ -225,24 +224,18 @@ public class InMemoryWebSessionStore implements WebSessionStore {
 		}
 
 		@Override
-		@SuppressWarnings("NullAway")
 		public boolean isStarted() {
 			return this.state.get().equals(State.STARTED) || !getAttributes().isEmpty();
 		}
 
 		@Override
 		public Mono<Void> changeSessionId() {
-			return Mono.<Void>defer(() -> {
-						String currentId = this.id.get();
-						InMemoryWebSessionStore.this.sessions.remove(currentId);
-						String newId = String.valueOf(idGenerator.generateId());
-						this.id.set(newId);
-						InMemoryWebSessionStore.this.sessions.put(this.getId(), this);
-						return Mono.empty();
-					})
-					.subscribeOn(Schedulers.boundedElastic())
-					.publishOn(Schedulers.parallel())
-					.then();
+			String currentId = this.id.get();
+			InMemoryWebSessionStore.this.sessions.remove(currentId);
+			String newId = String.valueOf(idGenerator.generateId());
+			this.id.set(newId);
+			InMemoryWebSessionStore.this.sessions.put(this.getId(), this);
+			return Mono.empty();
 		}
 
 		@Override
@@ -254,7 +247,6 @@ public class InMemoryWebSessionStore implements WebSessionStore {
 		}
 
 		@Override
-		@SuppressWarnings("NullAway")
 		public Mono<Void> save() {
 
 			checkMaxSessionsLimit();
@@ -292,7 +284,6 @@ public class InMemoryWebSessionStore implements WebSessionStore {
 			return isExpired(clock.instant());
 		}
 
-		@SuppressWarnings("NullAway")
 		private boolean isExpired(Instant now) {
 			if (this.state.get().equals(State.EXPIRED)) {
 				return true;

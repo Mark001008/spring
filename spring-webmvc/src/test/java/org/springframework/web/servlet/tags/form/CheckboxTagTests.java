@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2021 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,7 +25,9 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import jakarta.servlet.jsp.tagext.Tag;
+import javax.servlet.jsp.JspException;
+import javax.servlet.jsp.tagext.Tag;
+
 import org.dom4j.Document;
 import org.dom4j.Element;
 import org.dom4j.io.SAXReader;
@@ -54,6 +56,7 @@ class CheckboxTagTests extends AbstractFormTagTests {
 	private TestBean bean;
 
 	@Override
+	@SuppressWarnings("serial")
 	protected void onSetUp() {
 		this.tag = new CheckboxTag() {
 			@Override
@@ -77,7 +80,7 @@ class CheckboxTagTests extends AbstractFormTagTests {
 		SAXReader reader = new SAXReader();
 		Document document = reader.read(new StringReader(output));
 		Element rootElement = document.getRootElement();
-		assertThat(rootElement.elements()).as("Both tag and hidden element not rendered").hasSize(2);
+		assertThat(rootElement.elements().size()).as("Both tag and hidden element not rendered").isEqualTo(2);
 		Element checkboxElement = rootElement.elements().get(0);
 		assertThat(checkboxElement.getName()).isEqualTo("input");
 		assertThat(checkboxElement.attribute("type").getValue()).isEqualTo("checkbox");
@@ -100,7 +103,7 @@ class CheckboxTagTests extends AbstractFormTagTests {
 		SAXReader reader = new SAXReader();
 		Document document = reader.read(new StringReader(output));
 		Element rootElement = document.getRootElement();
-		assertThat(rootElement.elements()).as("Both tag and hidden element not rendered").hasSize(2);
+		assertThat(rootElement.elements().size()).as("Both tag and hidden element not rendered").isEqualTo(2);
 		Element checkboxElement = rootElement.elements().get(0);
 		assertThat(checkboxElement.getName()).isEqualTo("input");
 		assertThat(checkboxElement.attribute("type").getValue()).isEqualTo("checkbox");
@@ -129,7 +132,7 @@ class CheckboxTagTests extends AbstractFormTagTests {
 		SAXReader reader = new SAXReader();
 		Document document = reader.read(new StringReader(output));
 		Element rootElement = document.getRootElement();
-		assertThat(rootElement.elements()).as("Both tag and hidden element not rendered").hasSize(2);
+		assertThat(rootElement.elements().size()).as("Both tag and hidden element not rendered").isEqualTo(2);
 		Element checkboxElement = rootElement.elements().get(0);
 		assertThat(checkboxElement.getName()).isEqualTo("input");
 		assertThat(checkboxElement.attribute("type").getValue()).isEqualTo("checkbox");
@@ -609,7 +612,7 @@ class CheckboxTagTests extends AbstractFormTagTests {
 	}
 
 	@Test
-	void withNullValue() {
+	void withNullValue() throws Exception {
 		this.tag.setPath("name");
 		assertThatIllegalArgumentException().as("null value binding to a non-boolean").isThrownBy(
 				this.tag::doStartTag);
@@ -629,7 +632,7 @@ class CheckboxTagTests extends AbstractFormTagTests {
 		SAXReader reader = new SAXReader();
 		Document document = reader.read(new StringReader(output));
 		Element rootElement = document.getRootElement();
-		assertThat(rootElement.elements()).as("Both tag and hidden element rendered incorrectly").hasSize(1);
+		assertThat(rootElement.elements().size()).as("Both tag and hidden element rendered incorrectly").isEqualTo(1);
 		Element checkboxElement = rootElement.elements().get(0);
 		assertThat(checkboxElement.getName()).isEqualTo("input");
 		assertThat(checkboxElement.attribute("type").getValue()).isEqualTo("checkbox");
@@ -639,7 +642,7 @@ class CheckboxTagTests extends AbstractFormTagTests {
 	}
 
 	@Test
-	void dynamicTypeAttribute() {
+	void dynamicTypeAttribute() throws JspException {
 		assertThatIllegalArgumentException().isThrownBy(() ->
 				this.tag.setDynamicAttribute(null, "type", "email"))
 			.withMessage("Attribute type=\"email\" is not allowed");
@@ -692,7 +695,7 @@ class CheckboxTagTests extends AbstractFormTagTests {
 	}
 
 
-	private static class MyStringTrimmerEditor extends StringTrimmerEditor {
+	private class MyStringTrimmerEditor extends StringTrimmerEditor {
 
 		public int count = 0;
 
@@ -708,7 +711,7 @@ class CheckboxTagTests extends AbstractFormTagTests {
 	}
 
 
-	private static class MyIntegerEditor extends PropertyEditorSupport {
+	private class MyIntegerEditor extends PropertyEditorSupport {
 
 		public int count = 0;
 

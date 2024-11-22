@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -250,11 +250,11 @@ public class ServiceLocatorFactoryBean implements FactoryBean<Object>, BeanFacto
 
 	@Override
 	public void setBeanFactory(BeanFactory beanFactory) throws BeansException {
-		if (!(beanFactory instanceof ListableBeanFactory lbf)) {
+		if (!(beanFactory instanceof ListableBeanFactory)) {
 			throw new FatalBeanException(
 					"ServiceLocatorFactoryBean needs to run in a BeanFactory that is a ListableBeanFactory");
 		}
-		this.beanFactory = lbf;
+		this.beanFactory = (ListableBeanFactory) beanFactory;
 	}
 
 	@Override
@@ -335,7 +335,6 @@ public class ServiceLocatorFactoryBean implements FactoryBean<Object>, BeanFacto
 	}
 
 	@Override
-	@Nullable
 	public Class<?> getObjectType() {
 		return this.serviceLocatorInterface;
 	}

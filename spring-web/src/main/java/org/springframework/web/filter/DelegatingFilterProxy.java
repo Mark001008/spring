@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2023 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,14 +17,12 @@
 package org.springframework.web.filter;
 
 import java.io.IOException;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 
-import jakarta.servlet.Filter;
-import jakarta.servlet.FilterChain;
-import jakarta.servlet.ServletException;
-import jakarta.servlet.ServletRequest;
-import jakarta.servlet.ServletResponse;
+import javax.servlet.Filter;
+import javax.servlet.FilterChain;
+import javax.servlet.ServletException;
+import javax.servlet.ServletRequest;
+import javax.servlet.ServletResponse;
 
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.lang.Nullable;
@@ -53,9 +51,8 @@ import org.springframework.web.context.support.WebApplicationContextUtils;
  * will by default <i>not</i> be delegated to the target bean, relying on the
  * Spring application context to manage the lifecycle of that bean. Specifying
  * the "targetFilterLifecycle" filter init-param as "true" will enforce invocation
- * of the {@link Filter#init(jakarta.servlet.FilterConfig)} and
- * {@link Filter#destroy()} lifecycle methods on the target bean, letting the
- * Servlet container manage the filter lifecycle.
+ * of the {@code Filter.init} and {@code Filter.destroy} lifecycle methods
+ * on the target bean, letting the Servlet container manage the filter lifecycle.
  *
  * <p>{@code DelegatingFilterProxy} can optionally accept constructor parameters
  * when using a Servlet container's instance-based filter registration methods,
@@ -74,13 +71,13 @@ import org.springframework.web.context.support.WebApplicationContextUtils;
  * @since 1.2
  * @see #setTargetBeanName
  * @see #setTargetFilterLifecycle
- * @see jakarta.servlet.Filter#doFilter
- * @see jakarta.servlet.Filter#init
- * @see jakarta.servlet.Filter#destroy
+ * @see javax.servlet.Filter#doFilter
+ * @see javax.servlet.Filter#init
+ * @see javax.servlet.Filter#destroy
  * @see #DelegatingFilterProxy(Filter)
  * @see #DelegatingFilterProxy(String)
  * @see #DelegatingFilterProxy(String, WebApplicationContext)
- * @see jakarta.servlet.ServletContext#addFilter(String, Filter)
+ * @see javax.servlet.ServletContext#addFilter(String, Filter)
  * @see org.springframework.web.WebApplicationInitializer
  */
 public class DelegatingFilterProxy extends GenericFilterBean {
@@ -99,7 +96,7 @@ public class DelegatingFilterProxy extends GenericFilterBean {
 	@Nullable
 	private volatile Filter delegate;
 
-	private final Lock delegateLock = new ReentrantLock();
+	private final Object delegateMonitor = new Object();
 
 
 	/**
@@ -228,8 +225,7 @@ public class DelegatingFilterProxy extends GenericFilterBean {
 
 	@Override
 	protected void initFilterBean() throws ServletException {
-		this.delegateLock.lock();
-		try {
+		synchronized (this.delegateMonitor) {
 			if (this.delegate == null) {
 				// If no target bean name specified, use filter name.
 				if (this.targetBeanName == null) {
@@ -244,9 +240,6 @@ public class DelegatingFilterProxy extends GenericFilterBean {
 				}
 			}
 		}
-		finally {
-			this.delegateLock.unlock();
-		}
 	}
 
 	@Override
@@ -256,8 +249,7 @@ public class DelegatingFilterProxy extends GenericFilterBean {
 		// Lazily initialize the delegate if necessary.
 		Filter delegateToUse = this.delegate;
 		if (delegateToUse == null) {
-			this.delegateLock.lock();
-			try {
+			synchronized (this.delegateMonitor) {
 				delegateToUse = this.delegate;
 				if (delegateToUse == null) {
 					WebApplicationContext wac = findWebApplicationContext();
@@ -268,9 +260,6 @@ public class DelegatingFilterProxy extends GenericFilterBean {
 					delegateToUse = initDelegate(wac);
 				}
 				this.delegate = delegateToUse;
-			}
-			finally {
-				this.delegateLock.unlock();
 			}
 		}
 
@@ -300,16 +289,19 @@ public class DelegatingFilterProxy extends GenericFilterBean {
 	 * @return the {@code WebApplicationContext} for this proxy, or {@code null} if not found
 	 * @see #DelegatingFilterProxy(String, WebApplicationContext)
 	 * @see #getContextAttribute()
-	 * @see WebApplicationContextUtils#getWebApplicationContext(jakarta.servlet.ServletContext)
+	 * @see WebApplicationContextUtils#getWebApplicationContext(javax.servlet.ServletContext)
 	 * @see WebApplicationContext#ROOT_WEB_APPLICATION_CONTEXT_ATTRIBUTE
 	 */
 	@Nullable
 	protected WebApplicationContext findWebApplicationContext() {
 		if (this.webApplicationContext != null) {
 			// The user has injected a context at construction time -> use it...
-			if (this.webApplicationContext instanceof ConfigurableApplicationContext cac && !cac.isActive()) {
-				// The context has not yet been refreshed -> do so before returning it...
-				cac.refresh();
+			if (this.webApplicationContext instanceof ConfigurableApplicationContext) {
+				ConfigurableApplicationContext cac = (ConfigurableApplicationContext) this.webApplicationContext;
+				if (!cac.isActive()) {
+					// The context has not yet been refreshed -> do so before returning it...
+					cac.refresh();
+				}
 			}
 			return this.webApplicationContext;
 		}
@@ -334,7 +326,7 @@ public class DelegatingFilterProxy extends GenericFilterBean {
 	 * @see #getTargetBeanName()
 	 * @see #isTargetFilterLifecycle()
 	 * @see #getFilterConfig()
-	 * @see jakarta.servlet.Filter#init(jakarta.servlet.FilterConfig)
+	 * @see javax.servlet.Filter#init(javax.servlet.FilterConfig)
 	 */
 	protected Filter initDelegate(WebApplicationContext wac) throws ServletException {
 		String targetBeanName = getTargetBeanName();
@@ -367,7 +359,7 @@ public class DelegatingFilterProxy extends GenericFilterBean {
 	 * Default implementation simply calls {@code Filter.destroy} on it.
 	 * @param delegate the Filter delegate (never {@code null})
 	 * @see #isTargetFilterLifecycle()
-	 * @see jakarta.servlet.Filter#destroy()
+	 * @see javax.servlet.Filter#destroy()
 	 */
 	protected void destroyDelegate(Filter delegate) {
 		if (isTargetFilterLifecycle()) {

@@ -35,14 +35,14 @@ import org.springframework.web.context.request.NativeWebRequest;
  * Base class for {@code ContentNegotiationStrategy} implementations with the
  * steps to resolve a request to media types.
  *
- * <p>First a key (for example, "json", "pdf") must be extracted from the request (for example,
+ * <p>First a key (e.g. "json", "pdf") must be extracted from the request (e.g.
  * file extension, query param). The key must then be resolved to media type(s)
  * through the base class {@link MappingMediaTypeFileExtensionResolver} which
  * stores such mappings.
  *
  * <p>The method {@link #handleNoMatch} allow subclasses to plug in additional
- * ways of looking up media types (for example, through the Java Activation framework,
- * or {@link jakarta.servlet.ServletContext#getMimeType}). Media types resolved
+ * ways of looking up media types (e.g. through the Java Activation framework,
+ * or {@link javax.servlet.ServletContext#getMimeType}). Media types resolved
  * via base classes are then added to the base class
  * {@link MappingMediaTypeFileExtensionResolver}, i.e. cached for new lookups.
  *
@@ -69,7 +69,7 @@ public abstract class AbstractMappingContentNegotiationStrategy extends MappingM
 
 	/**
 	 * Whether to only use the registered mappings to look up file extensions,
-	 * or also to use dynamic resolution (for example, via {@link MediaTypeFactory}).
+	 * or also to use dynamic resolution (e.g. via {@link MediaTypeFactory}.
 	 * <p>By default this is set to {@code false}.
 	 */
 	public void setUseRegisteredExtensionsOnly(boolean useRegisteredExtensionsOnly) {

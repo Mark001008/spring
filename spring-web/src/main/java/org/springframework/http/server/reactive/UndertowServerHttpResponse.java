@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,7 +35,7 @@ import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.core.io.buffer.DataBufferFactory;
 import org.springframework.core.io.buffer.DataBufferUtils;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatusCode;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ZeroCopyHttpOutputMessage;
 import org.springframework.lang.Nullable;
@@ -47,7 +47,6 @@ import org.springframework.util.Assert;
  * @author Marek Hawrylczak
  * @author Rossen Stoyanchev
  * @author Arjen Poutsma
- * @author Juergen Hoeller
  * @since 5.0
  */
 class UndertowServerHttpResponse extends AbstractListenerServerHttpResponse implements ZeroCopyHttpOutputMessage {
@@ -82,14 +81,12 @@ class UndertowServerHttpResponse extends AbstractListenerServerHttpResponse impl
 	}
 
 	@Override
-	public HttpStatusCode getStatusCode() {
-		HttpStatusCode status = super.getStatusCode();
-		return (status != null ? status : HttpStatusCode.valueOf(this.exchange.getStatusCode()));
+	public HttpStatus getStatusCode() {
+		HttpStatus status = super.getStatusCode();
+		return (status != null ? status : HttpStatus.resolve(this.exchange.getStatusCode()));
 	}
 
 	@Override
-	@Deprecated
-	@SuppressWarnings("removal")
 	public Integer getRawStatusCode() {
 		Integer status = super.getRawStatusCode();
 		return (status != null ? status : this.exchange.getStatusCode());
@@ -97,9 +94,9 @@ class UndertowServerHttpResponse extends AbstractListenerServerHttpResponse impl
 
 	@Override
 	protected void applyStatusCode() {
-		HttpStatusCode status = super.getStatusCode();
+		Integer status = super.getRawStatusCode();
 		if (status != null) {
-			this.exchange.setStatusCode(status.value());
+			this.exchange.setStatusCode(status);
 		}
 	}
 
@@ -107,6 +104,7 @@ class UndertowServerHttpResponse extends AbstractListenerServerHttpResponse impl
 	protected void applyHeaders() {
 	}
 
+	@SuppressWarnings("deprecation")
 	@Override
 	protected void applyCookies() {
 		for (String name : getCookies().keySet()) {
@@ -123,9 +121,9 @@ class UndertowServerHttpResponse extends AbstractListenerServerHttpResponse impl
 				}
 				cookie.setSecure(httpCookie.isSecure());
 				cookie.setHttpOnly(httpCookie.isHttpOnly());
-				// TODO: add "Partitioned" attribute when Undertow supports it
 				cookie.setSameSiteMode(httpCookie.getSameSite());
-				this.exchange.setResponseCookie(cookie);
+				// getResponseCookies() is deprecated in Undertow 2.2
+				this.exchange.getResponseCookies().putIfAbsent(name, cookie);
 			}
 		}
 	}
@@ -136,10 +134,14 @@ class UndertowServerHttpResponse extends AbstractListenerServerHttpResponse impl
 				Mono.create(sink -> {
 					try {
 						FileChannel source = FileChannel.open(file, StandardOpenOption.READ);
-						TransferBodyListener listener = new TransferBodyListener(source, position, count, sink);
+
+						TransferBodyListener listener = new TransferBodyListener(source, position,
+								count, sink);
 						sink.onDispose(listener::closeSource);
+
 						StreamSinkChannel destination = this.exchange.getResponseChannel();
 						destination.getWriteSetter().set(listener::transfer);
+
 						listener.transfer(destination);
 					}
 					catch (IOException ex) {
@@ -232,9 +234,7 @@ class UndertowServerHttpResponse extends AbstractListenerServerHttpResponse impl
 		@Override
 		protected void dataReceived(DataBuffer dataBuffer) {
 			super.dataReceived(dataBuffer);
-			ByteBuffer byteBuffer = ByteBuffer.allocate(dataBuffer.readableByteCount());
-			dataBuffer.toByteBuffer(byteBuffer);
-			this.byteBuffer = byteBuffer;
+			this.byteBuffer = dataBuffer.asByteBuffer();
 		}
 
 		@Override

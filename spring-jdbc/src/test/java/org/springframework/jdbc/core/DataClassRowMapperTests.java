@@ -75,27 +75,4 @@ class DataClassRowMapperTests extends AbstractRowMapperTests {
 		mock.verifyClosed();
 	}
 
-	@Test
-	void staticQueryWithDataRecord() throws Exception {
-		Mock mock = new Mock();
-		RecordPerson person = mock.getJdbcTemplate().queryForObject(
-				"select name, age, birth_date, balance from people",
-				new DataClassRowMapper<>(RecordPerson.class));
-		verifyPerson(person);
-
-		mock.verifyClosed();
-	}
-
-	protected void verifyPerson(RecordPerson person) {
-		assertThat(person.name()).isEqualTo("Bubba");
-		assertThat(person.age()).isEqualTo(22L);
-		assertThat(person.birth_date()).usingComparator(Date::compareTo).isEqualTo(new Date(1221222L));
-		assertThat(person.balance()).isEqualTo(new BigDecimal("1234.56"));
-		verifyPersonViaBeanWrapper(person);
-	}
-
-
-	record RecordPerson(String name, long age, Date birth_date, BigDecimal balance) {
-	}
-
 }

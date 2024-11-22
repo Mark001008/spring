@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,8 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.io.StringWriter;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 
 import org.junit.jupiter.api.Test;
@@ -47,10 +49,8 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 /**
  * @author Juergen Hoeller
  * @author Chris Beams
- * @author Sam Brannen
- * @author Yanming Zhou
  */
-class ClassPathXmlApplicationContextTests {
+public class ClassPathXmlApplicationContextTests {
 
 	private static final String PATH = "/org/springframework/context/support/";
 	private static final String RESOURCE_CONTEXT = PATH + "ClassPathXmlApplicationContextTests-resource.xml";
@@ -135,7 +135,7 @@ class ClassPathXmlApplicationContextTests {
 	}
 
 	@Test
-	void contextWithInvalidValueType() {
+	void contextWithInvalidValueType() throws IOException {
 		ClassPathXmlApplicationContext context = new ClassPathXmlApplicationContext(
 				new String[] {INVALID_VALUE_TYPE_CONTEXT}, false);
 		assertThatExceptionOfType(BeanCreationException.class)
@@ -155,8 +155,8 @@ class ClassPathXmlApplicationContextTests {
 			ByteArrayOutputStream baos = new ByteArrayOutputStream();
 			ex.printStackTrace(new PrintStream(baos));
 			String dump = FileCopyUtils.copyToString(new InputStreamReader(new ByteArrayInputStream(baos.toByteArray())));
-			assertThat(dump).contains("someMessageSource");
-			assertThat(dump).contains("useCodeAsDefaultMessage");
+			assertThat(dump.contains("someMessageSource")).isTrue();
+			assertThat(dump.contains("useCodeAsDefaultMessage")).isTrue();
 		}
 		catch (IOException ioex) {
 			throw new IllegalStateException(ioex);
@@ -167,9 +167,9 @@ class ClassPathXmlApplicationContextTests {
 	void contextWithInvalidLazyClass() {
 		ClassPathXmlApplicationContext ctx = new ClassPathXmlApplicationContext(INVALID_CLASS_CONTEXT, getClass());
 		assertThat(ctx.containsBean("someMessageSource")).isTrue();
-		assertThatExceptionOfType(CannotLoadBeanClassException.class)
-				.isThrownBy(() -> ctx.getBean("someMessageSource"))
-				.withCauseExactlyInstanceOf(ClassNotFoundException.class);
+		assertThatExceptionOfType(CannotLoadBeanClassException.class).isThrownBy(() ->
+				ctx.getBean("someMessageSource"))
+			.satisfies(ex -> assertThat(ex.contains(ClassNotFoundException.class)).isTrue());
 		ctx.close();
 	}
 
@@ -177,7 +177,8 @@ class ClassPathXmlApplicationContextTests {
 	void contextWithClassNameThatContainsPlaceholder() {
 		ClassPathXmlApplicationContext ctx = new ClassPathXmlApplicationContext(CLASS_WITH_PLACEHOLDER_CONTEXT, getClass());
 		assertThat(ctx.containsBean("someMessageSource")).isTrue();
-		assertThat(ctx.getBean("someMessageSource")).isInstanceOf(StaticMessageSource.class);
+		boolean condition = ctx.getBean("someMessageSource") instanceof StaticMessageSource;
+		assertThat(condition).isTrue();
 		ctx.close();
 	}
 
@@ -195,7 +196,7 @@ class ClassPathXmlApplicationContextTests {
 	void factoryBeanAndApplicationListener() {
 		ClassPathXmlApplicationContext ctx = new ClassPathXmlApplicationContext(CONTEXT_WILDCARD);
 		ctx.getBeanFactory().registerSingleton("manualFBAAL", new FactoryBeanAndApplicationListener());
-		assertThat(ctx.getBeansOfType(ApplicationListener.class)).hasSize(2);
+		assertThat(ctx.getBeansOfType(ApplicationListener.class).size()).isEqualTo(2);
 		ctx.close();
 	}
 
@@ -216,23 +217,18 @@ class ClassPathXmlApplicationContextTests {
 
 	@Test
 	void resourceArrayPropertyEditor() throws IOException {
-		Resource contextA = new FileSystemResource(new ClassPathResource(FQ_CONTEXT_A).getFile());
-		Resource contextB = new FileSystemResource(new ClassPathResource(FQ_CONTEXT_B).getFile());
-		Resource contextC = new FileSystemResource(new ClassPathResource(FQ_CONTEXT_C).getFile());
-
 		ClassPathXmlApplicationContext ctx = new ClassPathXmlApplicationContext(CONTEXT_WILDCARD);
-		Service service = ctx.getBean("service", Service.class);
-		assertThat(service.getResources()).containsExactlyInAnyOrder(contextA, contextB, contextC);
-		assertThat(service.getResourceSet()).containsExactlyInAnyOrder(contextA, contextB, contextC);
-
-		Service service3 = ctx.getBean("service3", Service.class);
-		assertThat(service3.getResources()).containsOnly(new ClassPathResource(FQ_CONTEXT_A));
-		assertThat(service3.getResourceSet()).containsOnly(new ClassPathResource(FQ_CONTEXT_A));
+		Service service = (Service) ctx.getBean("service");
+		assertThat(service.getResources().length).isEqualTo(3);
+		List<Resource> resources = Arrays.asList(service.getResources());
+		assertThat(resources.contains(new FileSystemResource(new ClassPathResource(FQ_CONTEXT_A).getFile()))).isTrue();
+		assertThat(resources.contains(new FileSystemResource(new ClassPathResource(FQ_CONTEXT_B).getFile()))).isTrue();
+		assertThat(resources.contains(new FileSystemResource(new ClassPathResource(FQ_CONTEXT_C).getFile()))).isTrue();
 		ctx.close();
 	}
 
 	@Test
-	void childWithProxy() {
+	void childWithProxy() throws Exception {
 		ClassPathXmlApplicationContext ctx = new ClassPathXmlApplicationContext(CONTEXT_WILDCARD);
 		ClassPathXmlApplicationContext child = new ClassPathXmlApplicationContext(
 				new String[] {CHILD_WITH_PROXY_CONTEXT}, ctx);
@@ -266,11 +262,11 @@ class ClassPathXmlApplicationContextTests {
 		assertThat(myMs).isSameAs(someMs);
 
 		String[] aliases = child.getAliases("someMessageSource");
-		assertThat(aliases).hasSize(2);
+		assertThat(aliases.length).isEqualTo(2);
 		assertThat(aliases[0]).isEqualTo("myMessageSource");
 		assertThat(aliases[1]).isEqualTo("yourMessageSource");
 		aliases = child.getAliases("myMessageSource");
-		assertThat(aliases).hasSize(2);
+		assertThat(aliases.length).isEqualTo(2);
 		assertThat(aliases[0]).isEqualTo("someMessageSource");
 		assertThat(aliases[1]).isEqualTo("yourMessageSource");
 
@@ -304,26 +300,30 @@ class ClassPathXmlApplicationContextTests {
 
 	private void assertOneMessageSourceOnly(ClassPathXmlApplicationContext ctx, Object myMessageSource) {
 		String[] beanNamesForType = ctx.getBeanNamesForType(StaticMessageSource.class);
-		assertThat(beanNamesForType).hasSize(1);
+		assertThat(beanNamesForType.length).isEqualTo(1);
 		assertThat(beanNamesForType[0]).isEqualTo("myMessageSource");
 		beanNamesForType = ctx.getBeanNamesForType(StaticMessageSource.class, true, true);
-		assertThat(beanNamesForType).hasSize(1);
+		assertThat(beanNamesForType.length).isEqualTo(1);
 		assertThat(beanNamesForType[0]).isEqualTo("myMessageSource");
 		beanNamesForType = BeanFactoryUtils.beanNamesForTypeIncludingAncestors(ctx, StaticMessageSource.class);
-		assertThat(beanNamesForType).hasSize(1);
+		assertThat(beanNamesForType.length).isEqualTo(1);
 		assertThat(beanNamesForType[0]).isEqualTo("myMessageSource");
 		beanNamesForType = BeanFactoryUtils.beanNamesForTypeIncludingAncestors(ctx, StaticMessageSource.class, true, true);
-		assertThat(beanNamesForType).hasSize(1);
+		assertThat(beanNamesForType.length).isEqualTo(1);
 		assertThat(beanNamesForType[0]).isEqualTo("myMessageSource");
 
 		Map<?, StaticMessageSource> beansOfType = ctx.getBeansOfType(StaticMessageSource.class);
-		assertThat(beansOfType.values()).singleElement().isSameAs(myMessageSource);
+		assertThat(beansOfType.size()).isEqualTo(1);
+		assertThat(beansOfType.values().iterator().next()).isSameAs(myMessageSource);
 		beansOfType = ctx.getBeansOfType(StaticMessageSource.class, true, true);
-		assertThat(beansOfType.values()).singleElement().isSameAs(myMessageSource);
+		assertThat(beansOfType.size()).isEqualTo(1);
+		assertThat(beansOfType.values().iterator().next()).isSameAs(myMessageSource);
 		beansOfType = BeanFactoryUtils.beansOfTypeIncludingAncestors(ctx, StaticMessageSource.class);
-		assertThat(beansOfType.values()).singleElement().isSameAs(myMessageSource);
+		assertThat(beansOfType.size()).isEqualTo(1);
+		assertThat(beansOfType.values().iterator().next()).isSameAs(myMessageSource);
 		beansOfType = BeanFactoryUtils.beansOfTypeIncludingAncestors(ctx, StaticMessageSource.class, true, true);
-		assertThat(beansOfType.values()).singleElement().isSameAs(myMessageSource);
+		assertThat(beansOfType.size()).isEqualTo(1);
+		assertThat(beansOfType.values().iterator().next()).isSameAs(myMessageSource);
 	}
 
 	@Test
@@ -339,7 +339,8 @@ class ClassPathXmlApplicationContextTests {
 		};
 		ResourceTestBean resource1 = (ResourceTestBean) ctx.getBean("resource1");
 		ResourceTestBean resource2 = (ResourceTestBean) ctx.getBean("resource2");
-		assertThat(resource1.getResource()).isInstanceOf(ClassPathResource.class);
+		boolean condition = resource1.getResource() instanceof ClassPathResource;
+		assertThat(condition).isTrue();
 		StringWriter writer = new StringWriter();
 		FileCopyUtils.copy(new InputStreamReader(resource1.getResource().getInputStream()), writer);
 		assertThat(writer.toString()).isEqualTo("contexttest");

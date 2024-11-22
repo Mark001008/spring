@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2023 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,11 +18,9 @@ package org.springframework.web.bind.support;
 
 import java.beans.PropertyEditor;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 
 import org.springframework.beans.PropertyEditorRegistry;
-import org.springframework.context.MessageSource;
 import org.springframework.core.MethodParameter;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
@@ -32,11 +30,12 @@ import org.springframework.validation.Errors;
 import org.springframework.validation.FieldError;
 import org.springframework.validation.ObjectError;
 import org.springframework.web.server.ServerWebInputException;
-import org.springframework.web.util.BindErrorUtils;
 
 /**
- * {@link ServerWebInputException} subclass that indicates a data binding or
- * validation failure.
+ * A specialization of {@link ServerWebInputException} thrown when after data
+ * binding and validation failure. Implements {@link BindingResult} (and its
+ * super-interface {@link Errors}) to allow for direct analysis of binding and
+ * validation errors.
  *
  * @author Rossen Stoyanchev
  * @since 5.0
@@ -48,9 +47,8 @@ public class WebExchangeBindException extends ServerWebInputException implements
 
 
 	public WebExchangeBindException(MethodParameter parameter, BindingResult bindingResult) {
-		super("Validation failure", parameter, null, null, null);
+		super("Validation failure", parameter);
 		this.bindingResult = bindingResult;
-		getBody().setDetail("Invalid request content.");
 	}
 
 
@@ -62,24 +60,6 @@ public class WebExchangeBindException extends ServerWebInputException implements
 	public final BindingResult getBindingResult() {
 		return this.bindingResult;
 	}
-
-
-	@Override
-	public Object[] getDetailMessageArguments() {
-		return new Object[] {
-				BindErrorUtils.resolveAndJoin(getGlobalErrors()),
-				BindErrorUtils.resolveAndJoin(getFieldErrors())};
-	}
-
-	@Override
-	public Object[] getDetailMessageArguments(MessageSource source, Locale locale) {
-		return new Object[] {
-				BindErrorUtils.resolveAndJoin(getGlobalErrors(), source, locale),
-				BindErrorUtils.resolveAndJoin(getFieldErrors(), source, locale)};
-	}
-
-
-	// BindingResult implementation methods
 
 	@Override
 	public String getObjectName() {
@@ -292,7 +272,6 @@ public class WebExchangeBindException extends ServerWebInputException implements
 	public String[] getSuppressedFields() {
 		return this.bindingResult.getSuppressedFields();
 	}
-
 
 	/**
 	 * Returns diagnostic information about the errors held in this object.

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,7 +23,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Properties;
 
-import jakarta.servlet.ServletContext;
+import javax.servlet.ServletContext;
 
 import org.springframework.beans.factory.FactoryBean;
 import org.springframework.beans.factory.InitializingBean;
@@ -110,7 +110,7 @@ public class ContentNegotiationManagerFactoryBean
 
 	private boolean favorPathExtension = false;
 
-	private final Map<String, MediaType> mediaTypes = new HashMap<>();
+	private Map<String, MediaType> mediaTypes = new HashMap<>();
 
 	private boolean ignoreUnknownPathExtensions = true;
 
@@ -188,7 +188,7 @@ public class ContentNegotiationManagerFactoryBean
 	 * <p><strong>Note:</strong> Mappings registered here may be accessed via
 	 * {@link ContentNegotiationManager#getMediaTypeMappings()} and may be used
 	 * not only in the parameter and path extension strategies. For example,
-	 * with the Spring MVC config, for example, {@code @EnableWebMvc} or
+	 * with the Spring MVC config, e.g. {@code @EnableWebMvc} or
 	 * {@code <mvc:annotation-driven>}, the media type mappings are also plugged
 	 * in to:
 	 * <ul>
@@ -214,7 +214,7 @@ public class ContentNegotiationManagerFactoryBean
 	 * An alternative to {@link #setMediaTypes} for programmatic registrations.
 	 */
 	public void addMediaType(String key, MediaType mediaType) {
-		this.mediaTypes.put(key.toLowerCase(Locale.ROOT), mediaType);
+		this.mediaTypes.put(key.toLowerCase(Locale.ENGLISH), mediaType);
 	}
 
 	/**
@@ -254,7 +254,7 @@ public class ContentNegotiationManagerFactoryBean
 	 * When {@link #setFavorPathExtension favorPathExtension} or
 	 * {@link #setFavorParameter(boolean)} is set, this property determines
 	 * whether to use only registered {@code MediaType} mappings or to allow
-	 * dynamic resolution, for example, via {@link MediaTypeFactory}.
+	 * dynamic resolution, e.g. via {@link MediaTypeFactory}.
 	 * <p>By default this is not set in which case dynamic resolution is on.
 	 */
 	public void setUseRegisteredExtensionsOnly(boolean useRegisteredExtensionsOnly) {

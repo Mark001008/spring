@@ -1,32 +1,33 @@
 name: CI
 on:
-  schedule:
-    - cron: '30 9 * * *'
+  push:
+    branches:
+      - 5.3.x
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
 jobs:
   ci:
     name: '${{ matrix.os.name}} | Java ${{ matrix.java.version}}'
-    if: ${{ github.repository == 'spring-projects/spring-framework' }}
     runs-on: ${{ matrix.os.id }}
     timeout-minutes: 60
+    if: ${{ github.repository == 'spring-projects/spring-framework' }}
     strategy:
       matrix:
         os:
           - id: ubuntu-latest
             name: Linux
         java:
-          - version: 17
+          - version: 8
             toolchain: false
-          - version: 21
+          - version: 17
             toolchain: true
-          - version: 23
+          - version: 21
             toolchain: true
         exclude:
           - os:
               name: Linux
             java:
-              version: 17
+              version: 8
     steps:
       - name: Prepare Windows runner
         if: ${{ runner.os == 'Windows' }}
@@ -40,16 +41,15 @@ jobs:
         id: build
         uses: ./.github/actions/build
         with:
-          develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
-          java-early-access: ${{ matrix.java.early-access || 'false' }}
-          java-distribution: ${{ matrix.java.distribution }}
-          java-toolchain: ${{ matrix.java.toolchain }}
           java-version: ${{ matrix.java.version }}
+          java-early-access: ${{ matrix.java.early-access || 'false' }}
+          java-toolchain: ${{ matrix.java.toolchain }}
+          develocity-access-key: ${{ secrets.GRADLE_ENTERPRISE_SECRET_ACCESS_KEY }}
       - name: Send Notification
-        if: always()
         uses: ./.github/actions/send-notification
+        if: always()
         with:
+          webhook-url: ${{ secrets.GOOGLE_CHAT_WEBHOOK_URL }}
+          status: ${{ job.status }}
           build-scan-url: ${{ steps.build.outputs.build-scan-url }}
           run-name: ${{ format('{0} | {1} | Java {2}', github.ref_name, matrix.os.name, matrix.java.version) }}
-          status: ${{ job.status }}
-          webhook-url: ${{ secrets.GOOGLE_CHAT_WEBHOOK_URL }}

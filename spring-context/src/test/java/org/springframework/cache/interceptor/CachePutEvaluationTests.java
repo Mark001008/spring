@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2021 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -43,7 +43,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  *
  * @author Stephane Nicoll
  */
-class CachePutEvaluationTests {
+public class CachePutEvaluationTests {
 
 	private ConfigurableApplicationContext context;
 
@@ -51,22 +51,22 @@ class CachePutEvaluationTests {
 
 	private SimpleService service;
 
-
 	@BeforeEach
-	void setup() {
+	public void setup() {
 		this.context = new AnnotationConfigApplicationContext(Config.class);
 		this.cache = this.context.getBean(CacheManager.class).getCache("test");
 		this.service = this.context.getBean(SimpleService.class);
 	}
 
 	@AfterEach
-	void closeContext() {
-		this.context.close();
+	public void close() {
+		if (this.context != null) {
+			this.context.close();
+		}
 	}
 
-
 	@Test
-	void mutualGetPutExclusion() {
+	public void mutualGetPutExclusion() {
 		String key = "1";
 
 		Long first = this.service.getOrPut(key, true);
@@ -83,7 +83,7 @@ class CachePutEvaluationTests {
 	}
 
 	@Test
-	void getAndPut() {
+	public void getAndPut() {
 		this.cache.clear();
 
 		long key = 1;

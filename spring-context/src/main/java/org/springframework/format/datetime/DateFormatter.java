@@ -181,6 +181,7 @@ public class DateFormatter implements Formatter<Date> {
 	 * <li>'F' = Full</li>
 	 * <li>'-' = Omitted</li>
 	 * </ul>
+	 * This method mimics the styles supported by Joda-Time.
 	 * @param stylePattern two characters from the set {"S", "M", "L", "F", "-"}
 	 * @since 3.2
 	 */
@@ -291,7 +292,7 @@ public class DateFormatter implements Formatter<Date> {
 			if (timeStyle != -1) {
 				return DateFormat.getTimeInstance(timeStyle, locale);
 			}
-			throw unsupportedStylePatternException();
+			throw new IllegalStateException("Unsupported style pattern '" + this.stylePattern + "'");
 
 		}
 		return DateFormat.getDateInstance(this.style, locale);
@@ -299,21 +300,15 @@ public class DateFormatter implements Formatter<Date> {
 
 	private int getStylePatternForChar(int index) {
 		if (this.stylePattern != null && this.stylePattern.length() > index) {
-			char ch = this.stylePattern.charAt(index);
-			return switch (ch) {
-				case 'S' -> DateFormat.SHORT;
-				case 'M' -> DateFormat.MEDIUM;
-				case 'L' -> DateFormat.LONG;
-				case 'F' -> DateFormat.FULL;
-				case '-' -> -1;
-				default -> throw unsupportedStylePatternException();
-			};
+			switch (this.stylePattern.charAt(index)) {
+				case 'S': return DateFormat.SHORT;
+				case 'M': return DateFormat.MEDIUM;
+				case 'L': return DateFormat.LONG;
+				case 'F': return DateFormat.FULL;
+				case '-': return -1;
+			}
 		}
-		throw unsupportedStylePatternException();
-	}
-
-	private IllegalStateException unsupportedStylePatternException() {
-		return new IllegalStateException("Unsupported style pattern '" + this.stylePattern + "'");
+		throw new IllegalStateException("Unsupported style pattern '" + this.stylePattern + "'");
 	}
 
 }

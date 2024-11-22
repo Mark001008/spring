@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -44,7 +44,7 @@ public abstract class AbstractMessageSendingTemplate<D> implements MessageSendin
 
 	/**
 	 * Name of the header that can be set to provide further information
-	 * (for example, a {@code MethodParameter} instance) about the origin of the
+	 * (e.g. a {@code MethodParameter} instance) about the origin of the
 	 * payload, to be taken into account as a conversion hint.
 	 * @since 4.2
 	 */
@@ -168,12 +168,17 @@ public abstract class AbstractMessageSendingTemplate<D> implements MessageSendin
 
 		Map<String, Object> headersToUse = processHeadersToSend(headers);
 		if (headersToUse != null) {
-			messageHeaders = (headersToUse instanceof MessageHeaders mh ? mh : new MessageHeaders(headersToUse));
+			if (headersToUse instanceof MessageHeaders) {
+				messageHeaders = (MessageHeaders) headersToUse;
+			}
+			else {
+				messageHeaders = new MessageHeaders(headersToUse);
+			}
 		}
 
 		MessageConverter converter = getMessageConverter();
-		Message<?> message = (converter instanceof SmartMessageConverter smartMessageConverter ?
-				smartMessageConverter.toMessage(payload, messageHeaders, conversionHint) :
+		Message<?> message = (converter instanceof SmartMessageConverter ?
+				((SmartMessageConverter) converter).toMessage(payload, messageHeaders, conversionHint) :
 				converter.toMessage(payload, messageHeaders));
 		if (message == null) {
 			String payloadType = payload.getClass().getName();

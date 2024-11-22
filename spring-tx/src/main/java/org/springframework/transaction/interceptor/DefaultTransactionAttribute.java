@@ -18,11 +18,11 @@ package org.springframework.transaction.interceptor;
 
 import java.util.Collection;
 import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.Set;
 
 import org.springframework.lang.Nullable;
 import org.springframework.transaction.support.DefaultTransactionDefinition;
-import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 import org.springframework.util.StringValueResolver;
 
@@ -60,6 +60,7 @@ public class DefaultTransactionAttribute extends DefaultTransactionDefinition im
 	 * @see #setName
 	 */
 	public DefaultTransactionAttribute() {
+		super();
 	}
 
 	/**
@@ -90,7 +91,7 @@ public class DefaultTransactionAttribute extends DefaultTransactionDefinition im
 
 	/**
 	 * Set a descriptor for this transaction attribute,
-	 * for example, indicating where the attribute is applying.
+	 * e.g. indicating where the attribute is applying.
 	 * @since 4.3.4
 	 */
 	public void setDescriptor(@Nullable String descriptor) {
@@ -206,7 +207,7 @@ public class DefaultTransactionAttribute extends DefaultTransactionDefinition im
 				}
 				catch (RuntimeException ex) {
 					throw new IllegalArgumentException(
-							"Invalid timeoutString value \"" + timeoutString + "\"; " + ex);
+							"Invalid timeoutString value \"" + timeoutString + "\" - cannot parse into int");
 				}
 			}
 		}
@@ -215,7 +216,7 @@ public class DefaultTransactionAttribute extends DefaultTransactionDefinition im
 			if (this.qualifier != null) {
 				this.qualifier = resolver.resolveStringValue(this.qualifier);
 			}
-			Set<String> resolvedLabels = CollectionUtils.newLinkedHashSet(this.labels.size());
+			Set<String> resolvedLabels = new LinkedHashSet<>(this.labels.size());
 			for (String label : this.labels) {
 				resolvedLabels.add(resolver.resolveStringValue(label));
 			}

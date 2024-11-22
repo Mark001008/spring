@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -83,8 +83,8 @@ import org.springframework.web.socket.sockjs.support.SockJsHttpRequestHandler;
  *
  * <p>Registers the following {@link org.springframework.messaging.MessageChannel MessageChannels}:
  * <ul>
- * <li>"clientInboundChannel" for receiving messages from clients (for example, WebSocket clients)
- * <li>"clientOutboundChannel" for sending messages to clients (for example, WebSocket clients)
+ * <li>"clientInboundChannel" for receiving messages from clients (e.g. WebSocket clients)
+ * <li>"clientOutboundChannel" for sending messages to clients (e.g. WebSocket clients)
  * <li>"brokerChannel" for sending messages from within the application to the message broker
  * </ul>
  *
@@ -127,13 +127,12 @@ class MessageBrokerBeanDefinitionParser implements BeanDefinitionParser {
 		jackson2Present = ClassUtils.isPresent("com.fasterxml.jackson.databind.ObjectMapper", classLoader) &&
 				ClassUtils.isPresent("com.fasterxml.jackson.core.JsonGenerator", classLoader);
 		gsonPresent = ClassUtils.isPresent("com.google.gson.Gson", classLoader);
-		jsonbPresent = ClassUtils.isPresent("jakarta.json.bind.Jsonb", classLoader);
-		javaxValidationPresent = ClassUtils.isPresent("jakarta.validation.Validator", classLoader);
+		jsonbPresent = ClassUtils.isPresent("javax.json.bind.Jsonb", classLoader);
+		javaxValidationPresent = ClassUtils.isPresent("javax.validation.Validator", classLoader);
 	}
 
 
 	@Override
-	@Nullable
 	public BeanDefinition parse(Element element, ParserContext context) {
 		Object source = context.extractSource(element);
 		CompositeComponentDefinition compDefinition = new CompositeComponentDefinition(element.getTagName(), source);
@@ -511,7 +510,7 @@ class MessageBrokerBeanDefinitionParser implements BeanDefinitionParser {
 				RootBeanDefinition resolverDef = new RootBeanDefinition(DefaultContentTypeResolver.class);
 				resolverDef.getPropertyValues().add("defaultMimeType", MimeTypeUtils.APPLICATION_JSON);
 				jacksonConverterDef.getPropertyValues().add("contentTypeResolver", resolverDef);
-				// Use Jackson factory in order to have well known modules registered automatically
+				// Use Jackson factory in order to have JSR-310 and Joda-Time modules registered automatically
 				GenericBeanDefinition jacksonFactoryDef = new GenericBeanDefinition();
 				jacksonFactoryDef.setBeanClass(Jackson2ObjectMapperFactoryBean.class);
 				jacksonFactoryDef.setRole(BeanDefinition.ROLE_INFRASTRUCTURE);
@@ -626,6 +625,10 @@ class MessageBrokerBeanDefinitionParser implements BeanDefinitionParser {
 		beanDef.getConstructorArgumentValues().addIndexedArgumentValue(0, userRegistry);
 		if (brokerElem.hasAttribute("user-destination-prefix")) {
 			beanDef.getPropertyValues().add("userDestinationPrefix", brokerElem.getAttribute("user-destination-prefix"));
+		}
+		if (brokerElem.hasAttribute("path-matcher")) {
+			String pathMatcherRef = brokerElem.getAttribute("path-matcher");
+			beanDef.getPropertyValues().add("pathMatcher", new RuntimeBeanReference(pathMatcherRef));
 		}
 		return new RuntimeBeanReference(registerBeanDef(beanDef, context, source));
 	}

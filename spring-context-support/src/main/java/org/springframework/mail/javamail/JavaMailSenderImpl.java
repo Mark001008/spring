@@ -24,19 +24,20 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
-import jakarta.activation.FileTypeMap;
-import jakarta.mail.Address;
-import jakarta.mail.AuthenticationFailedException;
-import jakarta.mail.MessagingException;
-import jakarta.mail.NoSuchProviderException;
-import jakarta.mail.Session;
-import jakarta.mail.Transport;
-import jakarta.mail.internet.MimeMessage;
+import javax.activation.FileTypeMap;
+import javax.mail.Address;
+import javax.mail.AuthenticationFailedException;
+import javax.mail.MessagingException;
+import javax.mail.NoSuchProviderException;
+import javax.mail.Session;
+import javax.mail.Transport;
+import javax.mail.internet.MimeMessage;
 
 import org.springframework.lang.Nullable;
 import org.springframework.mail.MailAuthenticationException;
 import org.springframework.mail.MailException;
 import org.springframework.mail.MailParseException;
+import org.springframework.mail.MailPreparationException;
 import org.springframework.mail.MailSendException;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.util.Assert;
@@ -48,7 +49,7 @@ import org.springframework.util.Assert;
  * plain {@link org.springframework.mail.MailSender} implementation.
  *
  * <p>Allows for defining all settings locally as bean properties.
- * Alternatively, a pre-configured JavaMail {@link jakarta.mail.Session} can be
+ * Alternatively, a pre-configured JavaMail {@link javax.mail.Session} can be
  * specified, possibly pulled from an application server's JNDI environment.
  *
  * <p>Non-default properties in this object will always override the settings
@@ -58,8 +59,8 @@ import org.springframework.util.Assert;
  * @author Dmitriy Kopylenko
  * @author Juergen Hoeller
  * @since 10.09.2003
- * @see jakarta.mail.internet.MimeMessage
- * @see jakarta.mail.Session
+ * @see javax.mail.internet.MimeMessage
+ * @see javax.mail.Session
  * @see #setSession
  * @see #setJavaMailProperties
  * @see #setHost
@@ -199,7 +200,7 @@ public class JavaMailSenderImpl implements JavaMailSender {
 	 * Set the mail server port.
 	 * <p>Default is {@link #DEFAULT_PORT}, letting JavaMail use the default
 	 * SMTP port (25).
-	 */
+	*/
 	public void setPort(int port) {
 		this.port = port;
 	}
@@ -307,6 +308,11 @@ public class JavaMailSenderImpl implements JavaMailSender {
 	//---------------------------------------------------------------------
 
 	@Override
+	public void send(SimpleMailMessage simpleMessage) throws MailException {
+		send(new SimpleMailMessage[] {simpleMessage});
+	}
+
+	@Override
 	public void send(SimpleMailMessage... simpleMessages) throws MailException {
 		List<MimeMessage> mimeMessages = new ArrayList<>(simpleMessages.length);
 		for (SimpleMailMessage simpleMessage : simpleMessages) {
@@ -346,8 +352,40 @@ public class JavaMailSenderImpl implements JavaMailSender {
 	}
 
 	@Override
+	public void send(MimeMessage mimeMessage) throws MailException {
+		send(new MimeMessage[] {mimeMessage});
+	}
+
+	@Override
 	public void send(MimeMessage... mimeMessages) throws MailException {
 		doSend(mimeMessages, null);
+	}
+
+	@Override
+	public void send(MimeMessagePreparator mimeMessagePreparator) throws MailException {
+		send(new MimeMessagePreparator[] {mimeMessagePreparator});
+	}
+
+	@Override
+	public void send(MimeMessagePreparator... mimeMessagePreparators) throws MailException {
+		try {
+			List<MimeMessage> mimeMessages = new ArrayList<>(mimeMessagePreparators.length);
+			for (MimeMessagePreparator preparator : mimeMessagePreparators) {
+				MimeMessage mimeMessage = createMimeMessage();
+				preparator.prepare(mimeMessage);
+				mimeMessages.add(mimeMessage);
+			}
+			send(mimeMessages.toArray(new MimeMessage[0]));
+		}
+		catch (MailException ex) {
+			throw ex;
+		}
+		catch (MessagingException ex) {
+			throw new MailParseException(ex);
+		}
+		catch (Exception ex) {
+			throw new MailPreparationException(ex);
+		}
 	}
 
 	/**
@@ -484,13 +522,13 @@ public class JavaMailSenderImpl implements JavaMailSender {
 	/**
 	 * Obtain a Transport object from the given JavaMail Session,
 	 * using the configured protocol.
-	 * <p>Can be overridden in subclasses, for example, to return a mock Transport object.
-	 * @see jakarta.mail.Session#getTransport(String)
+	 * <p>Can be overridden in subclasses, e.g. to return a mock Transport object.
+	 * @see javax.mail.Session#getTransport(String)
 	 * @see #getSession()
 	 * @see #getProtocol()
 	 */
 	protected Transport getTransport(Session session) throws NoSuchProviderException {
-		String protocol = getProtocol();
+		String protocol	= getProtocol();
 		if (protocol == null) {
 			protocol = session.getProperty("mail.transport.protocol");
 			if (protocol == null) {

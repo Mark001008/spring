@@ -34,9 +34,7 @@ import java.util.Set;
 import java.util.StringJoiner;
 import java.util.StringTokenizer;
 import java.util.TimeZone;
-import java.util.stream.Collectors;
 
-import org.springframework.lang.Contract;
 import org.springframework.lang.Nullable;
 
 /**
@@ -59,7 +57,6 @@ import org.springframework.lang.Nullable;
  * @author Arjen Poutsma
  * @author Sam Brannen
  * @author Brian Clozel
- * @author Sebastien Deleuze
  * @since 16 April 2001
  */
 public abstract class StringUtils {
@@ -72,15 +69,11 @@ public abstract class StringUtils {
 
 	private static final String WINDOWS_FOLDER_SEPARATOR = "\\";
 
-	private static final char WINDOWS_FOLDER_SEPARATOR_CHAR = '\\';
-
-	private static final String DOUBLE_BACKSLASHES = "\\\\";
-
 	private static final String TOP_PATH = "..";
 
 	private static final String CURRENT_PATH = ".";
 
-	private static final char DOT_CHAR = '.';
+	private static final char EXTENSION_SEPARATOR = '.';
 
 	private static final int DEFAULT_TRUNCATION_THRESHOLD = 100;
 
@@ -99,7 +92,7 @@ public abstract class StringUtils {
 	 * will never return {@code true} for a non-null non-String object.
 	 * <p>The Object signature is useful for general attribute handling code
 	 * that commonly deals with Strings but generally has to iterate over
-	 * Objects since attributes may, for example, be primitive value objects as well.
+	 * Objects since attributes may e.g. be primitive value objects as well.
 	 * <p><b>Note: If the object is typed to {@code String} upfront, prefer
 	 * {@link #hasLength(String)} or {@link #hasText(String)} instead.</b>
 	 * @param str the candidate object (possibly a {@code String})
@@ -128,9 +121,8 @@ public abstract class StringUtils {
 	 * @see #hasLength(String)
 	 * @see #hasText(CharSequence)
 	 */
-	@Contract("null -> false")
 	public static boolean hasLength(@Nullable CharSequence str) {
-		return (str != null && !str.isEmpty());  // as of JDK 15
+		return (str != null && str.length() > 0);
 	}
 
 	/**
@@ -142,7 +134,6 @@ public abstract class StringUtils {
 	 * @see #hasLength(CharSequence)
 	 * @see #hasText(String)
 	 */
-	@Contract("null -> false")
 	public static boolean hasLength(@Nullable String str) {
 		return (str != null && !str.isEmpty());
 	}
@@ -166,23 +157,8 @@ public abstract class StringUtils {
 	 * @see #hasLength(CharSequence)
 	 * @see Character#isWhitespace
 	 */
-	@Contract("null -> false")
 	public static boolean hasText(@Nullable CharSequence str) {
-		if (str == null) {
-			return false;
-		}
-
-		int strLen = str.length();
-		if (strLen == 0) {
-			return false;
-		}
-
-		for (int i = 0; i < strLen; i++) {
-			if (!Character.isWhitespace(str.charAt(i))) {
-				return true;
-			}
-		}
-		return false;
+		return (str != null && str.length() > 0 && containsText(str));
 	}
 
 	/**
@@ -197,9 +173,18 @@ public abstract class StringUtils {
 	 * @see #hasLength(String)
 	 * @see Character#isWhitespace
 	 */
-	@Contract("null -> false")
 	public static boolean hasText(@Nullable String str) {
-		return (str != null && !str.isBlank());
+		return (str != null && !str.isEmpty() && containsText(str));
+	}
+
+	private static boolean containsText(CharSequence str) {
+		int strLen = str.length();
+		for (int i = 0; i < strLen; i++) {
+			if (!Character.isWhitespace(str.charAt(i))) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	/**
@@ -239,15 +224,24 @@ public abstract class StringUtils {
 	 * @param str the {@code String} to check
 	 * @return the trimmed {@code String}
 	 * @see java.lang.Character#isWhitespace
-	 * @deprecated since 6.0, in favor of {@link String#strip()}
 	 */
-	@Deprecated(since = "6.0")
 	public static String trimWhitespace(String str) {
 		if (!hasLength(str)) {
 			return str;
 		}
 
-		return str.strip();
+		int beginIndex = 0;
+		int endIndex = str.length() - 1;
+
+		while (beginIndex <= endIndex && Character.isWhitespace(str.charAt(beginIndex))) {
+			beginIndex++;
+		}
+
+		while (endIndex > beginIndex && Character.isWhitespace(str.charAt(endIndex))) {
+			endIndex--;
+		}
+
+		return str.substring(beginIndex, endIndex + 1);
 	}
 
 	/**
@@ -296,15 +290,17 @@ public abstract class StringUtils {
 	 * @param str the {@code String} to check
 	 * @return the trimmed {@code String}
 	 * @see java.lang.Character#isWhitespace
-	 * @deprecated since 6.0, in favor of {@link String#stripLeading()}
 	 */
-	@Deprecated(since = "6.0")
 	public static String trimLeadingWhitespace(String str) {
 		if (!hasLength(str)) {
 			return str;
 		}
 
-		return str.stripLeading();
+		int beginIdx = 0;
+		while (beginIdx < str.length() && Character.isWhitespace(str.charAt(beginIdx))) {
+			beginIdx++;
+		}
+		return str.substring(beginIdx);
 	}
 
 	/**
@@ -312,15 +308,17 @@ public abstract class StringUtils {
 	 * @param str the {@code String} to check
 	 * @return the trimmed {@code String}
 	 * @see java.lang.Character#isWhitespace
-	 * @deprecated since 6.0, in favor of {@link String#stripTrailing()}
 	 */
-	@Deprecated(since = "6.0")
 	public static String trimTrailingWhitespace(String str) {
 		if (!hasLength(str)) {
 			return str;
 		}
 
-		return str.stripTrailing();
+		int endIdx = str.length() - 1;
+		while (endIdx >= 0 && Character.isWhitespace(str.charAt(endIdx))) {
+			endIdx--;
+		}
+		return str.substring(0, endIdx + 1);
 	}
 
 	/**
@@ -483,7 +481,7 @@ public abstract class StringUtils {
 	 * Delete any character in a given {@code String}.
 	 * @param inString the original {@code String}
 	 * @param charsToDelete a set of characters to delete.
-	 * For example, "az\n" will delete 'a's, 'z's and new lines.
+	 * E.g. "az\n" will delete 'a's, 'z's and new lines.
 	 * @return the resulting {@code String}
 	 */
 	public static String deleteAny(String inString, @Nullable String charsToDelete) {
@@ -511,8 +509,8 @@ public abstract class StringUtils {
 
 	/**
 	 * Quote the given {@code String} with single quotes.
-	 * @param str the input {@code String} (for example, "myString")
-	 * @return the quoted {@code String} (for example, "'myString'"),
+	 * @param str the input {@code String} (e.g. "myString")
+	 * @return the quoted {@code String} (e.g. "'myString'"),
 	 * or {@code null} if the input was {@code null}
 	 */
 	@Nullable
@@ -523,13 +521,13 @@ public abstract class StringUtils {
 	/**
 	 * Turn the given Object into a {@code String} with single quotes
 	 * if it is a {@code String}; keeping the Object as-is else.
-	 * @param obj the input Object (for example, "myString")
-	 * @return the quoted {@code String} (for example, "'myString'"),
+	 * @param obj the input Object (e.g. "myString")
+	 * @return the quoted {@code String} (e.g. "'myString'"),
 	 * or the input object as-is if not a {@code String}
 	 */
 	@Nullable
 	public static Object quoteIfString(@Nullable Object obj) {
-		return (obj instanceof String str ? quote(str) : obj);
+		return (obj instanceof String ? quote((String) obj) : obj);
 	}
 
 	/**
@@ -538,7 +536,7 @@ public abstract class StringUtils {
 	 * @param qualifiedName the qualified name
 	 */
 	public static String unqualify(String qualifiedName) {
-		return unqualify(qualifiedName, DOT_CHAR);
+		return unqualify(qualifiedName, '.');
 	}
 
 	/**
@@ -573,24 +571,6 @@ public abstract class StringUtils {
 		return changeFirstCharacterCase(str, false);
 	}
 
-	/**
-	 * Uncapitalize a {@code String} in JavaBeans property format,
-	 * changing the first letter to lower case as per
-	 * {@link Character#toLowerCase(char)}, unless the initial two
-	 * letters are upper case in direct succession.
-	 * @param str the {@code String} to uncapitalize
-	 * @return the uncapitalized {@code String}
-	 * @since 6.0
-	 * @see java.beans.Introspector#decapitalize(String)
-	 */
-	public static String uncapitalizeAsProperty(String str) {
-		if (!hasLength(str) || (str.length() > 1 && Character.isUpperCase(str.charAt(0)) &&
-				Character.isUpperCase(str.charAt(1)))) {
-			return str;
-		}
-		return changeFirstCharacterCase(str, false);
-	}
-
 	private static String changeFirstCharacterCase(String str, boolean capitalize) {
 		if (!hasLength(str)) {
 			return str;
@@ -615,7 +595,7 @@ public abstract class StringUtils {
 
 	/**
 	 * Extract the filename from the given Java resource path,
-	 * for example, {@code "mypath/myfile.txt" &rarr; "myfile.txt"}.
+	 * e.g. {@code "mypath/myfile.txt" &rarr; "myfile.txt"}.
 	 * @param path the file path (may be {@code null})
 	 * @return the extracted filename, or {@code null} if none
 	 */
@@ -631,7 +611,7 @@ public abstract class StringUtils {
 
 	/**
 	 * Extract the filename extension from the given Java resource path,
-	 * for example, "mypath/myfile.txt" &rarr; "txt".
+	 * e.g. "mypath/myfile.txt" &rarr; "txt".
 	 * @param path the file path (may be {@code null})
 	 * @return the extracted filename extension, or {@code null} if none
 	 */
@@ -641,7 +621,7 @@ public abstract class StringUtils {
 			return null;
 		}
 
-		int extIndex = path.lastIndexOf(DOT_CHAR);
+		int extIndex = path.lastIndexOf(EXTENSION_SEPARATOR);
 		if (extIndex == -1) {
 			return null;
 		}
@@ -656,12 +636,12 @@ public abstract class StringUtils {
 
 	/**
 	 * Strip the filename extension from the given Java resource path,
-	 * for example, "mypath/myfile.txt" &rarr; "mypath/myfile".
+	 * e.g. "mypath/myfile.txt" &rarr; "mypath/myfile".
 	 * @param path the file path
 	 * @return the path with stripped filename extension
 	 */
 	public static String stripFilenameExtension(String path) {
-		int extIndex = path.lastIndexOf(DOT_CHAR);
+		int extIndex = path.lastIndexOf(EXTENSION_SEPARATOR);
 		if (extIndex == -1) {
 			return path;
 		}
@@ -700,7 +680,7 @@ public abstract class StringUtils {
 	 * Normalize the path by suppressing sequences like "path/.." and
 	 * inner simple dots.
 	 * <p>The result is convenient for path comparison. For other uses,
-	 * notice that Windows separators ("\" and "\\") are replaced by simple slashes.
+	 * notice that Windows separators ("\") are replaced by simple slashes.
 	 * <p><strong>NOTE</strong> that {@code cleanPath} should not be depended
 	 * upon in a security context. Other mechanisms should be used to prevent
 	 * path-traversal issues.
@@ -712,19 +692,11 @@ public abstract class StringUtils {
 			return path;
 		}
 
-		String normalizedPath;
-		// Optimize when there is no backslash
-		if (path.indexOf(WINDOWS_FOLDER_SEPARATOR_CHAR) != -1) {
-			normalizedPath = replace(path, DOUBLE_BACKSLASHES, FOLDER_SEPARATOR);
-			normalizedPath = replace(normalizedPath, WINDOWS_FOLDER_SEPARATOR, FOLDER_SEPARATOR);
-		}
-		else {
-			normalizedPath = path;
-		}
+		String normalizedPath = replace(path, WINDOWS_FOLDER_SEPARATOR, FOLDER_SEPARATOR);
 		String pathToUse = normalizedPath;
 
 		// Shortcut if there is no work to do
-		if (pathToUse.indexOf(DOT_CHAR) == -1) {
+		if (pathToUse.indexOf('.') == -1) {
 			return pathToUse;
 		}
 
@@ -859,7 +831,7 @@ public abstract class StringUtils {
 	 * specified by {@link Locale#forLanguageTag}.
 	 * @param localeValue the locale value: following either {@code Locale's}
 	 * {@code toString()} format ("en", "en_UK", etc.), also accepting spaces as
-	 * separators (as an alternative to underscores), or BCP 47 (for example, "en-UK")
+	 * separators (as an alternative to underscores), or BCP 47 (e.g. "en-UK")
 	 * @return a corresponding {@code Locale} instance, or {@code null} if none
 	 * @throws IllegalArgumentException in case of an invalid locale specification
 	 * @since 5.0.4
@@ -868,14 +840,15 @@ public abstract class StringUtils {
 	 */
 	@Nullable
 	public static Locale parseLocale(String localeValue) {
-		if (!localeValue.contains("_") && !localeValue.contains(" ")) {
+		String[] tokens = tokenizeLocaleSource(localeValue);
+		if (tokens.length == 1) {
 			validateLocalePart(localeValue);
 			Locale resolved = Locale.forLanguageTag(localeValue);
-			if (!resolved.getLanguage().isEmpty()) {
+			if (resolved.getLanguage().length() > 0) {
 				return resolved;
 			}
 		}
-		return parseLocaleString(localeValue);
+		return parseLocaleTokens(localeValue, tokens);
 	}
 
 	/**
@@ -892,41 +865,40 @@ public abstract class StringUtils {
 	 * @return a corresponding {@code Locale} instance, or {@code null} if none
 	 * @throws IllegalArgumentException in case of an invalid locale specification
 	 */
-	@SuppressWarnings("deprecation")  // for Locale constructors on JDK 19
 	@Nullable
 	public static Locale parseLocaleString(String localeString) {
-		if (localeString.isEmpty()) {
-			return null;
+		return parseLocaleTokens(localeString, tokenizeLocaleSource(localeString));
+	}
+
+	private static String[] tokenizeLocaleSource(String localeSource) {
+		return tokenizeToStringArray(localeSource, "_ ", false, false);
+	}
+
+	@Nullable
+	private static Locale parseLocaleTokens(String localeString, String[] tokens) {
+		String language = (tokens.length > 0 ? tokens[0] : "");
+		String country = (tokens.length > 1 ? tokens[1] : "");
+		validateLocalePart(language);
+		validateLocalePart(country);
+
+		String variant = "";
+		if (tokens.length > 2) {
+			// There is definitely a variant, and it is everything after the country
+			// code sans the separator between the country code and the variant.
+			int endIndexOfCountryCode = localeString.indexOf(country, language.length()) + country.length();
+			// Strip off any leading '_' and whitespace, what's left is the variant.
+			variant = trimLeadingWhitespace(localeString.substring(endIndexOfCountryCode));
+			if (variant.startsWith("_")) {
+				variant = trimLeadingCharacter(variant, '_');
+			}
 		}
 
-		String delimiter = "_";
-		if (!localeString.contains("_") && localeString.contains(" ")) {
-			delimiter = " ";
+		if (variant.isEmpty() && country.startsWith("#")) {
+			variant = country;
+			country = "";
 		}
 
-		String[] tokens = localeString.split(delimiter, -1);
-		if (tokens.length == 1) {
-			String language = tokens[0];
-			validateLocalePart(language);
-			return new Locale(language);
-		}
-		else if (tokens.length == 2) {
-			String language = tokens[0];
-			validateLocalePart(language);
-			String country = tokens[1];
-			validateLocalePart(country);
-			return new Locale(language, country);
-		}
-		else if (tokens.length > 2) {
-			String language = tokens[0];
-			validateLocalePart(language);
-			String country = tokens[1];
-			validateLocalePart(country);
-			String variant = Arrays.stream(tokens).skip(2).collect(Collectors.joining(delimiter));
-			return new Locale(language, country, variant);
-		}
-
-		throw new IllegalArgumentException("Invalid locale format: '" + localeString + "'");
+		return (language.length() > 0 ? new Locale(language, country, variant) : null);
 	}
 
 	private static void validateLocalePart(String localePart) {
@@ -937,6 +909,18 @@ public abstract class StringUtils {
 						"Locale part \"" + localePart + "\" contains invalid characters");
 			}
 		}
+	}
+
+	/**
+	 * Determine the RFC 3066 compliant language tag,
+	 * as used for the HTTP "Accept-Language" header.
+	 * @param locale the Locale to transform to a language tag
+	 * @return the RFC 3066 compliant language tag as {@code String}
+	 * @deprecated as of 5.0.4, in favor of {@link Locale#toLanguageTag()}
+	 */
+	@Deprecated
+	public static String toLanguageTag(Locale locale) {
+		return locale.getLanguage() + (hasText(locale.getCountry()) ? "-" + locale.getCountry() : "");
 	}
 
 	/**
@@ -1022,6 +1006,37 @@ public abstract class StringUtils {
 		System.arraycopy(array1, 0, newArr, 0, array1.length);
 		System.arraycopy(array2, 0, newArr, array1.length, array2.length);
 		return newArr;
+	}
+
+	/**
+	 * Merge the given {@code String} arrays into one, with overlapping
+	 * array elements only included once.
+	 * <p>The order of elements in the original arrays is preserved
+	 * (with the exception of overlapping elements, which are only
+	 * included on their first occurrence).
+	 * @param array1 the first array (can be {@code null})
+	 * @param array2 the second array (can be {@code null})
+	 * @return the new array ({@code null} if both given arrays were {@code null})
+	 * @deprecated as of 4.3.15, in favor of manual merging via {@link LinkedHashSet}
+	 * (with every entry included at most once, even entries within the first array)
+	 */
+	@Deprecated
+	@Nullable
+	public static String[] mergeStringArrays(@Nullable String[] array1, @Nullable String[] array2) {
+		if (ObjectUtils.isEmpty(array1)) {
+			return array2;
+		}
+		if (ObjectUtils.isEmpty(array2)) {
+			return array1;
+		}
+
+		List<String> result = new ArrayList<>(Arrays.asList(array1));
+		for (String str : array2) {
+			if (!result.contains(str)) {
+				result.add(str);
+			}
+		}
+		return toStringArray(result);
 	}
 
 	/**
@@ -1200,7 +1215,7 @@ public abstract class StringUtils {
 			if (trimTokens) {
 				token = token.trim();
 			}
-			if (!ignoreEmptyTokens || !token.isEmpty()) {
+			if (!ignoreEmptyTokens || token.length() > 0) {
 				tokens.add(token);
 			}
 		}
@@ -1235,7 +1250,7 @@ public abstract class StringUtils {
 	 * @param delimiter the delimiter between elements (this is a single delimiter,
 	 * rather than a bunch individual delimiter characters)
 	 * @param charsToDelete a set of characters to delete; useful for deleting unwanted
-	 * line breaks: for example, "\r\n\f" will delete all new lines and line feeds in a {@code String}
+	 * line breaks: e.g. "\r\n\f" will delete all new lines and line feeds in a {@code String}
 	 * @return an array of the tokens in the list
 	 * @see #tokenizeToStringArray
 	 */
@@ -1262,7 +1277,7 @@ public abstract class StringUtils {
 				result.add(deleteAny(str.substring(pos, delPos), charsToDelete));
 				pos = delPos + delimiter.length();
 			}
-			if (!str.isEmpty() && pos <= str.length()) {
+			if (str.length() > 0 && pos <= str.length()) {
 				// Add rest of String, but not in case of empty input.
 				result.add(deleteAny(str.substring(pos), charsToDelete));
 			}
@@ -1271,7 +1286,7 @@ public abstract class StringUtils {
 	}
 
 	/**
-	 * Convert a comma delimited list (for example, a row from a CSV file) into an
+	 * Convert a comma delimited list (e.g., a row from a CSV file) into an
 	 * array of strings.
 	 * @param str the input {@code String} (potentially {@code null} or empty)
 	 * @return an array of strings, or the empty array in case of empty input
@@ -1281,7 +1296,7 @@ public abstract class StringUtils {
 	}
 
 	/**
-	 * Convert a comma delimited list (for example, a row from a CSV file) into a set.
+	 * Convert a comma delimited list (e.g., a row from a CSV file) into a set.
 	 * <p>Note that this will suppress duplicates, and as of 4.2, the elements in
 	 * the returned set will preserve the original order in a {@link LinkedHashSet}.
 	 * @param str the input {@code String} (potentially {@code null} or empty)
@@ -1294,7 +1309,7 @@ public abstract class StringUtils {
 	}
 
 	/**
-	 * Convert a {@link Collection} to a delimited {@code String} (for example, CSV).
+	 * Convert a {@link Collection} to a delimited {@code String} (e.g. CSV).
 	 * <p>Useful for {@code toString()} implementations.
 	 * @param coll the {@code Collection} to convert (potentially {@code null} or empty)
 	 * @param delim the delimiter to use (typically a ",")
@@ -1326,7 +1341,7 @@ public abstract class StringUtils {
 	}
 
 	/**
-	 * Convert a {@code Collection} into a delimited {@code String} (for example, CSV).
+	 * Convert a {@code Collection} into a delimited {@code String} (e.g. CSV).
 	 * <p>Useful for {@code toString()} implementations.
 	 * @param coll the {@code Collection} to convert (potentially {@code null} or empty)
 	 * @param delim the delimiter to use (typically a ",")
@@ -1337,7 +1352,7 @@ public abstract class StringUtils {
 	}
 
 	/**
-	 * Convert a {@code Collection} into a delimited {@code String} (for example, CSV).
+	 * Convert a {@code Collection} into a delimited {@code String} (e.g., CSV).
 	 * <p>Useful for {@code toString()} implementations.
 	 * @param coll the {@code Collection} to convert (potentially {@code null} or empty)
 	 * @return the delimited {@code String}
@@ -1347,7 +1362,7 @@ public abstract class StringUtils {
 	}
 
 	/**
-	 * Convert a {@code String} array into a delimited {@code String} (for example, CSV).
+	 * Convert a {@code String} array into a delimited {@code String} (e.g. CSV).
 	 * <p>Useful for {@code toString()} implementations.
 	 * @param arr the array to display (potentially {@code null} or empty)
 	 * @param delim the delimiter to use (typically a ",")

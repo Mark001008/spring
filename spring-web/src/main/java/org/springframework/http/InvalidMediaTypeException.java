@@ -16,7 +16,6 @@
 
 package org.springframework.http;
 
-import org.springframework.lang.Nullable;
 import org.springframework.util.InvalidMimeTypeException;
 
 /**
@@ -37,8 +36,8 @@ public class InvalidMediaTypeException extends IllegalArgumentException {
 	 * @param mediaType the offending media type
 	 * @param message a detail message indicating the invalid part
 	 */
-	public InvalidMediaTypeException(String mediaType, @Nullable String message) {
-		super(message != null ? "Invalid media type \"" + mediaType + "\": " + message : "Invalid media type \"" + mediaType);
+	public InvalidMediaTypeException(String mediaType, String message) {
+		super("Invalid media type \"" + mediaType + "\": " + message);
 		this.mediaType = mediaType;
 	}
 

@@ -1,13 +1,13 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2003,2004 The Apache Software Foundation
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
+ *  Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
  *      https://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software
+ *  Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
@@ -24,7 +24,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 
 import org.springframework.asm.ClassVisitor;
@@ -277,9 +276,10 @@ abstract public class BeanMap implements Map {
 
 	@Override
 	public boolean equals(Object o) {
-		if (o == null || !(o instanceof Map other)) {
+		if (o == null || !(o instanceof Map)) {
 			return false;
 		}
+		Map other = (Map)o;
 		if (size() != other.size()) {
 			return false;
 		}
@@ -289,7 +289,7 @@ abstract public class BeanMap implements Map {
 			}
 			Object v1 = get(key);
 			Object v2 = other.get(key);
-			if (!(Objects.equals(v1, v2))) {
+			if (!((v1 == null) ? v2 == null : v1.equals(v2))) {
 				return false;
 			}
 		}

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,7 +21,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import jakarta.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletRequest;
+
 import org.junit.jupiter.api.Test;
 
 import org.springframework.http.HttpHeaders;
@@ -41,7 +42,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author Rossen Stoyanchev
  * @author Sebastien Deleuze
  */
-class WebUtilsTests {
+public class WebUtilsTests {
 
 	@Test
 	void findParameterValue() {
@@ -63,11 +64,11 @@ class WebUtilsTests {
 		MultiValueMap<String, String> variables;
 
 		variables = WebUtils.parseMatrixVariables(null);
-		assertThat(variables).isEmpty();
+		assertThat(variables).hasSize(0);
 
 		variables = WebUtils.parseMatrixVariables("year");
 		assertThat(variables).hasSize(1);
-		assertThat(variables.getFirst("year")).isEmpty();
+		assertThat(variables.getFirst("year")).isEqualTo("");
 
 		variables = WebUtils.parseMatrixVariables("year=2012");
 		assertThat(variables).hasSize(1);

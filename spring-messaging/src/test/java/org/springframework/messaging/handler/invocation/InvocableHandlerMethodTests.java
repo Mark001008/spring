@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,45 +33,45 @@ import static org.assertj.core.api.Assertions.assertThatRuntimeException;
 import static org.mockito.Mockito.mock;
 
 /**
- * Tests for {@link InvocableHandlerMethod}.
+ * Unit tests for {@link InvocableHandlerMethod}.
  *
  * @author Rossen Stoyanchev
  */
-class InvocableHandlerMethodTests {
+public class InvocableHandlerMethodTests {
 
-	private final Message<?> message = mock();
+	private final Message<?> message = mock(Message.class);
 
 	private final HandlerMethodArgumentResolverComposite resolvers = new HandlerMethodArgumentResolverComposite();
 
 
 	@Test
-	void resolveArg() throws Exception {
+	public void resolveArg() throws Exception {
 		this.resolvers.addResolver(new StubArgumentResolver(99));
 		this.resolvers.addResolver(new StubArgumentResolver("value"));
 		Method method = ResolvableMethod.on(Handler.class).mockCall(c -> c.handle(0, "")).method();
 		Object value = invoke(new Handler(), method);
 
-		assertThat(getStubResolver(0).getResolvedParameters()).hasSize(1);
-		assertThat(getStubResolver(1).getResolvedParameters()).hasSize(1);
+		assertThat(getStubResolver(0).getResolvedParameters().size()).isEqualTo(1);
+		assertThat(getStubResolver(1).getResolvedParameters().size()).isEqualTo(1);
 		assertThat(value).isEqualTo("99-value");
 		assertThat(getStubResolver(0).getResolvedParameters().get(0).getParameterName()).isEqualTo("intArg");
 		assertThat(getStubResolver(1).getResolvedParameters().get(0).getParameterName()).isEqualTo("stringArg");
 	}
 
 	@Test
-	void resolveNoArgValue() throws Exception {
+	public void resolveNoArgValue() throws Exception {
 		this.resolvers.addResolver(new StubArgumentResolver(Integer.class));
 		this.resolvers.addResolver(new StubArgumentResolver(String.class));
 		Method method = ResolvableMethod.on(Handler.class).mockCall(c -> c.handle(0, "")).method();
 		Object value = invoke(new Handler(), method);
 
-		assertThat(getStubResolver(0).getResolvedParameters()).hasSize(1);
-		assertThat(getStubResolver(1).getResolvedParameters()).hasSize(1);
+		assertThat(getStubResolver(0).getResolvedParameters().size()).isEqualTo(1);
+		assertThat(getStubResolver(1).getResolvedParameters().size()).isEqualTo(1);
 		assertThat(value).isEqualTo("null-null");
 	}
 
 	@Test
-	void cannotResolveArg() {
+	public void cannotResolveArg() throws Exception {
 		Method method = ResolvableMethod.on(Handler.class).mockCall(c -> c.handle(0, "")).method();
 		assertThatExceptionOfType(MethodArgumentResolutionException.class)
 			.isThrownBy(() -> invoke(new Handler(), method))
@@ -79,7 +79,7 @@ class InvocableHandlerMethodTests {
 	}
 
 	@Test
-	void resolveProvidedArg() throws Exception {
+	public void resolveProvidedArg() throws Exception {
 		Method method = ResolvableMethod.on(Handler.class).mockCall(c -> c.handle(0, "")).method();
 		Object value = invoke(new Handler(), method, 99, "value");
 
@@ -89,7 +89,7 @@ class InvocableHandlerMethodTests {
 	}
 
 	@Test
-	void resolveProvidedArgFirst() throws Exception {
+	public void resolveProvidedArgFirst() throws Exception {
 		this.resolvers.addResolver(new StubArgumentResolver(1));
 		this.resolvers.addResolver(new StubArgumentResolver("value1"));
 		Method method = ResolvableMethod.on(Handler.class).mockCall(c -> c.handle(0, "")).method();
@@ -99,7 +99,7 @@ class InvocableHandlerMethodTests {
 	}
 
 	@Test
-	void exceptionInResolvingArg() {
+	public void exceptionInResolvingArg() throws Exception {
 		this.resolvers.addResolver(new ExceptionRaisingArgumentResolver());
 		Method method = ResolvableMethod.on(Handler.class).mockCall(c -> c.handle(0, "")).method();
 		assertThatIllegalArgumentException().isThrownBy(() ->
@@ -108,7 +108,7 @@ class InvocableHandlerMethodTests {
 	}
 
 	@Test
-	void illegalArgumentException() {
+	public void illegalArgumentException() throws Exception {
 		this.resolvers.addResolver(new StubArgumentResolver(Integer.class, "__not_an_int__"));
 		this.resolvers.addResolver(new StubArgumentResolver("value"));
 		Method method = ResolvableMethod.on(Handler.class).mockCall(c -> c.handle(0, "")).method();
@@ -123,7 +123,7 @@ class InvocableHandlerMethodTests {
 	}
 
 	@Test
-	void invocationTargetException() {
+	public void invocationTargetException() throws Exception {
 		Handler handler = new Handler();
 		Method method = ResolvableMethod.on(Handler.class).argTypes(Throwable.class).resolveMethod();
 		RuntimeException runtimeException = new RuntimeException("error");
@@ -146,7 +146,7 @@ class InvocableHandlerMethodTests {
 	}
 
 	@Test  // Based on SPR-13917 (spring-web)
-	public void invocationErrorMessage() {
+	public void invocationErrorMessage() throws Exception {
 		this.resolvers.addResolver(new StubArgumentResolver(double.class));
 		Method method = ResolvableMethod.on(Handler.class).mockCall(c -> c.handle(0.0)).method();
 		assertThatIllegalStateException().isThrownBy(() ->

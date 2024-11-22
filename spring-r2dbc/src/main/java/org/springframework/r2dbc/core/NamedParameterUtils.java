@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2023 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,8 +25,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 
-import io.r2dbc.spi.Parameter;
-
 import org.springframework.dao.InvalidDataAccessApiUsageException;
 import org.springframework.lang.Nullable;
 import org.springframework.r2dbc.core.binding.BindMarker;
@@ -48,20 +46,19 @@ import org.springframework.util.Assert;
  * @author Thomas Risberg
  * @author Juergen Hoeller
  * @author Mark Paluch
- * @author Anton Naydenov
  * @since 5.3
  */
 abstract class NamedParameterUtils {
 
 	/**
-	 * Set of characters that qualify as comment or quote starting characters.
+	 * Set of characters that qualify as comment or quotes starting characters.
 	 */
-	private static final String[] START_SKIP = {"'", "\"", "--", "/*", "`"};
+	private static final String[] START_SKIP = new String[] {"'", "\"", "--", "/*"};
 
 	/**
-	 * Set of characters that are the corresponding comment or quote ending characters.
+	 * Set of characters that at are the corresponding comment or quotes ending characters.
 	 */
-	private static final String[] STOP_SKIP = {"'", "\"", "\n", "*/", "`"};
+	private static final String[] STOP_SKIP = new String[] {"'", "\"", "\n", "*/"};
 
 	/**
 	 * Set of characters that qualify as parameter separators,
@@ -83,12 +80,12 @@ abstract class NamedParameterUtils {
 
 
 	// -------------------------------------------------------------------------
-	// Core methods used by NamedParameterExpander
+	// Core methods used by NamedParameterSupport.
 	// -------------------------------------------------------------------------
 
 	/**
 	 * Parse the SQL statement and locate any placeholders or named parameters.
-	 * Named parameters are substituted for an R2DBC placeholder.
+	 * Named parameters are substituted for a R2DBC placeholder.
 	 * @param sql the SQL statement
 	 * @return the parsed statement, represented as {@link ParsedSql} instance
 	 */
@@ -154,21 +151,7 @@ abstract class NamedParameterUtils {
 					j++;
 				}
 				else {
-					boolean paramWithSquareBrackets = false;
-					while (j < statement.length) {
-						c = statement[j];
-						if (isParameterSeparator(c)) {
-							break;
-						}
-						if (c == '[') {
-							paramWithSquareBrackets = true;
-						}
-						else if (c == ']') {
-							if (!paramWithSquareBrackets) {
-								break;
-							}
-							paramWithSquareBrackets = false;
-						}
+					while (j < statement.length && !isParameterSeparator(statement[j])) {
 						j++;
 					}
 					if (j - i > 1) {
@@ -270,15 +253,14 @@ abstract class NamedParameterUtils {
 
 	/**
 	 * Parse the SQL statement and locate any placeholders or named parameters. Named
-	 * parameters are substituted for an R2DBC placeholder, and any select list is expanded
+	 * parameters are substituted for a R2DBC placeholder, and any select list is expanded
 	 * to the required number of placeholders. Select lists may contain an array of objects,
 	 * and in that case the placeholders will be grouped and enclosed with parentheses.
 	 * This allows for the use of "expression lists" in the SQL statement like:
 	 * {@code select id, name, state from table where (name, age) in (('John', 35), ('Ann', 50))}
-	 * <p>The parameter values passed in are used to determine the number of
-	 * placeholders to be used for a select list. Select lists should not be empty
-	 * and should be limited to 100 or fewer elements. An empty list or a larger
-	 * number of elements is not guaranteed to be supported by the database and
+	 * <p>The parameter values passed in are used to determine the number of placeholders to
+	 * be used for a select list. Select lists should be limited to 100 or fewer elements.
+	 * A larger number of elements is not guaranteed to be supported by the database and
 	 * is strictly vendor-dependent.
 	 * @param parsedSql the parsed representation of the SQL statement
 	 * @param bindMarkersFactory the bind marker factory.
@@ -307,16 +289,19 @@ abstract class NamedParameterUtils {
 			actualSql.append(originalSql, lastIndex, startIndex);
 			NamedParameters.NamedParameter marker = markerHolder.getOrCreate(paramName);
 			if (paramSource.hasValue(paramName)) {
-				Parameter parameter = paramSource.getValue(paramName);
-				if (parameter.getValue() instanceof Collection<?> collection) {
+				Object value = paramSource.getValue(paramName);
+				if (value instanceof Collection) {
+					Iterator<?> entryIter = ((Collection<?>) value).iterator();
 					int k = 0;
 					int counter = 0;
-					for (Object entryItem : collection) {
+					while (entryIter.hasNext()) {
 						if (k > 0) {
 							actualSql.append(", ");
 						}
 						k++;
-						if (entryItem instanceof Object[] expressionList) {
+						Object entryItem = entryIter.next();
+						if (entryItem instanceof Object[]) {
+							Object[] expressionList = (Object[]) entryItem;
 							actualSql.append('(');
 							for (int m = 0; m < expressionList.length; m++) {
 								if (m > 0) {
@@ -362,11 +347,8 @@ abstract class NamedParameterUtils {
 
 	/**
 	 * Parse the SQL statement and locate any placeholders or named parameters.
-	 * <p>Named parameters are substituted for a native placeholder and any
+	 * Named parameters are substituted for a native placeholder and any
 	 * select list is expanded to the required number of placeholders.
-	 * <p>This is a shortcut version of
-	 * {@link #parseSqlStatement(String)} in combination with
-	 * {@link #substituteNamedParameters(ParsedSql, BindMarkersFactory, BindParameterSource)}.
 	 * @param sql the SQL statement
 	 * @param bindMarkersFactory the bind marker factory
 	 * @param paramSource the source for named parameters
@@ -409,10 +391,16 @@ abstract class NamedParameterUtils {
 		}
 
 		@Override
-		public boolean equals(@Nullable Object other) {
-			return (this == other || (other instanceof ParameterHolder that &&
-					this.startIndex == that.startIndex && this.endIndex == that.endIndex &&
-					this.parameterName.equals(that.parameterName)));
+		public boolean equals(Object other) {
+			if (this == other) {
+				return true;
+			}
+			if (!(other instanceof ParameterHolder)) {
+				return false;
+			}
+			ParameterHolder that = (ParameterHolder) other;
+			return (this.startIndex == that.startIndex && this.endIndex == that.endIndex &&
+					this.parameterName.equals(that.parameterName));
 		}
 
 		@Override
@@ -519,19 +507,21 @@ abstract class NamedParameterUtils {
 			this.parameterSource = parameterSource;
 		}
 
-		@SuppressWarnings({"rawtypes", "unchecked"})
-		public void bind(BindTarget target, String identifier, Parameter parameter) {
+		@SuppressWarnings("unchecked")
+		public void bind(BindTarget target, String identifier, Object value) {
 			List<BindMarker> bindMarkers = getBindMarkers(identifier);
 			if (bindMarkers == null) {
-				target.bind(identifier, parameter);
+				target.bind(identifier, value);
 				return;
 			}
-			if (parameter.getValue() instanceof Collection collection) {
+			if (value instanceof Collection) {
+				Collection<Object> collection = (Collection<Object>) value;
 				Iterator<Object> iterator = collection.iterator();
 				Iterator<BindMarker> markers = bindMarkers.iterator();
 				while (iterator.hasNext()) {
 					Object valueToBind = iterator.next();
-					if (valueToBind instanceof Object[] objects) {
+					if (valueToBind instanceof Object[]) {
+						Object[] objects = (Object[]) valueToBind;
 						for (Object object : objects) {
 							bind(target, markers, object);
 						}
@@ -543,7 +533,7 @@ abstract class NamedParameterUtils {
 			}
 			else {
 				for (BindMarker bindMarker : bindMarkers) {
-					bindMarker.bind(target, parameter);
+					bindMarker.bind(target, value);
 				}
 			}
 		}
@@ -555,14 +545,14 @@ abstract class NamedParameterUtils {
 			markers.next().bind(target, valueToBind);
 		}
 
-		public void bindNull(BindTarget target, String identifier, Parameter parameter) {
+		public void bindNull(BindTarget target, String identifier, Class<?> valueType) {
 			List<BindMarker> bindMarkers = getBindMarkers(identifier);
 			if (bindMarkers == null) {
-				target.bind(identifier, parameter);
+				target.bindNull(identifier, valueType);
 				return;
 			}
 			for (BindMarker bindMarker : bindMarkers) {
-				bindMarker.bind(target, parameter);
+				bindMarker.bindNull(target, valueType);
 			}
 		}
 
@@ -587,12 +577,12 @@ abstract class NamedParameterUtils {
 		@Override
 		public void bindTo(BindTarget target) {
 			for (String namedParameter : this.parameterSource.getParameterNames()) {
-				Parameter parameter = this.parameterSource.getValue(namedParameter);
-				if (parameter.getValue() == null) {
-					bindNull(target, namedParameter, parameter);
+				Object value = this.parameterSource.getValue(namedParameter);
+				if (value == null) {
+					bindNull(target, namedParameter, this.parameterSource.getType(namedParameter));
 				}
 				else {
-					bind(target, namedParameter, parameter);
+					bind(target, namedParameter, value);
 				}
 			}
 		}

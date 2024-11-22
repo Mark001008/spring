@@ -18,8 +18,6 @@ package org.springframework.web.client;
 
 import java.io.IOException;
 
-import org.springframework.lang.Nullable;
-
 /**
  * Exception thrown when an I/O error occurs.
  *
@@ -44,7 +42,7 @@ public class ResourceAccessException extends RestClientException {
 	 * @param msg the message
 	 * @param ex the {@code IOException}
 	 */
-	public ResourceAccessException(String msg, @Nullable IOException ex) {
+	public ResourceAccessException(String msg, IOException ex) {
 		super(msg, ex);
 	}
 

@@ -24,7 +24,6 @@ import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 
-import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.ResourceRegion;
 import org.springframework.http.HttpHeaders;
@@ -43,7 +42,6 @@ import org.springframework.util.StreamUtils;
  *
  * @author Brian Clozel
  * @author Juergen Hoeller
- * @author Sam Brannen
  * @since 4.3
  */
 public class ResourceRegionHttpMessageConverter extends AbstractGenericHttpMessageConverter<Object> {
@@ -84,12 +82,15 @@ public class ResourceRegionHttpMessageConverter extends AbstractGenericHttpMessa
 
 	@Override
 	public boolean canWrite(@Nullable Type type, @Nullable Class<?> clazz, @Nullable MediaType mediaType) {
-		if (!(type instanceof ParameterizedType parameterizedType)) {
-			return (type instanceof Class<?> c && ResourceRegion.class.isAssignableFrom(c));
+		if (!(type instanceof ParameterizedType)) {
+			return (type instanceof Class && ResourceRegion.class.isAssignableFrom((Class<?>) type));
 		}
-		if (!(parameterizedType.getRawType() instanceof Class<?> rawType)) {
+
+		ParameterizedType parameterizedType = (ParameterizedType) type;
+		if (!(parameterizedType.getRawType() instanceof Class)) {
 			return false;
 		}
+		Class<?> rawType = (Class<?>) parameterizedType.getRawType();
 		if (!(Collection.class.isAssignableFrom(rawType))) {
 			return false;
 		}
@@ -97,9 +98,11 @@ public class ResourceRegionHttpMessageConverter extends AbstractGenericHttpMessa
 			return false;
 		}
 		Type typeArgument = parameterizedType.getActualTypeArguments()[0];
-		if (!(typeArgument instanceof Class<?> typeArgumentClass)) {
+		if (!(typeArgument instanceof Class)) {
 			return false;
 		}
+
+		Class<?> typeArgumentClass = (Class<?>) typeArgument;
 		return ResourceRegion.class.isAssignableFrom(typeArgumentClass);
 	}
 
@@ -107,8 +110,8 @@ public class ResourceRegionHttpMessageConverter extends AbstractGenericHttpMessa
 	protected void writeInternal(Object object, @Nullable Type type, HttpOutputMessage outputMessage)
 			throws IOException, HttpMessageNotWritableException {
 
-		if (object instanceof ResourceRegion resourceRegion) {
-			writeResourceRegion(resourceRegion, outputMessage);
+		if (object instanceof ResourceRegion) {
+			writeResourceRegion((ResourceRegion) object, outputMessage);
 		}
 		else {
 			@SuppressWarnings("unchecked")
@@ -125,8 +128,8 @@ public class ResourceRegionHttpMessageConverter extends AbstractGenericHttpMessa
 	@Override
 	protected MediaType getDefaultContentType(Object object) {
 		Resource resource = null;
-		if (object instanceof ResourceRegion resourceRegion) {
-			resource = resourceRegion.getResource();
+		if (object instanceof ResourceRegion) {
+			resource = ((ResourceRegion) object).getResource();
 		}
 		else {
 			@SuppressWarnings("unchecked")
@@ -136,27 +139,6 @@ public class ResourceRegionHttpMessageConverter extends AbstractGenericHttpMessa
 			}
 		}
 		return MediaTypeFactory.getMediaType(resource).orElse(MediaType.APPLICATION_OCTET_STREAM);
-	}
-
-	@Override
-	protected boolean supportsRepeatableWrites(Object object) {
-		if (object instanceof ResourceRegion resourceRegion) {
-			return supportsRepeatableWrites(resourceRegion);
-		}
-		else {
-			@SuppressWarnings("unchecked")
-			Collection<ResourceRegion> regions = (Collection<ResourceRegion>) object;
-			for (ResourceRegion region : regions) {
-				if (!supportsRepeatableWrites(region)) {
-					return false;
-				}
-			}
-			return true;
-		}
-	}
-
-	private boolean supportsRepeatableWrites(ResourceRegion region) {
-		return !(region.getResource() instanceof InputStreamResource);
 	}
 
 
@@ -188,7 +170,6 @@ public class ResourceRegionHttpMessageConverter extends AbstractGenericHttpMessa
 		}
 	}
 
-	@SuppressWarnings("NullAway")
 	private void writeResourceRegionCollection(Collection<ResourceRegion> resourceRegions,
 			HttpOutputMessage outputMessage) throws IOException {
 

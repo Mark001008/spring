@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2021 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -80,7 +80,6 @@ public class CompositeMessageCondition implements MessageCondition<CompositeMess
 	}
 
 	@Override
-	@Nullable
 	public CompositeMessageCondition getMatchingCondition(Message<?> message) {
 		List<MessageCondition<?>> result = new ArrayList<>(this.messageConditions.size());
 		for (MessageCondition<?> condition : this.messageConditions) {
@@ -132,9 +131,10 @@ public class CompositeMessageCondition implements MessageCondition<CompositeMess
 		if (this == other) {
 			return true;
 		}
-		if (!(other instanceof CompositeMessageCondition otherComposite)) {
+		if (!(other instanceof CompositeMessageCondition)) {
 			return false;
 		}
+		CompositeMessageCondition otherComposite = (CompositeMessageCondition) other;
 		checkCompatible(otherComposite);
 		List<MessageCondition<?>> otherConditions = otherComposite.getMessageConditions();
 		for (int i = 0; i < this.messageConditions.size(); i++) {

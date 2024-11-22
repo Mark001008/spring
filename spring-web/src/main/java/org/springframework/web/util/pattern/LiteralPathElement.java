@@ -16,6 +16,7 @@
 
 package org.springframework.web.util.pattern;
 
+import org.springframework.http.server.PathContainer;
 import org.springframework.http.server.PathContainer.Element;
 import org.springframework.http.server.PathContainer.PathSegment;
 import org.springframework.web.util.pattern.PathPattern.MatchingContext;
@@ -29,7 +30,7 @@ import org.springframework.web.util.pattern.PathPattern.MatchingContext;
  */
 class LiteralPathElement extends PathElement {
 
-	private final String text;
+	private final char[] text;
 
 	private final int len;
 
@@ -40,7 +41,16 @@ class LiteralPathElement extends PathElement {
 		super(pos, separator);
 		this.len = literalText.length;
 		this.caseSensitive = caseSensitive;
-		this.text = new String(literalText);
+		if (caseSensitive) {
+			this.text = literalText;
+		}
+		else {
+			// Force all the text lower case to make matching faster
+			this.text = new char[literalText.length];
+			for (int i = 0; i < this.len; i++) {
+				this.text[i] = Character.toLowerCase(literalText[i]);
+			}
+		}
 	}
 
 
@@ -51,23 +61,28 @@ class LiteralPathElement extends PathElement {
 			return false;
 		}
 		Element element = matchingContext.pathElements.get(pathIndex);
-		if (!(element instanceof PathSegment pathSegment)) {
+		if (!(element instanceof PathContainer.PathSegment)) {
 			return false;
 		}
-		String value = pathSegment.valueToMatch();
+		String value = ((PathSegment)element).valueToMatch();
 		if (value.length() != this.len) {
 			// Not enough data to match this path element
 			return false;
 		}
 
 		if (this.caseSensitive) {
-			if (!this.text.equals(value)) {
-				return false;
+			for (int i = 0; i < this.len; i++) {
+				if (value.charAt(i) != this.text[i]) {
+					return false;
+				}
 			}
 		}
 		else {
-			if (!this.text.equalsIgnoreCase(value)) {
-				return false;
+			for (int i = 0; i < this.len; i++) {
+				// TODO revisit performance if doing a lot of case-insensitive matching
+				if (Character.toLowerCase(value.charAt(i)) != this.text[i]) {
+					return false;
+				}
 			}
 		}
 
@@ -100,7 +115,7 @@ class LiteralPathElement extends PathElement {
 
 	@Override
 	public char[] getChars() {
-		return this.text.toCharArray();
+		return this.text;
 	}
 
 	@Override
@@ -110,7 +125,7 @@ class LiteralPathElement extends PathElement {
 
 	@Override
 	public String toString() {
-		return "Literal(" + this.text + ")";
+		return "Literal(" + String.valueOf(this.text) + ")";
 	}
 
 }

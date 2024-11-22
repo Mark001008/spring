@@ -32,7 +32,6 @@ import org.springframework.aop.aspectj.annotation.AbstractAspectJAdvisorFactory.
 import org.springframework.aop.support.DynamicMethodMatcherPointcut;
 import org.springframework.aop.support.Pointcuts;
 import org.springframework.lang.Nullable;
-import org.springframework.util.ObjectUtils;
 
 /**
  * Internal implementation of AspectJPointcutAdvisor.
@@ -41,7 +40,6 @@ import org.springframework.util.ObjectUtils;
  *
  * @author Rod Johnson
  * @author Juergen Hoeller
- * @author Sam Brannen
  * @since 2.0
  */
 @SuppressWarnings("serial")
@@ -195,7 +193,6 @@ final class InstantiationModelAwarePointcutAdvisorImpl
 	}
 
 	@Override
-	@SuppressWarnings("NullAway")
 	public boolean isBeforeAdvice() {
 		if (this.isBeforeAdvice == null) {
 			determineAdviceType();
@@ -204,7 +201,6 @@ final class InstantiationModelAwarePointcutAdvisorImpl
 	}
 
 	@Override
-	@SuppressWarnings("NullAway")
 	public boolean isAfterAdvice() {
 		if (this.isAfterAdvice == null) {
 			determineAdviceType();
@@ -217,7 +213,7 @@ final class InstantiationModelAwarePointcutAdvisorImpl
 	 * creation of the advice.
 	 */
 	private void determineAdviceType() {
-		AspectJAnnotation aspectJAnnotation =
+		AspectJAnnotation<?> aspectJAnnotation =
 				AbstractAspectJAdvisorFactory.findAspectJAnnotationOnMethod(this.aspectJAdviceMethod);
 		if (aspectJAnnotation == null) {
 			this.isBeforeAdvice = false;
@@ -225,18 +221,21 @@ final class InstantiationModelAwarePointcutAdvisorImpl
 		}
 		else {
 			switch (aspectJAnnotation.getAnnotationType()) {
-				case AtPointcut, AtAround -> {
+				case AtPointcut:
+				case AtAround:
 					this.isBeforeAdvice = false;
 					this.isAfterAdvice = false;
-				}
-				case AtBefore -> {
+					break;
+				case AtBefore:
 					this.isBeforeAdvice = true;
 					this.isAfterAdvice = false;
-				}
-				case AtAfter, AtAfterReturning, AtAfterThrowing -> {
+					break;
+				case AtAfter:
+				case AtAfterReturning:
+				case AtAfterThrowing:
 					this.isBeforeAdvice = false;
 					this.isAfterAdvice = true;
-				}
+					break;
 			}
 		}
 	}
@@ -279,8 +278,8 @@ final class InstantiationModelAwarePointcutAdvisorImpl
 
 			this.declaredPointcut = declaredPointcut;
 			this.preInstantiationPointcut = preInstantiationPointcut;
-			if (aspectInstanceFactory instanceof LazySingletonAspectInstanceFactoryDecorator lazyFactory) {
-				this.aspectInstanceFactory = lazyFactory;
+			if (aspectInstanceFactory instanceof LazySingletonAspectInstanceFactoryDecorator) {
+				this.aspectInstanceFactory = (LazySingletonAspectInstanceFactoryDecorator) aspectInstanceFactory;
 			}
 		}
 
@@ -301,27 +300,6 @@ final class InstantiationModelAwarePointcutAdvisorImpl
 		private boolean isAspectMaterialized() {
 			return (this.aspectInstanceFactory == null || this.aspectInstanceFactory.isMaterialized());
 		}
-
-		@Override
-		public boolean equals(@Nullable Object other) {
-			// For equivalence, we only need to compare the preInstantiationPointcut fields since
-			// they include the declaredPointcut fields. In addition, we should not compare the
-			// aspectInstanceFactory fields since LazySingletonAspectInstanceFactoryDecorator does
-			// not implement equals().
-			return (this == other || (other instanceof PerTargetInstantiationModelPointcut that &&
-					ObjectUtils.nullSafeEquals(this.preInstantiationPointcut, that.preInstantiationPointcut)));
-		}
-
-		@Override
-		public int hashCode() {
-			return ObjectUtils.nullSafeHashCode(this.declaredPointcut.getExpression());
-		}
-
-		@Override
-		public String toString() {
-			return PerTargetInstantiationModelPointcut.class.getName() + ": " + this.declaredPointcut.getExpression();
-		}
-
 	}
 
 }

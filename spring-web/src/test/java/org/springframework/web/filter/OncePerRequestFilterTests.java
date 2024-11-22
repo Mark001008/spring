@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,12 +18,13 @@ package org.springframework.web.filter;
 
 import java.io.IOException;
 
-import jakarta.servlet.DispatcherType;
-import jakarta.servlet.FilterChain;
-import jakarta.servlet.ServletException;
-import jakarta.servlet.http.HttpServlet;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
+import javax.servlet.DispatcherType;
+import javax.servlet.FilterChain;
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -35,12 +36,12 @@ import org.springframework.web.util.WebUtils;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Tests for {@link OncePerRequestFilter}.
+ * Unit tests for {@link OncePerRequestFilter}.
  *
  * @author Rossen Stoyanchev
  * @since 5.1.9
  */
-class OncePerRequestFilterTests {
+public class OncePerRequestFilterTests {
 
 	private final TestOncePerRequestFilter filter = new TestOncePerRequestFilter();
 
@@ -50,6 +51,7 @@ class OncePerRequestFilterTests {
 
 
 	@BeforeEach
+	@SuppressWarnings("serial")
 	public void setup() throws Exception {
 		this.request = new MockHttpServletRequest();
 		this.request.setScheme("http");
@@ -60,7 +62,7 @@ class OncePerRequestFilterTests {
 
 
 	@Test
-	void filterOnce() throws ServletException, IOException {
+	public void filterOnce() throws ServletException, IOException {
 
 		// Already filtered
 		this.request.setAttribute(this.filter.getAlreadyFilteredAttributeName(), Boolean.TRUE);
@@ -79,7 +81,7 @@ class OncePerRequestFilterTests {
 	}
 
 	@Test
-	void shouldNotFilterErrorDispatch() throws ServletException, IOException {
+	public void shouldNotFilterErrorDispatch() throws ServletException, IOException {
 
 		initErrorDispatch();
 
@@ -89,7 +91,7 @@ class OncePerRequestFilterTests {
 	}
 
 	@Test
-	void shouldNotFilterNestedErrorDispatch() throws ServletException, IOException {
+	public void shouldNotFilterNestedErrorDispatch() throws ServletException, IOException {
 
 		initErrorDispatch();
 		this.request.setAttribute(this.filter.getAlreadyFilteredAttributeName(), Boolean.TRUE);

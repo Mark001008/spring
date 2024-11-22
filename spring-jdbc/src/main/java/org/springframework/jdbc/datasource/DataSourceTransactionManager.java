@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2023 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -82,7 +82,7 @@ import org.springframework.util.Assert;
  * until a {@code Statement} gets executed, lazily applying the specified transaction
  * settings to the target {@code Connection}.
  *
- * <p>This transaction manager supports nested transactions via the JDBC
+ * <p>This transaction manager supports nested transactions via the JDBC 3.0
  * {@link java.sql.Savepoint} mechanism. The
  * {@link #setNestedTransactionAllowed "nestedTransactionAllowed"} flag defaults
  * to "true", since nested transactions will work without restrictions on JDBC
@@ -91,7 +91,7 @@ import org.springframework.util.Assert;
  * <p>This transaction manager can be used as a replacement for the
  * {@link org.springframework.transaction.jta.JtaTransactionManager} in the single
  * resource case, as it does not require a container that supports JTA, typically
- * in combination with a locally defined JDBC {@code DataSource} (for example, a Hikari
+ * in combination with a locally defined JDBC {@code DataSource} (e.g. a Hikari
  * connection pool). Switching between this local strategy and a JTA environment
  * is just a matter of configuration!
  *
@@ -99,7 +99,7 @@ import org.springframework.util.Assert;
  * transaction synchronizations (if synchronization is generally active), assuming
  * resources operating on the underlying JDBC {@code Connection}. This allows for
  * setup analogous to {@code JtaTransactionManager}, in particular with respect to
- * lazily registered ORM resources (for example, a Hibernate {@code Session}).
+ * lazily registered ORM resources (e.g. a Hibernate {@code Session}).
  *
  * <p><b>NOTE: As of 5.3, {@link org.springframework.jdbc.support.JdbcTransactionManager}
  * is available as an extended subclass which includes commit/rollback exception
@@ -166,11 +166,11 @@ public class DataSourceTransactionManager extends AbstractPlatformTransactionMan
 	 * @see LazyConnectionDataSourceProxy
 	 */
 	public void setDataSource(@Nullable DataSource dataSource) {
-		if (dataSource instanceof TransactionAwareDataSourceProxy tadsp) {
+		if (dataSource instanceof TransactionAwareDataSourceProxy) {
 			// If we got a TransactionAwareDataSourceProxy, we need to perform transactions
 			// for its underlying target DataSource, else data access code won't see
 			// properly exposed transactions (i.e. transactions for the target DataSource).
-			this.dataSource = tadsp.getTargetDataSource();
+			this.dataSource = ((TransactionAwareDataSourceProxy) dataSource).getTargetDataSource();
 		}
 		else {
 			this.dataSource = dataSource;
@@ -211,7 +211,7 @@ public class DataSourceTransactionManager extends AbstractPlatformTransactionMan
 	 * this read-only mode provides read consistency for the entire transaction.
 	 * <p>Note that older Oracle JDBC drivers (9i, 10g) used to enforce this read-only
 	 * mode even for {@code Connection.setReadOnly(true}. However, with recent drivers,
-	 * this strong enforcement needs to be applied explicitly, for example, through this flag.
+	 * this strong enforcement needs to be applied explicitly, e.g. through this flag.
 	 * @since 4.3.7
 	 * @see #prepareTransactionalConnection
 	 */
@@ -478,7 +478,9 @@ public class DataSourceTransactionManager extends AbstractPlatformTransactionMan
 
 		@Override
 		public void flush() {
-			TransactionSynchronizationUtils.triggerFlush();
+			if (TransactionSynchronizationManager.isSynchronizationActive()) {
+				TransactionSynchronizationUtils.triggerFlush();
+			}
 		}
 	}
 

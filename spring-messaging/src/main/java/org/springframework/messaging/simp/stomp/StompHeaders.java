@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -104,7 +104,6 @@ public class StompHeaders implements MultiValueMap<String, String>, Serializable
 	public static final String RECEIPT_ID = "receipt-id";
 
 
-	@SuppressWarnings("serial")
 	private final Map<String, List<String>> headers;
 
 
@@ -278,15 +277,13 @@ public class StompHeaders implements MultiValueMap<String, String>, Serializable
 	 * Get the heartbeat header.
 	 */
 	@Nullable
-	@SuppressWarnings("NullAway")
 	public long[] getHeartbeat() {
 		String rawValue = getFirst(HEARTBEAT);
-		int pos = (rawValue != null ? rawValue.indexOf(',') : -1);
-		if (pos == -1) {
+		String[] rawValues = StringUtils.split(rawValue, ",");
+		if (rawValues == null) {
 			return null;
 		}
-		return new long[] {Long.parseLong(rawValue, 0, pos, 10),
-				Long.parseLong(rawValue, pos + 1, rawValue.length(), 10)};
+		return new long[] {Long.parseLong(rawValues[0]), Long.parseLong(rawValues[1])};
 	}
 
 	/**
@@ -515,7 +512,6 @@ public class StompHeaders implements MultiValueMap<String, String>, Serializable
 	}
 
 	@Override
-	@Nullable
 	public List<String> get(Object key) {
 		return this.headers.get(key);
 	}
@@ -558,7 +554,8 @@ public class StompHeaders implements MultiValueMap<String, String>, Serializable
 
 	@Override
 	public boolean equals(@Nullable Object other) {
-		return (this == other || (other instanceof StompHeaders that && this.headers.equals(that.headers)));
+		return (this == other || (other instanceof StompHeaders &&
+				this.headers.equals(((StompHeaders) other).headers)));
 	}
 
 	@Override

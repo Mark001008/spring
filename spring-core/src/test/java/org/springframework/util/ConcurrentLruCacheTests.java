@@ -35,7 +35,7 @@ class ConcurrentLruCacheTests {
 	void zeroCapacity() {
 		ConcurrentLruCache<String, String> cache = new ConcurrentLruCache<>(0, key -> key + "value");
 
-		assertThat(cache.capacity()).isZero();
+		assertThat(cache.sizeLimit()).isZero();
 		assertThat(cache.size()).isZero();
 
 		assertThat(cache.get("k1")).isEqualTo("k1value");
@@ -56,7 +56,7 @@ class ConcurrentLruCacheTests {
 
 	@Test
 	void getAndSize() {
-		assertThat(this.cache.capacity()).isEqualTo(2);
+		assertThat(this.cache.sizeLimit()).isEqualTo(2);
 		assertThat(this.cache.size()).isEqualTo(0);
 		assertThat(this.cache.get("k1")).isEqualTo("k1value");
 		assertThat(this.cache.size()).isEqualTo(1);

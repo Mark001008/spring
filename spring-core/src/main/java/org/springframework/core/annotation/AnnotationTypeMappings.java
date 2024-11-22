@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -76,6 +76,7 @@ final class AnnotationTypeMappings {
 
 	private void addAllMappings(Class<? extends Annotation> annotationType,
 			Set<Class<? extends Annotation>> visitedAnnotationTypes) {
+
 		Deque<AnnotationTypeMapping> queue = new ArrayDeque<>();
 		addIfPossible(queue, null, annotationType, null, visitedAnnotationTypes);
 		while (!queue.isEmpty()) {
@@ -217,7 +218,7 @@ final class AnnotationTypeMappings {
 	 * some JVM languages support (such as Kotlin)
 	 * @return type mappings for the annotation type
 	 */
-	static AnnotationTypeMappings forAnnotationType(Class<? extends Annotation> annotationType,
+	private static AnnotationTypeMappings forAnnotationType(Class<? extends Annotation> annotationType,
 			RepeatableContainers repeatableContainers, AnnotationFilter annotationFilter,
 			Set<Class<? extends Annotation>> visitedAnnotationTypes) {
 
@@ -229,8 +230,7 @@ final class AnnotationTypeMappings {
 			return noRepeatablesCache.computeIfAbsent(annotationFilter,
 					key -> new Cache(repeatableContainers, key)).get(annotationType, visitedAnnotationTypes);
 		}
-		return new AnnotationTypeMappings(repeatableContainers, annotationFilter, annotationType,
-				visitedAnnotationTypes);
+		return new AnnotationTypeMappings(repeatableContainers, annotationFilter, annotationType, visitedAnnotationTypes);
 	}
 
 	static void clearCache() {
@@ -270,13 +270,14 @@ final class AnnotationTypeMappings {
 		 */
 		AnnotationTypeMappings get(Class<? extends Annotation> annotationType,
 				Set<Class<? extends Annotation>> visitedAnnotationTypes) {
+
 			return this.mappings.computeIfAbsent(annotationType, key -> createMappings(key, visitedAnnotationTypes));
 		}
 
 		private AnnotationTypeMappings createMappings(Class<? extends Annotation> annotationType,
 				Set<Class<? extends Annotation>> visitedAnnotationTypes) {
-			return new AnnotationTypeMappings(this.repeatableContainers, this.filter, annotationType,
-					visitedAnnotationTypes);
+
+			return new AnnotationTypeMappings(this.repeatableContainers, this.filter, annotationType, visitedAnnotationTypes);
 		}
 	}
 

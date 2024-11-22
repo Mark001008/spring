@@ -29,7 +29,6 @@ import org.springframework.beans.factory.support.BeanDefinitionReader;
 import org.springframework.core.io.DescriptiveResource;
 import org.springframework.core.io.Resource;
 import org.springframework.core.type.AnnotationMetadata;
-import org.springframework.core.type.MethodMetadata;
 import org.springframework.core.type.classreading.MetadataReader;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
@@ -55,8 +54,6 @@ final class ConfigurationClass {
 
 	@Nullable
 	private String beanName;
-
-	private boolean scanned = false;
 
 	private final Set<ConfigurationClass> importedBy = new LinkedHashSet<>(1);
 
@@ -127,14 +124,12 @@ final class ConfigurationClass {
 	 * Create a new {@link ConfigurationClass} with the given name.
 	 * @param metadata the metadata for the underlying class to represent
 	 * @param beanName name of the {@code @Configuration} class bean
-	 * @param scanned whether the underlying class has been registered through a scan
 	 */
-	ConfigurationClass(AnnotationMetadata metadata, String beanName, boolean scanned) {
+	ConfigurationClass(AnnotationMetadata metadata, String beanName) {
 		Assert.notNull(beanName, "Bean name must not be null");
 		this.metadata = metadata;
 		this.resource = new DescriptiveResource(metadata.getClassName());
 		this.beanName = beanName;
-		this.scanned = scanned;
 	}
 
 
@@ -157,14 +152,6 @@ final class ConfigurationClass {
 	@Nullable
 	String getBeanName() {
 		return this.beanName;
-	}
-
-	/**
-	 * Return whether this configuration class has been registered through a scan.
-	 * @since 6.2
-	 */
-	boolean isScanned() {
-		return this.scanned;
 	}
 
 	/**
@@ -219,36 +206,23 @@ final class ConfigurationClass {
 		return this.importBeanDefinitionRegistrars;
 	}
 
-	@SuppressWarnings("NullAway")
 	void validate(ProblemReporter problemReporter) {
-		Map<String, Object> attributes = this.metadata.getAnnotationAttributes(Configuration.class.getName());
-
 		// A configuration class may not be final (CGLIB limitation) unless it declares proxyBeanMethods=false
-		if (attributes != null && (Boolean) attributes.get("proxyBeanMethods") && this.metadata.isFinal()) {
-			problemReporter.error(new FinalConfigurationProblem());
-		}
-
-		for (BeanMethod beanMethod : this.beanMethods) {
-			beanMethod.validate(problemReporter);
-		}
-
-		// A configuration class may not contain overloaded bean methods unless it declares enforceUniqueMethods=false
-		if (attributes != null && (Boolean) attributes.get("enforceUniqueMethods")) {
-			Map<String, MethodMetadata> beanMethodsByName = new LinkedHashMap<>();
+		Map<String, Object> attributes = this.metadata.getAnnotationAttributes(Configuration.class.getName());
+		if (attributes != null && (Boolean) attributes.get("proxyBeanMethods")) {
+			if (this.metadata.isFinal()) {
+				problemReporter.error(new FinalConfigurationProblem());
+			}
 			for (BeanMethod beanMethod : this.beanMethods) {
-				MethodMetadata current = beanMethod.getMetadata();
-				MethodMetadata existing = beanMethodsByName.put(current.getMethodName(), current);
-				if (existing != null && existing.getDeclaringClassName().equals(current.getDeclaringClassName())) {
-					problemReporter.error(new BeanMethodOverloadingProblem(existing.getMethodName()));
-				}
+				beanMethod.validate(problemReporter);
 			}
 		}
 	}
 
 	@Override
 	public boolean equals(@Nullable Object other) {
-		return (this == other || (other instanceof ConfigurationClass that &&
-				getMetadata().getClassName().equals(that.getMetadata().getClassName())));
+		return (this == other || (other instanceof ConfigurationClass &&
+				getMetadata().getClassName().equals(((ConfigurationClass) other).getMetadata().getClassName())));
 	}
 
 	@Override
@@ -270,21 +244,6 @@ final class ConfigurationClass {
 		FinalConfigurationProblem() {
 			super(String.format("@Configuration class '%s' may not be final. Remove the final modifier to continue.",
 					getSimpleName()), new Location(getResource(), getMetadata()));
-		}
-	}
-
-
-	/**
-	 * Configuration classes are not allowed to contain overloaded bean methods
-	 * by default (as of 6.0).
-	 */
-	private class BeanMethodOverloadingProblem extends Problem {
-
-		BeanMethodOverloadingProblem(String methodName) {
-			super(String.format("@Configuration class '%s' contains overloaded @Bean methods with name '%s'. Use " +
-							"unique method names for separate bean definitions (with individual conditions etc) " +
-							"or switch '@Configuration.enforceUniqueMethods' to 'false'.",
-					getSimpleName(), methodName), new Location(getResource(), getMetadata()));
 		}
 	}
 

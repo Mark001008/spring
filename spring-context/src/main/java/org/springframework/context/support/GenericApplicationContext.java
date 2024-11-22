@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,13 +18,9 @@ package org.springframework.context.support;
 
 import java.io.IOException;
 import java.lang.reflect.Constructor;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
 
-import org.springframework.aot.hint.RuntimeHints;
-import org.springframework.aot.hint.support.ClassHintUtils;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.BeanDefinitionStoreException;
@@ -33,11 +29,8 @@ import org.springframework.beans.factory.config.AutowireCapableBeanFactory;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.config.BeanDefinitionCustomizer;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
-import org.springframework.beans.factory.config.SmartInstantiationAwareBeanPostProcessor;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
-import org.springframework.beans.factory.support.BeanDefinitionRegistryPostProcessor;
 import org.springframework.beans.factory.support.DefaultListableBeanFactory;
-import org.springframework.beans.factory.support.MergedBeanDefinitionPostProcessor;
 import org.springframework.beans.factory.support.RootBeanDefinition;
 import org.springframework.context.ApplicationContext;
 import org.springframework.core.io.ProtocolResolver;
@@ -68,10 +61,6 @@ import org.springframework.util.Assert;
  * this context is available right from the start, to be able to register bean
  * definitions on it. {@link #refresh()} may only be called once.
  *
- * <p>This ApplicationContext implementation is suitable for Ahead of Time
- * processing, using {@link #refreshForAotProcessing} as an alternative to the
- * regular {@link #refresh()}.
- *
  * <p>Usage example:
  *
  * <pre class="code">
@@ -85,17 +74,19 @@ import org.springframework.util.Assert;
  * MyBean myBean = (MyBean) ctx.getBean("myBean");
  * ...</pre>
  *
- * For the typical case of XML bean definitions, you may also use
+ * For the typical case of XML bean definitions, simply use
  * {@link ClassPathXmlApplicationContext} or {@link FileSystemXmlApplicationContext},
  * which are easier to set up - but less flexible, since you can just use standard
  * resource locations for XML bean definitions, rather than mixing arbitrary bean
- * definition formats. For a custom application context implementation supposed to
- * read a specific bean definition format in a refreshable manner, consider
- * deriving from the {@link AbstractRefreshableApplicationContext} base class.
+ * definition formats. The equivalent in a web environment is
+ * {@link org.springframework.web.context.support.XmlWebApplicationContext}.
+ *
+ * <p>For custom application context implementations that are supposed to read
+ * special bean definition formats in a refreshable manner, consider deriving
+ * from the {@link AbstractRefreshableApplicationContext} base class.
  *
  * @author Juergen Hoeller
  * @author Chris Beams
- * @author Stephane Nicoll
  * @author Sam Brannen
  * @since 1.1.2
  * @see #registerBeanDefinition
@@ -257,8 +248,8 @@ public class GenericApplicationContext extends AbstractApplicationContext implem
 	 */
 	@Override
 	public Resource[] getResources(String locationPattern) throws IOException {
-		if (this.resourceLoader instanceof ResourcePatternResolver resourcePatternResolver) {
-			return resourcePatternResolver.getResources(locationPattern);
+		if (this.resourceLoader instanceof ResourcePatternResolver) {
+			return ((ResourcePatternResolver) this.resourceLoader).getResources(locationPattern);
 		}
 		return super.getResources(locationPattern);
 	}
@@ -298,7 +289,7 @@ public class GenericApplicationContext extends AbstractApplicationContext implem
 	}
 
 	@Override
-	protected void cancelRefresh(Throwable ex) {
+	protected void cancelRefresh(BeansException ex) {
 		this.beanFactory.setSerializationId(null);
 		super.cancelRefresh(ex);
 	}
@@ -362,11 +353,6 @@ public class GenericApplicationContext extends AbstractApplicationContext implem
 	}
 
 	@Override
-	public boolean isBeanDefinitionOverridable(String beanName) {
-		return this.beanFactory.isBeanDefinitionOverridable(beanName);
-	}
-
-	@Override
 	public boolean isBeanNameInUse(String beanName) {
 		return this.beanFactory.isBeanNameInUse(beanName);
 	}
@@ -384,97 +370,6 @@ public class GenericApplicationContext extends AbstractApplicationContext implem
 	@Override
 	public boolean isAlias(String beanName) {
 		return this.beanFactory.isAlias(beanName);
-	}
-
-
-	//---------------------------------------------------------------------
-	// AOT processing
-	//---------------------------------------------------------------------
-
-	/**
-	 * Load or refresh the persistent representation of the configuration up to
-	 * a point where the underlying bean factory is ready to create bean
-	 * instances.
-	 * <p>This variant of {@link #refresh()} is used by Ahead of Time (AOT)
-	 * processing that optimizes the application context, typically at build time.
-	 * <p>In this mode, only {@link BeanDefinitionRegistryPostProcessor} and
-	 * {@link MergedBeanDefinitionPostProcessor} are invoked.
-	 * @param runtimeHints the runtime hints
-	 * @throws BeansException if the bean factory could not be initialized
-	 * @throws IllegalStateException if already initialized and multiple refresh
-	 * attempts are not supported
-	 * @since 6.0
-	 */
-	public void refreshForAotProcessing(RuntimeHints runtimeHints) {
-		if (logger.isDebugEnabled()) {
-			logger.debug("Preparing bean factory for AOT processing");
-		}
-		prepareRefresh();
-		obtainFreshBeanFactory();
-		prepareBeanFactory(this.beanFactory);
-		postProcessBeanFactory(this.beanFactory);
-		invokeBeanFactoryPostProcessors(this.beanFactory);
-		this.beanFactory.freezeConfiguration();
-		PostProcessorRegistrationDelegate.invokeMergedBeanDefinitionPostProcessors(this.beanFactory);
-		preDetermineBeanTypes(runtimeHints);
-	}
-
-	/**
-	 * Pre-determine bean types in order to trigger early proxy class creation.
-	 * @see org.springframework.beans.factory.BeanFactory#getType
-	 * @see SmartInstantiationAwareBeanPostProcessor#determineBeanType
-	 */
-	private void preDetermineBeanTypes(RuntimeHints runtimeHints) {
-		List<String> singletons = new ArrayList<>();
-		List<String> lazyBeans = new ArrayList<>();
-
-		// First round: pre-registered singleton instances, if any.
-		for (String beanName : this.beanFactory.getSingletonNames()) {
-			Class<?> beanType = this.beanFactory.getType(beanName);
-			if (beanType != null) {
-				ClassHintUtils.registerProxyIfNecessary(beanType, runtimeHints);
-			}
-			singletons.add(beanName);
-		}
-
-		List<SmartInstantiationAwareBeanPostProcessor> bpps =
-				PostProcessorRegistrationDelegate.loadBeanPostProcessors(
-						this.beanFactory, SmartInstantiationAwareBeanPostProcessor.class);
-
-		// Second round: non-lazy singleton beans in definition order,
-		// matching preInstantiateSingletons.
-		for (String beanName : this.beanFactory.getBeanDefinitionNames()) {
-			if (!singletons.contains(beanName)) {
-				BeanDefinition bd = getBeanDefinition(beanName);
-				if (bd.isSingleton() && !bd.isLazyInit()) {
-					preDetermineBeanType(beanName, bpps, runtimeHints);
-				}
-				else {
-					lazyBeans.add(beanName);
-				}
-			}
-		}
-
-		// Third round: lazy singleton beans and scoped beans.
-		for (String beanName : lazyBeans) {
-			preDetermineBeanType(beanName, bpps, runtimeHints);
-		}
-	}
-
-	private void preDetermineBeanType(String beanName, List<SmartInstantiationAwareBeanPostProcessor> bpps,
-			RuntimeHints runtimeHints) {
-
-		Class<?> beanType = this.beanFactory.getType(beanName);
-		if (beanType != null) {
-			ClassHintUtils.registerProxyIfNecessary(beanType, runtimeHints);
-			for (SmartInstantiationAwareBeanPostProcessor bpp : bpps) {
-				Class<?> newBeanType = bpp.determineBeanType(beanType, beanName);
-				if (newBeanType != beanType) {
-					ClassHintUtils.registerProxyIfNecessary(newBeanType, runtimeHints);
-					beanType = newBeanType;
-				}
-			}
-		}
 	}
 
 
@@ -522,7 +417,7 @@ public class GenericApplicationContext extends AbstractApplicationContext implem
 	 * @param beanClass the class of the bean (resolving a public constructor
 	 * to be autowired, possibly simply the default constructor)
 	 * @param customizers one or more callbacks for customizing the factory's
-	 * {@link BeanDefinition}, for example, setting a lazy-init or primary flag
+	 * {@link BeanDefinition}, e.g. setting a lazy-init or primary flag
 	 * @since 5.0
 	 * @see #registerBean(String, Class, Supplier, BeanDefinitionCustomizer...)
 	 */
@@ -537,7 +432,7 @@ public class GenericApplicationContext extends AbstractApplicationContext implem
 	 * @param beanClass the class of the bean (resolving a public constructor
 	 * to be autowired, possibly simply the default constructor)
 	 * @param customizers one or more callbacks for customizing the factory's
-	 * {@link BeanDefinition}, for example, setting a lazy-init or primary flag
+	 * {@link BeanDefinition}, e.g. setting a lazy-init or primary flag
 	 * @since 5.0
 	 * @see #registerBean(String, Class, Supplier, BeanDefinitionCustomizer...)
 	 */
@@ -555,7 +450,7 @@ public class GenericApplicationContext extends AbstractApplicationContext implem
 	 * @param beanClass the class of the bean
 	 * @param supplier a callback for creating an instance of the bean
 	 * @param customizers one or more callbacks for customizing the factory's
-	 * {@link BeanDefinition}, for example, setting a lazy-init or primary flag
+	 * {@link BeanDefinition}, e.g. setting a lazy-init or primary flag
 	 * @since 5.0
 	 * @see #registerBean(String, Class, Supplier, BeanDefinitionCustomizer...)
 	 */
@@ -577,7 +472,7 @@ public class GenericApplicationContext extends AbstractApplicationContext implem
 	 * @param supplier a callback for creating an instance of the bean (in case
 	 * of {@code null}, resolving a public constructor to be autowired instead)
 	 * @param customizers one or more callbacks for customizing the factory's
-	 * {@link BeanDefinition}, for example, setting a lazy-init or primary flag
+	 * {@link BeanDefinition}, e.g. setting a lazy-init or primary flag
 	 * @since 5.0
 	 */
 	public <T> void registerBean(@Nullable String beanName, Class<T> beanClass,
@@ -597,7 +492,7 @@ public class GenericApplicationContext extends AbstractApplicationContext implem
 
 
 	/**
-	 * {@link RootBeanDefinition} subclass for {@code #registerBean} based
+	 * {@link RootBeanDefinition} marker subclass for {@code #registerBean} based
 	 * registrations with flexible autowiring for public constructors.
 	 */
 	@SuppressWarnings("serial")
@@ -614,10 +509,6 @@ public class GenericApplicationContext extends AbstractApplicationContext implem
 		@Override
 		@Nullable
 		public Constructor<?>[] getPreferredConstructors() {
-			Constructor<?>[] fromAttribute = super.getPreferredConstructors();
-			if (fromAttribute != null) {
-				return fromAttribute;
-			}
 			Class<?> clazz = getBeanClass();
 			Constructor<?> primaryCtor = BeanUtils.findPrimaryConstructor(clazz);
 			if (primaryCtor != null) {

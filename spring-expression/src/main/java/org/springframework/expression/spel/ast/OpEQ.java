@@ -68,17 +68,19 @@ public class OpEQ extends Operator {
 		cf.loadEvaluationContext(mv);
 		String leftDesc = getLeftOperand().exitTypeDescriptor;
 		String rightDesc = getRightOperand().exitTypeDescriptor;
+		boolean leftPrim = CodeFlow.isPrimitive(leftDesc);
+		boolean rightPrim = CodeFlow.isPrimitive(rightDesc);
 
 		cf.enterCompilationScope();
 		getLeftOperand().generateCode(mv, cf);
 		cf.exitCompilationScope();
-		if (CodeFlow.isPrimitive(leftDesc)) {
+		if (leftPrim) {
 			CodeFlow.insertBoxIfNecessary(mv, leftDesc.charAt(0));
 		}
 		cf.enterCompilationScope();
 		getRightOperand().generateCode(mv, cf);
 		cf.exitCompilationScope();
-		if (CodeFlow.isPrimitive(rightDesc)) {
+		if (rightPrim) {
 			CodeFlow.insertBoxIfNecessary(mv, rightDesc.charAt(0));
 		}
 

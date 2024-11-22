@@ -101,34 +101,19 @@ public class DirectFieldAccessor extends AbstractNestablePropertyAccessor {
 
 		private final Field field;
 
-		private final ResolvableType resolvableType;
-
 		public FieldPropertyHandler(Field field) {
 			super(field.getType(), true, true);
 			this.field = field;
-			this.resolvableType = ResolvableType.forField(this.field);
 		}
 
 		@Override
 		public TypeDescriptor toTypeDescriptor() {
-			return new TypeDescriptor(this.resolvableType, this.field.getType(), this.field.getAnnotations());
+			return new TypeDescriptor(this.field);
 		}
 
 		@Override
 		public ResolvableType getResolvableType() {
-			return this.resolvableType;
-		}
-
-		@Override
-		public TypeDescriptor getMapValueType(int nestingLevel) {
-			return new TypeDescriptor(this.resolvableType.getNested(nestingLevel).asMap().getGeneric(1),
-					null, this.field.getAnnotations());
-		}
-
-		@Override
-		public TypeDescriptor getCollectionType(int nestingLevel) {
-			return new TypeDescriptor(this.resolvableType.getNested(nestingLevel).asCollection().getGeneric(),
-					null, this.field.getAnnotations());
+			return ResolvableType.forField(this.field);
 		}
 
 		@Override

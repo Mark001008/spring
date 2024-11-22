@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2023 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,23 +35,17 @@ import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
 /**
- * A root bean definition represents the <b>merged bean definition at runtime</b>
- * that backs a specific bean in a Spring BeanFactory. It might have been created
- * from multiple original bean definitions that inherit from each other, for example,
- * {@link GenericBeanDefinition GenericBeanDefinitions} from XML declarations.
+ * A root bean definition represents the merged bean definition that backs
+ * a specific bean in a Spring BeanFactory at runtime. It might have been created
+ * from multiple original bean definitions that inherit from each other,
+ * typically registered as {@link GenericBeanDefinition GenericBeanDefinitions}.
  * A root bean definition is essentially the 'unified' bean definition view at runtime.
  *
- * <p>Root bean definitions may also be used for <b>registering individual bean
- * definitions in the configuration phase.</b> This is particularly applicable for
- * programmatic definitions derived from factory methods (for example, {@code @Bean} methods)
- * and instance suppliers (for example, lambda expressions) which come with extra type metadata
- * (see {@link #setTargetType(ResolvableType)}/{@link #setResolvedFactoryMethod(Method)}).
- *
- * <p>Note: The preferred choice for bean definitions derived from declarative sources
- * (for example, XML definitions) is the flexible {@link GenericBeanDefinition} variant.
- * GenericBeanDefinition comes with the advantage that it allows for dynamically
- * defining parent dependencies, not 'hard-coding' the role as a root bean definition,
- * even supporting parent relationship changes in the bean post-processor phase.
+ * <p>Root bean definitions may also be used for registering individual bean definitions
+ * in the configuration phase. However, since Spring 2.5, the preferred way to register
+ * bean definitions programmatically is the {@link GenericBeanDefinition} class.
+ * GenericBeanDefinition has the advantage that it allows to dynamically define
+ * parent dependencies, not 'hard-coding' the role as a root bean definition.
  *
  * @author Rod Johnson
  * @author Juergen Hoeller
@@ -145,6 +139,7 @@ public class RootBeanDefinition extends AbstractBeanDefinition {
 	 * @see #setPropertyValues
 	 */
 	public RootBeanDefinition() {
+		super();
 	}
 
 	/**
@@ -153,19 +148,8 @@ public class RootBeanDefinition extends AbstractBeanDefinition {
 	 * @see #setBeanClass
 	 */
 	public RootBeanDefinition(@Nullable Class<?> beanClass) {
+		super();
 		setBeanClass(beanClass);
-	}
-
-	/**
-	 * Create a new RootBeanDefinition for a singleton.
-	 * @param beanType the type of bean to instantiate
-	 * @since 6.0
-	 * @see #setTargetType(ResolvableType)
-	 * @deprecated as of 6.0.11, in favor of an extra {@link #setTargetType(ResolvableType)} call
-	 */
-	@Deprecated(since = "6.0.11")
-	public RootBeanDefinition(@Nullable ResolvableType beanType) {
-		setTargetType(beanType);
 	}
 
 	/**
@@ -178,6 +162,7 @@ public class RootBeanDefinition extends AbstractBeanDefinition {
 	 * @see #setInstanceSupplier
 	 */
 	public <T> RootBeanDefinition(@Nullable Class<T> beanClass, @Nullable Supplier<T> instanceSupplier) {
+		super();
 		setBeanClass(beanClass);
 		setInstanceSupplier(instanceSupplier);
 	}
@@ -193,6 +178,7 @@ public class RootBeanDefinition extends AbstractBeanDefinition {
 	 * @see #setInstanceSupplier
 	 */
 	public <T> RootBeanDefinition(@Nullable Class<T> beanClass, String scope, @Nullable Supplier<T> instanceSupplier) {
+		super();
 		setBeanClass(beanClass);
 		setScope(scope);
 		setInstanceSupplier(instanceSupplier);
@@ -207,6 +193,7 @@ public class RootBeanDefinition extends AbstractBeanDefinition {
 	 * (not applicable to autowiring a constructor, thus ignored there)
 	 */
 	public RootBeanDefinition(@Nullable Class<?> beanClass, int autowireMode, boolean dependencyCheck) {
+		super();
 		setBeanClass(beanClass);
 		setAutowireMode(autowireMode);
 		if (dependencyCheck && getResolvedAutowireMode() != AUTOWIRE_CONSTRUCTOR) {
@@ -277,7 +264,6 @@ public class RootBeanDefinition extends AbstractBeanDefinition {
 
 
 	@Override
-	@Nullable
 	public String getParentName() {
 		return null;
 	}
@@ -329,7 +315,7 @@ public class RootBeanDefinition extends AbstractBeanDefinition {
 	 * Specify a generics-containing target type of this bean definition, if known in advance.
 	 * @since 4.3.3
 	 */
-	public void setTargetType(@Nullable ResolvableType targetType) {
+	public void setTargetType(ResolvableType targetType) {
 		this.targetType = targetType;
 	}
 
@@ -375,7 +361,7 @@ public class RootBeanDefinition extends AbstractBeanDefinition {
 		if (returnType != null) {
 			return returnType;
 		}
-		Method factoryMethod = getResolvedFactoryMethod();
+		Method factoryMethod = this.factoryMethodToIntrospect;
 		if (factoryMethod != null) {
 			return ResolvableType.forMethodReturnType(factoryMethod);
 		}
@@ -385,28 +371,13 @@ public class RootBeanDefinition extends AbstractBeanDefinition {
 	/**
 	 * Determine preferred constructors to use for default construction, if any.
 	 * Constructor arguments will be autowired if necessary.
-	 * <p>As of 6.1, the default implementation of this method takes the
-	 * {@link #PREFERRED_CONSTRUCTORS_ATTRIBUTE} attribute into account.
-	 * Subclasses are encouraged to preserve this through a {@code super} call,
-	 * either before or after their own preferred constructor determination.
 	 * @return one or more preferred constructors, or {@code null} if none
 	 * (in which case the regular no-arg default constructor will be called)
 	 * @since 5.1
 	 */
 	@Nullable
 	public Constructor<?>[] getPreferredConstructors() {
-		Object attribute = getAttribute(PREFERRED_CONSTRUCTORS_ATTRIBUTE);
-		if (attribute == null) {
-			return null;
-		}
-		if (attribute instanceof Constructor<?> constructor) {
-			return new Constructor<?>[] {constructor};
-		}
-		if (attribute instanceof Constructor<?>[] constructors) {
-			return constructors;
-		}
-		throw new IllegalArgumentException("Invalid value type for attribute '" +
-				PREFERRED_CONSTRUCTORS_ATTRIBUTE + "': " + attribute.getClass().getName());
+		return null;
 	}
 
 	/**
@@ -442,9 +413,6 @@ public class RootBeanDefinition extends AbstractBeanDefinition {
 	 */
 	public void setResolvedFactoryMethod(@Nullable Method method) {
 		this.factoryMethodToIntrospect = method;
-		if (method != null) {
-			setUniqueFactoryMethodName(method.getName());
-		}
 	}
 
 	/**
@@ -453,23 +421,7 @@ public class RootBeanDefinition extends AbstractBeanDefinition {
 	 */
 	@Nullable
 	public Method getResolvedFactoryMethod() {
-		Method factoryMethod = this.factoryMethodToIntrospect;
-		if (factoryMethod == null &&
-				getInstanceSupplier() instanceof InstanceSupplier<?> instanceSupplier) {
-			factoryMethod = instanceSupplier.getFactoryMethod();
-		}
-		return factoryMethod;
-	}
-
-	/**
-	 * Mark this bean definition as post-processed,
-	 * i.e. processed by {@link MergedBeanDefinitionPostProcessor}.
-	 * @since 6.0
-	 */
-	public void markAsPostProcessed() {
-		synchronized (this.postProcessingLock) {
-			this.postProcessed = true;
-		}
+		return this.factoryMethodToIntrospect;
 	}
 
 	/**
@@ -508,15 +460,14 @@ public class RootBeanDefinition extends AbstractBeanDefinition {
 
 	/**
 	 * Register an externally managed configuration initialization method &mdash;
-	 * for example, a method annotated with JSR-250's {@code javax.annotation.PostConstruct}
-	 * or Jakarta's {@link jakarta.annotation.PostConstruct} annotation.
-	 * <p>The supplied {@code initMethod} may be a
-	 * {@linkplain Method#getName() simple method name} or a
+	 * for example, a method annotated with JSR-250's
+	 * {@link javax.annotation.PostConstruct} annotation.
+	 * <p>The supplied {@code initMethod} may be the
+	 * {@linkplain Method#getName() simple method name} for non-private methods or the
 	 * {@linkplain org.springframework.util.ClassUtils#getQualifiedMethodName(Method)
-	 * qualified method name} for package-private and {@code private} methods.
-	 * A qualified name is necessary for package-private and {@code private} methods
-	 * in order to disambiguate between multiple such methods with the same name
-	 * within a type hierarchy.
+	 * qualified method name} for {@code private} methods. A qualified name is
+	 * necessary for {@code private} methods in order to disambiguate between
+	 * multiple private methods with the same name within a class hierarchy.
 	 */
 	public void registerExternallyManagedInitMethod(String initMethod) {
 		synchronized (this.postProcessingLock) {
@@ -574,18 +525,9 @@ public class RootBeanDefinition extends AbstractBeanDefinition {
 	}
 
 	/**
-	 * Resolve the inferred destroy method if necessary.
-	 * @since 6.0
-	 */
-	public void resolveDestroyMethodIfNecessary() {
-		setDestroyMethodNames(DisposableBeanAdapter
-				.inferDestroyMethodsIfNecessary(getResolvableType().toClass(), this));
-	}
-
-	/**
 	 * Register an externally managed configuration destruction method &mdash;
 	 * for example, a method annotated with JSR-250's
-	 * {@link jakarta.annotation.PreDestroy} annotation.
+	 * {@link javax.annotation.PreDestroy} annotation.
 	 * <p>The supplied {@code destroyMethod} may be the
 	 * {@linkplain Method#getName() simple method name} for non-private methods or the
 	 * {@linkplain org.springframework.util.ClassUtils#getQualifiedMethodName(Method)
@@ -634,7 +576,7 @@ public class RootBeanDefinition extends AbstractBeanDefinition {
 		}
 	}
 
-	private static boolean hasAnyExternallyManagedMethod(@Nullable Set<String> candidates, String methodName) {
+	private static boolean hasAnyExternallyManagedMethod(Set<String> candidates, String methodName) {
 		if (candidates != null) {
 			for (String candidate : candidates) {
 				int indexOfDot = candidate.lastIndexOf('.');

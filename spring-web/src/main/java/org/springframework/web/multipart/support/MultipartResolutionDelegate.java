@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,10 +19,9 @@ package org.springframework.web.multipart.support;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.Locale;
 
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.Part;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.Part;
 
 import org.springframework.core.MethodParameter;
 import org.springframework.core.ResolvableType;
@@ -72,7 +71,7 @@ public final class MultipartResolutionDelegate {
 
 	private static boolean isMultipartContent(HttpServletRequest request) {
 		String contentType = request.getContentType();
-		return (contentType != null && contentType.toLowerCase(Locale.ROOT).startsWith("multipart/"));
+		return (contentType != null && contentType.toLowerCase().startsWith("multipart/"));
 	}
 
 	static MultipartHttpServletRequest asMultipartHttpServletRequest(HttpServletRequest request) {
@@ -158,7 +157,7 @@ public final class MultipartResolutionDelegate {
 	}
 
 	private static boolean isMultipartFileArray(MethodParameter methodParam) {
-		return (MultipartFile.class == methodParam.getNestedParameterType().componentType());
+		return (MultipartFile.class == methodParam.getNestedParameterType().getComponentType());
 	}
 
 	private static boolean isPartCollection(MethodParameter methodParam) {
@@ -166,7 +165,7 @@ public final class MultipartResolutionDelegate {
 	}
 
 	private static boolean isPartArray(MethodParameter methodParam) {
-		return (Part.class == methodParam.getNestedParameterType().componentType());
+		return (Part.class == methodParam.getNestedParameterType().getComponentType());
 	}
 
 	@Nullable

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2021 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -67,12 +67,12 @@ public class GenericApplicationListenerAdapter implements GenericApplicationList
 	@Override
 	@SuppressWarnings("unchecked")
 	public boolean supportsEventType(ResolvableType eventType) {
-		if (this.delegate instanceof GenericApplicationListener gal) {
-			return gal.supportsEventType(eventType);
+		if (this.delegate instanceof GenericApplicationListener) {
+			return ((GenericApplicationListener) this.delegate).supportsEventType(eventType);
 		}
-		else if (this.delegate instanceof SmartApplicationListener sal) {
+		else if (this.delegate instanceof SmartApplicationListener) {
 			Class<? extends ApplicationEvent> eventClass = (Class<? extends ApplicationEvent>) eventType.resolve();
-			return (eventClass != null && sal.supportsEventType(eventClass));
+			return (eventClass != null && ((SmartApplicationListener) this.delegate).supportsEventType(eventClass));
 		}
 		else {
 			return (this.declaredEventType == null || this.declaredEventType.isAssignableFrom(eventType));
@@ -81,17 +81,19 @@ public class GenericApplicationListenerAdapter implements GenericApplicationList
 
 	@Override
 	public boolean supportsSourceType(@Nullable Class<?> sourceType) {
-		return (!(this.delegate instanceof SmartApplicationListener sal) || sal.supportsSourceType(sourceType));
+		return !(this.delegate instanceof SmartApplicationListener) ||
+				((SmartApplicationListener) this.delegate).supportsSourceType(sourceType);
 	}
 
 	@Override
 	public int getOrder() {
-		return (this.delegate instanceof Ordered ordered ? ordered.getOrder() : Ordered.LOWEST_PRECEDENCE);
+		return (this.delegate instanceof Ordered ? ((Ordered) this.delegate).getOrder() : Ordered.LOWEST_PRECEDENCE);
 	}
 
 	@Override
 	public String getListenerId() {
-		return (this.delegate instanceof SmartApplicationListener sal ? sal.getListenerId() : "");
+		return (this.delegate instanceof SmartApplicationListener ?
+				((SmartApplicationListener) this.delegate).getListenerId() : "");
 	}
 
 

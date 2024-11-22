@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,9 +38,11 @@ import org.springframework.web.servlet.View;
  *
  * <p>By default, the entire contents of the model map (with the exception of framework-specific classes)
  * will be encoded as JSON. If the model contains only one key, you can have it extracted encoded as JSON
- * alone via {@link #setExtractValueFromSingleKeyModel}.
+ * alone via  {@link #setExtractValueFromSingleKeyModel}.
  *
  * <p>The default constructor uses the default configuration provided by {@link Jackson2ObjectMapperBuilder}.
+ *
+ * <p>Compatible with Jackson 2.9 to 2.12, as of Spring 5.3.
  *
  * @author Jeremy Grelle
  * @author Arjen Poutsma
@@ -106,6 +108,9 @@ public class MappingJackson2JsonView extends AbstractJackson2View {
 		this.jsonPrefix = (prefixJson ? ")]}', " : null);
 	}
 
+	/**
+	 * {@inheritDoc}
+	 */
 	@Override
 	public void setModelKey(String modelKey) {
 		this.modelKeys = Collections.singleton(modelKey);

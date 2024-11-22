@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,7 +42,7 @@ class AfterThrowingAdviceBindingTests {
 
 	private AfterThrowingAdviceBindingTestAspect afterThrowingAdviceAspect;
 
-	private AfterThrowingAdviceBindingCollaborator mockCollaborator = mock();
+	private AfterThrowingAdviceBindingCollaborator mockCollaborator;
 
 
 	@BeforeEach
@@ -52,6 +52,7 @@ class AfterThrowingAdviceBindingTests {
 		testBean = (ITestBean) ctx.getBean("testBean");
 		afterThrowingAdviceAspect = (AfterThrowingAdviceBindingTestAspect) ctx.getBean("testAspect");
 
+		mockCollaborator = mock(AfterThrowingAdviceBindingCollaborator.class);
 		afterThrowingAdviceAspect.setCollaborator(mockCollaborator);
 	}
 
@@ -62,14 +63,14 @@ class AfterThrowingAdviceBindingTests {
 
 
 	@Test
-	void simpleAfterThrowing() {
+	void simpleAfterThrowing() throws Throwable {
 		assertThatExceptionOfType(Throwable.class).isThrownBy(() ->
 				this.testBean.exceptional(new Throwable()));
 		verify(mockCollaborator).noArgs();
 	}
 
 	@Test
-	void afterThrowingWithBinding() {
+	void afterThrowingWithBinding() throws Throwable {
 		Throwable t = new Throwable();
 		assertThatExceptionOfType(Throwable.class).isThrownBy(() ->
 				this.testBean.exceptional(t));
@@ -77,7 +78,7 @@ class AfterThrowingAdviceBindingTests {
 	}
 
 	@Test
-	void afterThrowingWithNamedTypeRestriction() {
+	void afterThrowingWithNamedTypeRestriction() throws Throwable {
 		Throwable t = new Throwable();
 		assertThatExceptionOfType(Throwable.class).isThrownBy(() ->
 				this.testBean.exceptional(t));
@@ -87,7 +88,7 @@ class AfterThrowingAdviceBindingTests {
 	}
 
 	@Test
-	void afterThrowingWithRuntimeExceptionBinding() {
+	void afterThrowingWithRuntimeExceptionBinding() throws Throwable {
 		RuntimeException ex = new RuntimeException();
 		assertThatExceptionOfType(Throwable.class).isThrownBy(() ->
 				this.testBean.exceptional(ex));
@@ -95,14 +96,14 @@ class AfterThrowingAdviceBindingTests {
 	}
 
 	@Test
-	void afterThrowingWithTypeSpecified() {
+	void afterThrowingWithTypeSpecified() throws Throwable {
 		assertThatExceptionOfType(Throwable.class).isThrownBy(() ->
 					this.testBean.exceptional(new Throwable()));
 		verify(mockCollaborator).noArgsOnThrowableMatch();
 	}
 
 	@Test
-	void afterThrowingWithRuntimeTypeSpecified() {
+	void afterThrowingWithRuntimeTypeSpecified() throws Throwable {
 		assertThatExceptionOfType(Throwable.class).isThrownBy(() ->
 				this.testBean.exceptional(new RuntimeException()));
 		verify(mockCollaborator).noArgsOnRuntimeExceptionMatch();
@@ -123,7 +124,7 @@ final class AfterThrowingAdviceBindingTestAspect {
 		void noArgsOnRuntimeExceptionMatch();
 	}
 
-	AfterThrowingAdviceBindingCollaborator collaborator = null;
+	protected AfterThrowingAdviceBindingCollaborator collaborator = null;
 
 	public void setCollaborator(AfterThrowingAdviceBindingCollaborator aCollaborator) {
 		this.collaborator = aCollaborator;

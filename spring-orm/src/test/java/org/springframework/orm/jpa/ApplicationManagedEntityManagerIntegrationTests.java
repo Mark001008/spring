@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,9 +19,10 @@ package org.springframework.orm.jpa;
 import java.lang.reflect.Proxy;
 import java.util.List;
 
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.Query;
-import jakarta.persistence.TransactionRequiredException;
+import javax.persistence.EntityManager;
+import javax.persistence.Query;
+import javax.persistence.TransactionRequiredException;
+
 import org.junit.jupiter.api.Test;
 
 import org.springframework.orm.jpa.domain.Person;
@@ -37,7 +38,7 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
  * @author Juergen Hoeller
  * @since 2.0
  */
-class ApplicationManagedEntityManagerIntegrationTests extends AbstractEntityManagerFactoryIntegrationTests {
+public class ApplicationManagedEntityManagerIntegrationTests extends AbstractEntityManagerFactoryIntegrationTests {
 
 	@Test
 	@SuppressWarnings("unchecked")
@@ -54,20 +55,20 @@ class ApplicationManagedEntityManagerIntegrationTests extends AbstractEntityMana
 	}
 
 	@Test
-	void testEntityManagerProxyAcceptsProgrammaticTxJoining() {
+	public void testEntityManagerProxyAcceptsProgrammaticTxJoining() {
 		EntityManager em = entityManagerFactory.createEntityManager();
 		em.joinTransaction();
 	}
 
 	@Test
-	void testInstantiateAndSave() {
+	public void testInstantiateAndSave() {
 		EntityManager em = entityManagerFactory.createEntityManager();
 		em.joinTransaction();
 		doInstantiateAndSave(em);
 	}
 
 	@Test
-	void testCannotFlushWithoutGettingTransaction() {
+	public void testCannotFlushWithoutGettingTransaction() {
 		EntityManager em = entityManagerFactory.createEntityManager();
 		assertThatExceptionOfType(TransactionRequiredException.class).isThrownBy(() ->
 				doInstantiateAndSave(em));
@@ -93,12 +94,12 @@ class ApplicationManagedEntityManagerIntegrationTests extends AbstractEntityMana
 	}
 
 	@Test
-	void testStateClean() {
+	public void testStateClean() {
 		assertThat(countRowsInTable("person")).as("Should be no people from previous transactions").isEqualTo(0);
 	}
 
 	@Test
-	void testReuseInNewTransaction() {
+	public void testReuseInNewTransaction() {
 		EntityManager em = entityManagerFactory.createEntityManager();
 		em.joinTransaction();
 
@@ -134,7 +135,7 @@ class ApplicationManagedEntityManagerIntegrationTests extends AbstractEntityMana
 	}
 
 	@Test
-	void testRollbackOccurs() {
+	public void testRollbackOccurs() {
 		EntityManager em = entityManagerFactory.createEntityManager();
 		em.joinTransaction();
 		doInstantiateAndSave(em);
@@ -143,7 +144,7 @@ class ApplicationManagedEntityManagerIntegrationTests extends AbstractEntityMana
 	}
 
 	@Test
-	void testCommitOccurs() {
+	public void testCommitOccurs() {
 		EntityManager em = entityManagerFactory.createEntityManager();
 		em.joinTransaction();
 		doInstantiateAndSave(em);

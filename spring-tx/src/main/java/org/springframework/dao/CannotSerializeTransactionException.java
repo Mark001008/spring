@@ -24,10 +24,7 @@ package org.springframework.dao;
  * instead, semantically including a wider range of locking-related failures.
  *
  * @author Rod Johnson
- * @deprecated as of 6.0.3, in favor of
- * {@link PessimisticLockingFailureException}/{@link CannotAcquireLockException}
  */
-@Deprecated(since = "6.0.3")
 @SuppressWarnings("serial")
 public class CannotSerializeTransactionException extends PessimisticLockingFailureException {
 

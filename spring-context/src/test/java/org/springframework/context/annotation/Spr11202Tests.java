@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -77,7 +77,7 @@ class Spr11202Tests {
 		}
 
 		@Bean
-		public String value() {
+		public String value() throws Exception {
 			String name = foo().getObject().getName();
 			Assert.state(name != null, "Name cannot be null");
 			return name;
@@ -85,7 +85,7 @@ class Spr11202Tests {
 
 		@Bean
 		@Conditional(NoBarCondition.class)
-		public String bar() {
+		public String bar() throws Exception {
 			return "bar";
 		}
 	}
@@ -115,7 +115,7 @@ class Spr11202Tests {
 		private Foo foo = new Foo();
 
 		@Override
-		public Foo getObject() {
+		public Foo getObject() throws Exception {
 			return foo;
 		}
 
@@ -130,7 +130,7 @@ class Spr11202Tests {
 		}
 
 		@Override
-		public void afterPropertiesSet() {
+		public void afterPropertiesSet() throws Exception {
 			this.foo.name = "foo";
 		}
 	}

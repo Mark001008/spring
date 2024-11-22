@@ -17,6 +17,7 @@
 package org.springframework.messaging.handler.annotation.reactive;
 
 import java.lang.annotation.Annotation;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -62,7 +63,7 @@ import org.springframework.validation.annotation.ValidationAnnotationUtils;
  *
  * <p>Validation is applied if the method argument is annotated with
  * {@link org.springframework.validation.annotation.Validated} or
- * {@code @jakarta.validation.Valid}. Validation failure results in an
+ * {@code @javax.validation.Valid}. Validation failure results in an
  * {@link MethodArgumentNotValidException}.
  *
  * <p>This resolver should be ordered last if {@link #useDefaultResolution} is
@@ -91,7 +92,7 @@ public class PayloadMethodArgumentResolver implements HandlerMethodArgumentResol
 			@Nullable ReactiveAdapterRegistry registry, boolean useDefaultResolution) {
 
 		Assert.isTrue(!CollectionUtils.isEmpty(decoders), "At least one Decoder is required");
-		this.decoders = List.copyOf(decoders);
+		this.decoders = Collections.unmodifiableList(new ArrayList<>(decoders));
 		this.validator = validator;
 		this.adapterRegistry = registry != null ? registry : ReactiveAdapterRegistry.getSharedInstance();
 		this.useDefaultResolution = useDefaultResolution;
@@ -141,7 +142,7 @@ public class PayloadMethodArgumentResolver implements HandlerMethodArgumentResol
 	 * {@link Decoder}.
 	 *
 	 * <p>Validation is applied if the method argument is annotated with
-	 * {@code @jakarta.validation.Valid} or
+	 * {@code @javax.validation.Valid} or
 	 * {@link org.springframework.validation.annotation.Validated}. Validation
 	 * failure results in an {@link MethodArgumentNotValidException}.
 	 * @param parameter the target method argument that we are decoding to
@@ -168,13 +169,13 @@ public class PayloadMethodArgumentResolver implements HandlerMethodArgumentResol
 	@SuppressWarnings("unchecked")
 	private Flux<DataBuffer> extractContent(MethodParameter parameter, Message<?> message) {
 		Object payload = message.getPayload();
-		if (payload instanceof DataBuffer dataBuffer) {
-			return Flux.just(dataBuffer);
+		if (payload instanceof DataBuffer) {
+			return Flux.just((DataBuffer) payload);
 		}
-		if (payload instanceof Publisher<?> publisher) {
-			return Flux.from(publisher).map(value -> {
-				if (value instanceof DataBuffer dataBuffer) {
-					return dataBuffer;
+		if (payload instanceof Publisher) {
+			return Flux.from((Publisher<?>) payload).map(value -> {
+				if (value instanceof DataBuffer) {
+					return (DataBuffer) value;
 				}
 				String className = value.getClass().getName();
 				throw getUnexpectedPayloadError(message, parameter, "Publisher<" + className + ">");
@@ -202,11 +203,11 @@ public class PayloadMethodArgumentResolver implements HandlerMethodArgumentResol
 		if (headerValue == null) {
 			return null;
 		}
-		else if (headerValue instanceof String stringHeader) {
-			return MimeTypeUtils.parseMimeType(stringHeader);
+		else if (headerValue instanceof String) {
+			return MimeTypeUtils.parseMimeType((String) headerValue);
 		}
-		else if (headerValue instanceof MimeType mimeTypeHeader) {
-			return mimeTypeHeader;
+		else if (headerValue instanceof MimeType) {
+			return (MimeType) headerValue;
 		}
 		else {
 			throw new IllegalArgumentException("Unexpected MimeType value: " + headerValue);
@@ -231,7 +232,7 @@ public class PayloadMethodArgumentResolver implements HandlerMethodArgumentResol
 					Flux<?> flux = content
 							.filter(this::nonEmptyDataBuffer)
 							.map(buffer -> decoder.decode(buffer, elementType, mimeType, hints))
-							.onErrorMap(ex -> handleReadError(parameter, message, ex));
+							.onErrorResume(ex -> Flux.error(handleReadError(parameter, message, ex)));
 					if (isContentRequired) {
 						flux = flux.switchIfEmpty(Flux.error(() -> handleMissingBody(parameter, message)));
 					}
@@ -245,7 +246,7 @@ public class PayloadMethodArgumentResolver implements HandlerMethodArgumentResol
 					Mono<?> mono = content.next()
 							.filter(this::nonEmptyDataBuffer)
 							.map(buffer -> decoder.decode(buffer, elementType, mimeType, hints))
-							.onErrorMap(ex -> handleReadError(parameter, message, ex));
+							.onErrorResume(ex -> Mono.error(handleReadError(parameter, message, ex)));
 					if (isContentRequired) {
 						mono = mono.switchIfEmpty(Mono.error(() -> handleMissingBody(parameter, message)));
 					}
@@ -290,8 +291,8 @@ public class PayloadMethodArgumentResolver implements HandlerMethodArgumentResol
 				String name = Conventions.getVariableNameForParameter(parameter);
 				return target -> {
 					BeanPropertyBindingResult bindingResult = new BeanPropertyBindingResult(target, name);
-					if (!ObjectUtils.isEmpty(validationHints) && this.validator instanceof SmartValidator sv) {
-						sv.validate(target, bindingResult, validationHints);
+					if (!ObjectUtils.isEmpty(validationHints) && this.validator instanceof SmartValidator) {
+						((SmartValidator) this.validator).validate(target, bindingResult, validationHints);
 					}
 					else {
 						this.validator.validate(target, bindingResult);

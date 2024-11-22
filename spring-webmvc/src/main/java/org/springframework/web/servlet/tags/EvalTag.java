@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,9 +18,8 @@ package org.springframework.web.servlet.tags;
 
 import java.io.IOException;
 
-import jakarta.el.ELContext;
-import jakarta.servlet.jsp.JspException;
-import jakarta.servlet.jsp.PageContext;
+import javax.servlet.jsp.JspException;
+import javax.servlet.jsp.PageContext;
 
 import org.springframework.context.expression.BeanFactoryResolver;
 import org.springframework.context.expression.EnvironmentAccessor;
@@ -97,14 +96,13 @@ import org.springframework.web.util.TagUtils;
  *
  * @author Keith Donald
  * @author Juergen Hoeller
- * @author Sam Brannen
  * @since 3.0.1
  */
 @SuppressWarnings("serial")
 public class EvalTag extends HtmlEscapingAwareTag {
 
 	/**
-	 * {@link jakarta.servlet.jsp.PageContext} attribute for the
+	 * {@link javax.servlet.jsp.PageContext} attribute for the
 	 * page-level {@link EvaluationContext} instance.
 	 */
 	private static final String EVALUATION_CONTEXT_PAGE_ATTRIBUTE =
@@ -214,12 +212,11 @@ public class EvalTag extends HtmlEscapingAwareTag {
 		private final PageContext pageContext;
 
 		@Nullable
-		private final ELContext elContext;
-
+		private final javax.servlet.jsp.el.VariableResolver variableResolver;
 
 		public JspPropertyAccessor(PageContext pageContext) {
 			this.pageContext = pageContext;
-			this.elContext = pageContext.getELContext();
+			this.variableResolver = pageContext.getVariableResolver();
 		}
 
 		@Override
@@ -255,11 +252,11 @@ public class EvalTag extends HtmlEscapingAwareTag {
 
 		@Nullable
 		private Object resolveImplicitVariable(String name) throws AccessException {
-			if (this.elContext == null) {
+			if (this.variableResolver == null) {
 				return null;
 			}
 			try {
-				return this.elContext.getELResolver().getValue(this.elContext, name, null);
+				return this.variableResolver.resolveVariable(name);
 			}
 			catch (Exception ex) {
 				throw new AccessException(

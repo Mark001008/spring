@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,7 +37,6 @@ import org.springframework.core.ReactiveAdapterRegistry;
 import org.springframework.core.annotation.AnnotatedElementUtils;
 import org.springframework.core.codec.Decoder;
 import org.springframework.core.codec.Encoder;
-import org.springframework.core.io.buffer.PooledDataBuffer;
 import org.springframework.lang.Nullable;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageDeliveryException;
@@ -53,7 +52,6 @@ import org.springframework.messaging.rsocket.MetadataExtractor;
 import org.springframework.messaging.rsocket.RSocketRequester;
 import org.springframework.messaging.rsocket.RSocketStrategies;
 import org.springframework.messaging.rsocket.annotation.ConnectMapping;
-import org.springframework.messaging.rsocket.service.RSocketExchange;
 import org.springframework.util.Assert;
 import org.springframework.util.MimeType;
 import org.springframework.util.MimeTypeUtils;
@@ -61,10 +59,9 @@ import org.springframework.util.RouteMatcher;
 import org.springframework.util.StringUtils;
 
 /**
- * Extension of {@link MessageMappingMessageHandler} to handle RSocket
- * requests with {@link MessageMapping @MessageMapping} and
- * {@link ConnectMapping @ConnectMapping} methods, also supporting use of
- * {@link RSocketExchange @RSocketExchange}.
+ * Extension of {@link MessageMappingMessageHandler} for handling RSocket
+ * requests with {@link ConnectMapping @ConnectMapping} and
+ * {@link MessageMapping @MessageMapping} methods.
  *
  * <p>For server scenarios this class can be declared as a bean in Spring
  * configuration and that would detect {@code @MessageMapping} methods in
@@ -80,14 +77,13 @@ import org.springframework.util.StringUtils;
  * {@link org.springframework.messaging.rsocket.RSocketRequester.Builder#rsocketConnector
  * RSocketRequester.Builder}.
  *
- * <p>For {@code @MessageMapping} and {@code @RSocketExchange} methods,
- * this class automatically determines the RSocket interaction type
- * based on the input and output cardinality of the method. See the
+ * <p>For {@code @MessageMapping} methods, this class automatically determines
+ * the RSocket interaction type based on the input and output cardinality of the
+ * method. See the
  * <a href="https://docs.spring.io/spring/docs/current/spring-framework-reference/web-reactive.html#rsocket-annot-responders">
  * "Annotated Responders"</a> section of the Spring Framework reference for more details.
  *
  * @author Rossen Stoyanchev
- * @author Olga Maciaszek-Sharma
  * @since 5.2
  */
 public class RSocketMessageHandler extends MessageMappingMessageHandler {
@@ -326,15 +322,6 @@ public class RSocketMessageHandler extends MessageMappingMessageHandler {
 					RSocketFrameTypeMessageCondition.CONNECT_CONDITION,
 					new DestinationPatternsMessageCondition(patterns, obtainRouteMatcher()));
 		}
-		RSocketExchange ann3 = AnnotatedElementUtils.findMergedAnnotation(element, RSocketExchange.class);
-		if (ann3 != null && StringUtils.hasText(ann3.value())) {
-			String[] destinations = new String[]{ann3.value()};
-			return new CompositeMessageCondition(
-					RSocketFrameTypeMessageCondition.EMPTY_CONDITION,
-					new DestinationPatternsMessageCondition(processDestinations(destinations),
-							obtainRouteMatcher())
-			);
-		}
 		return null;
 	}
 
@@ -382,9 +369,6 @@ public class RSocketMessageHandler extends MessageMappingMessageHandler {
 	protected void handleNoMatch(@Nullable RouteMatcher.Route destination, Message<?> message) {
 		FrameType frameType = RSocketFrameTypeMessageCondition.getFrameType(message);
 		if (frameType == FrameType.SETUP || frameType == FrameType.METADATA_PUSH) {
-			if (frameType == FrameType.SETUP && message.getPayload() instanceof PooledDataBuffer pooledDataBuffer) {
-				pooledDataBuffer.release();
-			}
 			return;  // optional handling
 		}
 		if (frameType == FrameType.REQUEST_FNF) {
@@ -418,8 +402,7 @@ public class RSocketMessageHandler extends MessageMappingMessageHandler {
 	 * connection. Such a method can also start requests to the client but that
 	 * must be done decoupled from handling and from the current thread.
 	 * <p>Subsequent requests on the connection can be handled with
-	 * {@link MessageMapping MessageMapping}
-	 * and {@link RSocketExchange RSocketExchange} methods.
+	 * {@link MessageMapping MessageMapping} methods.
 	 */
 	public SocketAcceptor responder() {
 		return (setupPayload, sendingRSocket) -> {
@@ -485,7 +468,7 @@ public class RSocketMessageHandler extends MessageMappingMessageHandler {
 	 * <p>Note that the given handlers do not need to have any stereotype
 	 * annotations such as {@code @Controller} which helps to avoid overlap with
 	 * server side handlers that may be used in the same application. However,
-	 * for more advanced scenarios, for example, discovering handlers through a custom
+	 * for more advanced scenarios, e.g. discovering handlers through a custom
 	 * stereotype annotation, consider declaring {@code RSocketMessageHandler}
 	 * as a bean, and then obtain the responder from it.
 	 * @param strategies the strategies to set on the created
@@ -501,7 +484,7 @@ public class RSocketMessageHandler extends MessageMappingMessageHandler {
 		Assert.notEmpty(candidateHandlers, "No handlers");
 		List<Object> handlers = new ArrayList<>(candidateHandlers.length);
 		for (Object obj : candidateHandlers) {
-			handlers.add(obj instanceof Class<?> clazz ? BeanUtils.instantiateClass(clazz) : obj);
+			handlers.add(obj instanceof Class ? BeanUtils.instantiateClass((Class<?>) obj) : obj);
 		}
 		RSocketMessageHandler handler = new RSocketMessageHandler();
 		handler.setHandlers(handlers);

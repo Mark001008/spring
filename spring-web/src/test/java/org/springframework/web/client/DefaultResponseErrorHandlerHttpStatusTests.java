@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -52,32 +52,32 @@ import static org.springframework.http.HttpStatus.UNAUTHORIZED;
 import static org.springframework.http.HttpStatus.UNPROCESSABLE_ENTITY;
 
 /**
- * Tests for {@link DefaultResponseErrorHandler} handling of specific
+ * Unit tests for {@link DefaultResponseErrorHandler} handling of specific
  * HTTP status codes.
  */
 class DefaultResponseErrorHandlerHttpStatusTests {
 
 	private final DefaultResponseErrorHandler handler = new DefaultResponseErrorHandler();
 
-	private final ClientHttpResponse response = mock();
+	private final ClientHttpResponse response = mock(ClientHttpResponse.class);
 
 
-	@ParameterizedTest(name = "[{index}] error: {0}")
+	@ParameterizedTest(name = "[{index}] error: [{0}]")
 	@DisplayName("hasError() returns true")
 	@MethodSource("errorCodes")
 	void hasErrorTrue(HttpStatus httpStatus) throws Exception {
-		given(this.response.getStatusCode()).willReturn(httpStatus);
+		given(this.response.getRawStatusCode()).willReturn(httpStatus.value());
 		assertThat(this.handler.hasError(this.response)).isTrue();
 	}
 
-	@ParameterizedTest(name = "[{index}] {0} -> {1}")
+	@ParameterizedTest(name = "[{index}] error: {0}, exception: {1}")
 	@DisplayName("handleError() throws an exception")
 	@MethodSource("errorCodes")
 	void handleErrorException(HttpStatus httpStatus, Class<? extends Throwable> expectedExceptionClass) throws Exception {
 		HttpHeaders headers = new HttpHeaders();
 		headers.setContentType(MediaType.TEXT_PLAIN);
 
-		given(this.response.getStatusCode()).willReturn(httpStatus);
+		given(this.response.getRawStatusCode()).willReturn(httpStatus.value());
 		given(this.response.getHeaders()).willReturn(headers);
 
 		assertThatExceptionOfType(expectedExceptionClass).isThrownBy(() -> this.handler.handleError(this.response));

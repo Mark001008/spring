@@ -57,7 +57,6 @@ import org.springframework.util.Assert;
  * @author Sam Brannen
  * @since 5.3
  * @param <T> the result type
- * @see SimplePropertyRowMapper
  */
 public class DataClassRowMapper<T> extends BeanPropertyRowMapper<T> {
 
@@ -107,7 +106,7 @@ public class DataClassRowMapper<T> extends BeanPropertyRowMapper<T> {
 	}
 
 	@Override
-	protected T constructMappedInstance(ResultSet rs, TypeConverter tc) throws SQLException {
+	protected T constructMappedInstance(ResultSet rs, TypeConverter tc) throws SQLException  {
 		Assert.state(this.mappedConstructor != null, "Mapped constructor was not initialized");
 
 		Object[] args;

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@
 package org.springframework.util;
 
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
@@ -107,10 +108,12 @@ public abstract class FileCopyUtils {
 		Assert.notNull(in, "No InputStream specified");
 		Assert.notNull(out, "No OutputStream specified");
 
-		try (in; out) {
-			int count = (int) in.transferTo(out);
-			out.flush();
-			return count;
+		try {
+			return StreamUtils.copy(in, out);
+		}
+		finally {
+			close(in);
+			close(out);
 		}
 	}
 
@@ -145,9 +148,9 @@ public abstract class FileCopyUtils {
 			return new byte[0];
 		}
 
-		try (in) {
-			return in.readAllBytes();
-		}
+		ByteArrayOutputStream out = new ByteArrayOutputStream(BUFFER_SIZE);
+		copy(in, out);
+		return out.toByteArray();
 	}
 
 

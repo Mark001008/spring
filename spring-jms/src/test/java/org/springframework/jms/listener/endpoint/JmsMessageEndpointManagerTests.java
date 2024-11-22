@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,10 +26,10 @@ import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 /**
  * @author Stephane Nicoll
  */
-class JmsMessageEndpointManagerTests {
+public class JmsMessageEndpointManagerTests {
 
 	@Test
-	void isPubSubDomainWithQueue() {
+	public void isPubSubDomainWithQueue() {
 		JmsMessageEndpointManager endpoint = new JmsMessageEndpointManager();
 		JmsActivationSpecConfig config = new JmsActivationSpecConfig();
 		config.setPubSubDomain(false);
@@ -39,7 +39,7 @@ class JmsMessageEndpointManagerTests {
 	}
 
 	@Test
-	void isPubSubDomainWithTopic() {
+	public void isPubSubDomainWithTopic() {
 		JmsMessageEndpointManager endpoint = new JmsMessageEndpointManager();
 		JmsActivationSpecConfig config = new JmsActivationSpecConfig();
 		config.setPubSubDomain(true);
@@ -49,7 +49,7 @@ class JmsMessageEndpointManagerTests {
 	}
 
 	@Test
-	void pubSubDomainCustomForReply() {
+	public void pubSubDomainCustomForReply() {
 		JmsMessageEndpointManager endpoint = new JmsMessageEndpointManager();
 		JmsActivationSpecConfig config = new JmsActivationSpecConfig();
 		config.setPubSubDomain(true);
@@ -60,7 +60,7 @@ class JmsMessageEndpointManagerTests {
 	}
 
 	@Test
-	void customReplyQosSettings() {
+	public void customReplyQosSettings() {
 		JmsMessageEndpointManager endpoint = new JmsMessageEndpointManager();
 		JmsActivationSpecConfig config = new JmsActivationSpecConfig();
 		QosSettings settings = new QosSettings(1, 3, 5);
@@ -73,7 +73,7 @@ class JmsMessageEndpointManagerTests {
 	}
 
 	@Test
-	void isPubSubDomainWithNoConfig() {
+	public void isPubSubDomainWithNoConfig() {
 		JmsMessageEndpointManager endpoint = new JmsMessageEndpointManager();
 		// far from ideal
 		assertThatIllegalStateException().isThrownBy(
@@ -81,7 +81,7 @@ class JmsMessageEndpointManagerTests {
 	}
 
 	@Test
-	void isReplyPubSubDomainWithNoConfig() {
+	public void isReplyPubSubDomainWithNoConfig() {
 		JmsMessageEndpointManager endpoint = new JmsMessageEndpointManager();
 		// far from ideal
 		assertThatIllegalStateException().isThrownBy(
@@ -89,7 +89,7 @@ class JmsMessageEndpointManagerTests {
 	}
 
 	@Test
-	void getReplyQosSettingsWithNoConfig() {
+	public void getReplyQosSettingsWithNoConfig() {
 		JmsMessageEndpointManager endpoint = new JmsMessageEndpointManager();
 		// far from ideal
 		assertThatIllegalStateException().isThrownBy(
@@ -97,13 +97,13 @@ class JmsMessageEndpointManagerTests {
 	}
 
 	@Test
-	void getMessageConverterNoConfig() {
+	public void getMessageConverterNoConfig() {
 		JmsMessageEndpointManager endpoint = new JmsMessageEndpointManager();
 		assertThat(endpoint.getMessageConverter()).isNull();
 	}
 
 	@Test
-	void getDestinationResolverNoConfig() {
+	public void getDestinationResolverNoConfig() {
 		JmsMessageEndpointManager endpoint = new JmsMessageEndpointManager();
 		assertThat(endpoint.getDestinationResolver()).isNull();
 	}

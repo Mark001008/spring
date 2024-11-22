@@ -102,7 +102,7 @@ public interface Decoder<T> {
 		}
 		catch (ExecutionException ex) {
 			Throwable cause = ex.getCause();
-			throw (cause instanceof CodecException codecException ? codecException :
+			throw (cause instanceof CodecException ? (CodecException) cause :
 					new DecodingException("Failed to decode: " + (cause != null ? cause.getMessage() : ex), cause));
 		}
 		catch (InterruptedException ex) {

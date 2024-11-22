@@ -26,8 +26,8 @@ import java.util.function.Supplier;
 import org.springframework.core.convert.ConversionService;
 import org.springframework.core.convert.TypeDescriptor;
 import org.springframework.expression.BeanResolver;
+import org.springframework.expression.ConstructorResolver;
 import org.springframework.expression.EvaluationContext;
-import org.springframework.expression.IndexAccessor;
 import org.springframework.expression.MethodResolver;
 import org.springframework.expression.OperatorOverloader;
 import org.springframework.expression.PropertyAccessor;
@@ -48,7 +48,7 @@ import org.springframework.lang.Nullable;
  * should be meaningfully restricted. Examples include but are not limited to
  * data binding expressions, property-based filters, and others. To that effect,
  * {@code SimpleEvaluationContext} is tailored to support only a subset of the
- * SpEL language syntax, for example, excluding references to Java types, constructors,
+ * SpEL language syntax, e.g. excluding references to Java types, constructors,
  * and bean references.
  *
  * <p>When creating a {@code SimpleEvaluationContext} you need to choose the level of
@@ -75,14 +75,6 @@ import org.springframework.lang.Nullable;
  * {@code EvaluationContext} and a root object as arguments:
  * {@link org.springframework.expression.Expression#getValue(EvaluationContext, Object)}.
  *
- * <p>In addition to support for setting and looking up variables as defined in
- * the {@link EvaluationContext} API, {@code SimpleEvaluationContext} also
- * provides support for {@linkplain #setVariable(String, Object) registering} and
- * {@linkplain #lookupVariable(String) looking up} functions as variables. Since
- * functions share a common namespace with the variables in this evaluation
- * context, care must be taken to ensure that function names and variable names
- * do not overlap.
- *
  * <p>For more power and flexibility, in particular for internal configuration
  * scenarios, consider using {@link StandardEvaluationContext} instead.
  *
@@ -96,7 +88,6 @@ import org.springframework.lang.Nullable;
  * @see StandardEvaluationContext
  * @see StandardTypeConverter
  * @see DataBindingPropertyAccessor
- * @see DataBindingMethodResolver
  */
 public final class SimpleEvaluationContext implements EvaluationContext {
 
@@ -109,27 +100,23 @@ public final class SimpleEvaluationContext implements EvaluationContext {
 
 	private final List<PropertyAccessor> propertyAccessors;
 
-	private final List<IndexAccessor> indexAccessors;
-
 	private final List<MethodResolver> methodResolvers;
 
 	private final TypeConverter typeConverter;
 
-	private final TypeComparator typeComparator = StandardTypeComparator.INSTANCE;
+	private final TypeComparator typeComparator = new StandardTypeComparator();
 
-	private final OperatorOverloader operatorOverloader = StandardOperatorOverloader.INSTANCE;
+	private final OperatorOverloader operatorOverloader = new StandardOperatorOverloader();
 
 	private final Map<String, Object> variables = new HashMap<>();
 
 	private final boolean assignmentEnabled;
 
 
-	private SimpleEvaluationContext(List<PropertyAccessor> propertyAccessors, List<IndexAccessor> indexAccessors,
-			List<MethodResolver> resolvers, @Nullable TypeConverter converter, @Nullable TypedValue rootObject,
-			boolean assignmentEnabled) {
+	private SimpleEvaluationContext(List<PropertyAccessor> accessors, List<MethodResolver> resolvers,
+			@Nullable TypeConverter converter, @Nullable TypedValue rootObject, boolean assignmentEnabled) {
 
-		this.propertyAccessors = propertyAccessors;
-		this.indexAccessors = indexAccessors;
+		this.propertyAccessors = accessors;
 		this.methodResolvers = resolvers;
 		this.typeConverter = (converter != null ? converter : new StandardTypeConverter());
 		this.rootObject = (rootObject != null ? rootObject : TypedValue.NULL);
@@ -155,13 +142,12 @@ public final class SimpleEvaluationContext implements EvaluationContext {
 	}
 
 	/**
-	 * Return the specified {@link IndexAccessor} delegates, if any.
-	 * @since 6.2
-	 * @see Builder#withIndexAccessors(IndexAccessor...)
+	 * Return an empty list, always, since this context does not support the
+	 * use of type references.
 	 */
 	@Override
-	public List<IndexAccessor> getIndexAccessors() {
-		return this.indexAccessors;
+	public List<ConstructorResolver> getConstructorResolvers() {
+		return Collections.emptyList();
 	}
 
 	/**
@@ -186,7 +172,7 @@ public final class SimpleEvaluationContext implements EvaluationContext {
 	/**
 	 * {@code SimpleEvaluationContext} does not support use of type references.
 	 * @return {@code TypeLocator} implementation that raises a
-	 * {@link SpelEvaluationException} with {@link SpelMessage#TYPE_NOT_FOUND}
+	 * {@link SpelEvaluationException} with {@link SpelMessage#TYPE_NOT_FOUND}.
 	 */
 	@Override
 	public TypeLocator getTypeLocator() {
@@ -231,31 +217,11 @@ public final class SimpleEvaluationContext implements EvaluationContext {
 		throw new SpelEvaluationException(SpelMessage.VARIABLE_ASSIGNMENT_NOT_SUPPORTED, "#" + name);
 	}
 
-	/**
-	 * Set a named variable or function in this evaluation context to the specified
-	 * value.
-	 * <p>A function can be registered as a {@link java.lang.reflect.Method} or
-	 * a {@link java.lang.invoke.MethodHandle}.
-	 * <p>Note that variables and functions share a common namespace in this
-	 * evaluation context. See the {@linkplain SimpleEvaluationContext
-	 * class-level documentation} for details.
-	 * @param name the name of the variable or function to set
-	 * @param value the value to be placed in the variable or function
-	 * @see #lookupVariable(String)
-	 */
 	@Override
 	public void setVariable(String name, @Nullable Object value) {
 		this.variables.put(name, value);
 	}
 
-	/**
-	 * Look up a named variable or function within this evaluation context.
-	 * <p>Note that variables and functions share a common namespace in this
-	 * evaluation context. See the {@linkplain SimpleEvaluationContext
-	 * class-level documentation} for details.
-	 * @param name the name of the variable or function to look up
-	 * @return the value of the variable or function, or {@code null} if not found
-	 */
 	@Override
 	@Nullable
 	public Object lookupVariable(String name) {
@@ -338,9 +304,7 @@ public final class SimpleEvaluationContext implements EvaluationContext {
 	 */
 	public static final class Builder {
 
-		private final List<PropertyAccessor> propertyAccessors;
-
-		private List<IndexAccessor> indexAccessors = Collections.emptyList();
+		private final List<PropertyAccessor> accessors;
 
 		private List<MethodResolver> resolvers = Collections.emptyList();
 
@@ -354,7 +318,7 @@ public final class SimpleEvaluationContext implements EvaluationContext {
 
 
 		private Builder(PropertyAccessor... accessors) {
-			this.propertyAccessors = Arrays.asList(accessors);
+			this.accessors = Arrays.asList(accessors);
 		}
 
 
@@ -365,16 +329,6 @@ public final class SimpleEvaluationContext implements EvaluationContext {
 		 */
 		public Builder withAssignmentDisabled() {
 			this.assignmentEnabled = false;
-			return this;
-		}
-
-		/**
-		 * Register the specified {@link IndexAccessor} delegates.
-		 * @param indexAccessors the index accessors to use
-		 * @since 6.2
-		 */
-		public Builder withIndexAccessors(IndexAccessor... indexAccessors) {
-			this.indexAccessors = Arrays.asList(indexAccessors);
 			return this;
 		}
 
@@ -456,10 +410,9 @@ public final class SimpleEvaluationContext implements EvaluationContext {
 		}
 
 		public SimpleEvaluationContext build() {
-			return new SimpleEvaluationContext(this.propertyAccessors, this.indexAccessors,
-					this.resolvers, this.typeConverter, this.rootObject, this.assignmentEnabled);
+			return new SimpleEvaluationContext(this.accessors, this.resolvers, this.typeConverter, this.rootObject,
+					this.assignmentEnabled);
 		}
-
 	}
 
 }

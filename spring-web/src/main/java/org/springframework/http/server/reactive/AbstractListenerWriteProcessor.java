@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2021 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,8 +34,8 @@ import org.springframework.util.StringUtils;
  * event-listener write APIs and Reactive Streams.
  *
  * <p>Specifically a base class for writing to the HTTP response body with
- * Servlet non-blocking I/O and Undertow XNIO as well for writing WebSocket
- * messages through the Jakarta WebSocket API (JSR-356), Jetty, and Undertow.
+ * Servlet 3.1 non-blocking I/O and Undertow XNIO as well for writing WebSocket
+ * messages through the Java WebSocket API (JSR-356), Jetty, and Undertow.
  *
  * @author Arjen Poutsma
  * @author Violeta Georgieva
@@ -43,7 +43,6 @@ import org.springframework.util.StringUtils;
  * @since 5.0
  * @param <T> the type of element signaled to the {@link Subscriber}
  */
-@SuppressWarnings("NullAway")
 public abstract class AbstractListenerWriteProcessor<T> implements Processor<T, Void> {
 
 	/**
@@ -71,7 +70,7 @@ public abstract class AbstractListenerWriteProcessor<T> implements Processor<T, 
 	 * Indicates we're waiting for one last isReady-onWritePossible cycle
 	 * after "onComplete" because some Servlet containers expect this to take
 	 * place prior to calling AsyncContext.complete().
-	 * @see <a href="https://github.com/jakartaee/servlet/issues/273">Jakarta Servlet issue 273</a>
+	 * See https://github.com/eclipse-ee4j/servlet-api/issues/273
 	 */
 	private volatile boolean readyToCompleteAfterLastWrite;
 

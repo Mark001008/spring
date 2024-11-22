@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2023 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,9 +17,7 @@
 package org.springframework.core.task;
 
 import java.io.Serializable;
-import java.util.Set;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Future;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.ThreadFactory;
@@ -33,34 +31,25 @@ import org.springframework.util.concurrent.ListenableFutureTask;
 
 /**
  * {@link TaskExecutor} implementation that fires up a new Thread for each task,
- * executing it asynchronously. Provides a virtual thread option on JDK 21.
+ * executing it asynchronously.
  *
- * <p>Supports a graceful shutdown through {@link #setTaskTerminationTimeout},
- * at the expense of task tracking overhead per execution thread at runtime.
- * Supports limiting concurrent threads through {@link #setConcurrencyLimit}.
+ * <p>Supports limiting concurrent threads through {@link #setConcurrencyLimit}.
  * By default, the number of concurrent task executions is unlimited.
  *
  * <p><b>NOTE: This implementation does not reuse threads!</b> Consider a
  * thread-pooling TaskExecutor implementation instead, in particular for
- * executing a large number of short-lived tasks. Alternatively, on JDK 21,
- * consider setting {@link #setVirtualThreads} to {@code true}.
- *
- * <p><b>NOTE: This executor does not participate in context-level lifecycle
- * management.</b> Tasks on handed-off execution threads cannot be centrally
- * stopped and restarted; if such tight lifecycle management is necessary,
- * consider a common {@code ThreadPoolTaskExecutor} setup instead.
+ * executing a large number of short-lived tasks.
  *
  * @author Juergen Hoeller
  * @since 2.0
- * @see #setVirtualThreads
- * @see #setTaskTerminationTimeout
  * @see #setConcurrencyLimit
- * @see org.springframework.scheduling.concurrent.SimpleAsyncTaskScheduler
+ * @see SyncTaskExecutor
  * @see org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor
+ * @see org.springframework.scheduling.commonj.WorkManagerTaskExecutor
  */
-@SuppressWarnings({"serial", "removal"})
+@SuppressWarnings("serial")
 public class SimpleAsyncTaskExecutor extends CustomizableThreadCreator
-		implements AsyncListenableTaskExecutor, Serializable, AutoCloseable {
+		implements AsyncListenableTaskExecutor, Serializable {
 
 	/**
 	 * Permit any number of concurrent invocations: that is, don't throttle concurrency.
@@ -79,20 +68,10 @@ public class SimpleAsyncTaskExecutor extends CustomizableThreadCreator
 	private final ConcurrencyThrottleAdapter concurrencyThrottle = new ConcurrencyThrottleAdapter();
 
 	@Nullable
-	private VirtualThreadDelegate virtualThreadDelegate;
-
-	@Nullable
 	private ThreadFactory threadFactory;
 
 	@Nullable
 	private TaskDecorator taskDecorator;
-
-	private long taskTerminationTimeout;
-
-	@Nullable
-	private Set<Thread> activeThreads;
-
-	private volatile boolean active = true;
 
 
 	/**
@@ -120,20 +99,10 @@ public class SimpleAsyncTaskExecutor extends CustomizableThreadCreator
 
 
 	/**
-	 * Switch this executor to virtual threads. Requires Java 21 or higher.
-	 * <p>The default is {@code false}, indicating platform threads.
-	 * Set this flag to {@code true} in order to create virtual threads instead.
-	 * @since 6.1
-	 */
-	public void setVirtualThreads(boolean virtual) {
-		this.virtualThreadDelegate = (virtual ? new VirtualThreadDelegate() : null);
-	}
-
-	/**
 	 * Specify an external factory to use for creating new Threads,
 	 * instead of relying on the local properties of this executor.
 	 * <p>You may specify an inner ThreadFactory bean or also a ThreadFactory reference
-	 * obtained from JNDI (on a Jakarta EE server) or some other lookup mechanism.
+	 * obtained from JNDI (on a Java EE 6 server) or some other lookup mechanism.
 	 * @see #setThreadNamePrefix
 	 * @see #setThreadPriority
 	 */
@@ -169,37 +138,10 @@ public class SimpleAsyncTaskExecutor extends CustomizableThreadCreator
 	}
 
 	/**
-	 * Specify a timeout (in milliseconds) for task termination when closing
-	 * this executor. The default is 0, not waiting for task termination at all.
-	 * <p>Note that a concrete >0 timeout specified here will lead to the
-	 * wrapping of every submitted task into a task-tracking runnable which
-	 * involves considerable overhead in case of a high number of tasks.
-	 * However, for a modest level of submissions with longer-running
-	 * tasks, this is feasible in order to arrive at a graceful shutdown.
-	 * <p>Note that {@code SimpleAsyncTaskExecutor} does not participate in
-	 * a coordinated lifecycle stop but rather just awaits task termination
-	 * on {@link #close()}.
-	 * @param timeout the timeout in milliseconds
-	 * @since 6.1
-	 * @see #close()
-	 * @see org.springframework.scheduling.concurrent.ExecutorConfigurationSupport#setAwaitTerminationMillis
-	 */
-	public void setTaskTerminationTimeout(long timeout) {
-		Assert.isTrue(timeout >= 0, "Timeout value must be >=0");
-		this.taskTerminationTimeout = timeout;
-		this.activeThreads = (timeout > 0 ? ConcurrentHashMap.newKeySet() : null);
-	}
-
-	/**
 	 * Set the maximum number of parallel task executions allowed.
 	 * The default of -1 indicates no concurrency limit at all.
 	 * <p>This is the equivalent of a maximum pool size in a thread pool,
 	 * preventing temporary overload of the thread management system.
-	 * However, in contrast to a thread pool with a managed task queue,
-	 * this executor will block the submitter until the task can be
-	 * accepted when the configured concurrency limit has been reached.
-	 * If you prefer queue-based task hand-offs without such blocking,
-	 * consider using a {@code ThreadPoolTaskExecutor} instead.
 	 * @see #UNBOUNDED_CONCURRENCY
 	 * @see org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor#setMaxPoolSize
 	 */
@@ -222,18 +164,6 @@ public class SimpleAsyncTaskExecutor extends CustomizableThreadCreator
 	 */
 	public final boolean isThrottleActive() {
 		return this.concurrencyThrottle.isThrottleActive();
-	}
-
-	/**
-	 * Return whether this executor is still active, i.e. not closed yet,
-	 * and therefore accepts further task submissions. Otherwise, it is
-	 * either in the task termination phase or entirely shut down already.
-	 * @since 6.1
-	 * @see #setTaskTerminationTimeout
-	 * @see #close()
-	 */
-	public boolean isActive() {
-		return this.active;
 	}
 
 
@@ -261,17 +191,10 @@ public class SimpleAsyncTaskExecutor extends CustomizableThreadCreator
 	@Override
 	public void execute(Runnable task, long startTimeout) {
 		Assert.notNull(task, "Runnable must not be null");
-		if (!isActive()) {
-			throw new TaskRejectedException(getClass().getSimpleName() + " has been closed already");
-		}
-
 		Runnable taskToUse = (this.taskDecorator != null ? this.taskDecorator.decorate(task) : task);
 		if (isThrottleActive() && startTimeout > TIMEOUT_IMMEDIATE) {
 			this.concurrencyThrottle.beforeAccess();
-			doExecute(new TaskTrackingRunnable(taskToUse));
-		}
-		else if (this.activeThreads != null) {
-			doExecute(new TaskTrackingRunnable(taskToUse));
+			doExecute(new ConcurrencyThrottlingRunnable(taskToUse));
 		}
 		else {
 			doExecute(taskToUse);
@@ -314,56 +237,13 @@ public class SimpleAsyncTaskExecutor extends CustomizableThreadCreator
 	 * Template method for the actual execution of a task.
 	 * <p>The default implementation creates a new Thread and starts it.
 	 * @param task the Runnable to execute
-	 * @see #newThread
-	 * @see Thread#start()
-	 */
-	protected void doExecute(Runnable task) {
-		newThread(task).start();
-	}
-
-	/**
-	 * Create a new Thread for the given task.
-	 * @param task the Runnable to create a Thread for
-	 * @return the new Thread instance
-	 * @since 6.1
-	 * @see #setVirtualThreads
 	 * @see #setThreadFactory
 	 * @see #createThread
+	 * @see java.lang.Thread#start()
 	 */
-	protected Thread newThread(Runnable task) {
-		if (this.virtualThreadDelegate != null) {
-			return this.virtualThreadDelegate.newVirtualThread(nextThreadName(), task);
-		}
-		else {
-			return (this.threadFactory != null ? this.threadFactory.newThread(task) : createThread(task));
-		}
-	}
-
-	/**
-	 * This close methods tracks the termination of active threads if a concrete
-	 * {@link #setTaskTerminationTimeout task termination timeout} has been set.
-	 * Otherwise, it is not necessary to close this executor.
-	 * @since 6.1
-	 */
-	@Override
-	public void close() {
-		if (this.active) {
-			this.active = false;
-			Set<Thread> threads = this.activeThreads;
-			if (threads != null) {
-				threads.forEach(Thread::interrupt);
-				synchronized (threads) {
-					try {
-						if (!threads.isEmpty()) {
-							threads.wait(this.taskTerminationTimeout);
-						}
-					}
-					catch (InterruptedException ex) {
-						Thread.currentThread().interrupt();
-					}
-				}
-			}
-		}
+	protected void doExecute(Runnable task) {
+		Thread thread = (this.threadFactory != null ? this.threadFactory.newThread(task) : createThread(task));
+		thread.start();
 	}
 
 
@@ -387,40 +267,23 @@ public class SimpleAsyncTaskExecutor extends CustomizableThreadCreator
 
 
 	/**
-	 * Decorates a target task with active thread tracking
-	 * and concurrency throttle management, if necessary.
+	 * This Runnable calls {@code afterAccess()} after the
+	 * target Runnable has finished its execution.
 	 */
-	private class TaskTrackingRunnable implements Runnable {
+	private class ConcurrencyThrottlingRunnable implements Runnable {
 
-		private final Runnable task;
+		private final Runnable target;
 
-		public TaskTrackingRunnable(Runnable task) {
-			Assert.notNull(task, "Task must not be null");
-			this.task = task;
+		public ConcurrencyThrottlingRunnable(Runnable target) {
+			this.target = target;
 		}
 
 		@Override
 		public void run() {
-			Set<Thread> threads = activeThreads;
-			Thread thread = null;
-			if (threads != null) {
-				thread = Thread.currentThread();
-				threads.add(thread);
-			}
 			try {
-				this.task.run();
+				this.target.run();
 			}
 			finally {
-				if (threads != null) {
-					threads.remove(thread);
-					if (!isActive()) {
-						synchronized (threads) {
-							if (threads.isEmpty()) {
-								threads.notify();
-							}
-						}
-					}
-				}
 				concurrencyThrottle.afterAccess();
 			}
 		}

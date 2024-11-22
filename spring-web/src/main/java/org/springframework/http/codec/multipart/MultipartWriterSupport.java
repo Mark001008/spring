@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2022 the original author or authors.
+ * Copyright 2002-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,6 +24,7 @@ import java.util.Map;
 
 import reactor.core.publisher.Mono;
 
+import org.springframework.core.ResolvableType;
 import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.core.io.buffer.DataBufferFactory;
 import org.springframework.http.HttpHeaders;
@@ -31,8 +32,8 @@ import org.springframework.http.MediaType;
 import org.springframework.http.codec.LoggingCodecSupport;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
-import org.springframework.util.FastByteArrayOutputStream;
 import org.springframework.util.MimeTypeUtils;
+import org.springframework.util.MultiValueMap;
 
 /**
  * Support class for multipart HTTP message writers.
@@ -79,6 +80,21 @@ public class MultipartWriterSupport extends LoggingCodecSupport {
 
 	public List<MediaType> getWritableMediaTypes() {
 		return this.supportedMediaTypes;
+	}
+
+
+	public boolean canWrite(ResolvableType elementType, @Nullable MediaType mediaType) {
+		if (MultiValueMap.class.isAssignableFrom(elementType.toClass())) {
+			if (mediaType == null) {
+				return true;
+			}
+			for (MediaType supportedMediaType : this.supportedMediaTypes) {
+				if (supportedMediaType.isCompatibleWith(mediaType)) {
+					return true;
+				}
+			}
+		}
+		return false;
 	}
 
 	/**
@@ -148,25 +164,22 @@ public class MultipartWriterSupport extends LoggingCodecSupport {
 
 	protected Mono<DataBuffer> generatePartHeaders(HttpHeaders headers, DataBufferFactory bufferFactory) {
 		return Mono.fromCallable(() -> {
-			@SuppressWarnings("resource")
-			FastByteArrayOutputStream bos = new FastByteArrayOutputStream();
+			DataBuffer buffer = bufferFactory.allocateBuffer();
 			for (Map.Entry<String, List<String>> entry : headers.entrySet()) {
 				byte[] headerName = entry.getKey().getBytes(getCharset());
 				for (String headerValueString : entry.getValue()) {
 					byte[] headerValue = headerValueString.getBytes(getCharset());
-					bos.write(headerName);
-					bos.write((byte)':');
-					bos.write((byte)' ');
-					bos.write(headerValue);
-					bos.write((byte)'\r');
-					bos.write((byte)'\n');
+					buffer.write(headerName);
+					buffer.write((byte)':');
+					buffer.write((byte)' ');
+					buffer.write(headerValue);
+					buffer.write((byte)'\r');
+					buffer.write((byte)'\n');
 				}
 			}
-			bos.write((byte)'\r');
-			bos.write((byte)'\n');
-
-			byte[] bytes = bos.toByteArrayUnsafe();
-			return bufferFactory.wrap(bytes);
+			buffer.write((byte)'\r');
+			buffer.write((byte)'\n');
+			return buffer;
 		});
 	}
 

@@ -16,8 +16,6 @@
 
 package org.springframework.dao;
 
-import org.springframework.lang.Nullable;
-
 /**
  * Data access exception thrown when a result was expected to have at least
  * one row (or element) but zero rows (or elements) were actually returned.
@@ -42,7 +40,7 @@ public class EmptyResultDataAccessException extends IncorrectResultSizeDataAcces
 	 * @param msg the detail message
 	 * @param expectedSize the expected result size
 	 */
-	public EmptyResultDataAccessException(@Nullable String msg, int expectedSize) {
+	public EmptyResultDataAccessException(String msg, int expectedSize) {
 		super(msg, expectedSize, 0);
 	}
 
@@ -52,7 +50,7 @@ public class EmptyResultDataAccessException extends IncorrectResultSizeDataAcces
 	 * @param expectedSize the expected result size
 	 * @param ex the wrapped exception
 	 */
-	public EmptyResultDataAccessException(@Nullable String msg, int expectedSize, Throwable ex) {
+	public EmptyResultDataAccessException(String msg, int expectedSize, Throwable ex) {
 		super(msg, expectedSize, 0, ex);
 	}
 

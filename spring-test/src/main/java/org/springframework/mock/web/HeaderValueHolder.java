@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2022 the original author or authors.
+ * Copyright 2002-2021 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 
 package org.springframework.mock.web;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedList;
@@ -60,7 +61,11 @@ class HeaderValueHolder {
 	}
 
 	List<String> getStringValues() {
-		return this.values.stream().map(Object::toString).toList();
+		List<String> stringList = new ArrayList<>(this.values.size());
+		for (Object value : this.values) {
+			stringList.add(value.toString());
+		}
+		return Collections.unmodifiableList(stringList);
 	}
 
 	@Nullable

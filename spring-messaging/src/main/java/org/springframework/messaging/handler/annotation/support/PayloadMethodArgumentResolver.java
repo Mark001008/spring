@@ -17,7 +17,6 @@
 package org.springframework.messaging.handler.annotation.support;
 
 import java.lang.annotation.Annotation;
-import java.util.Optional;
 
 import org.springframework.core.MethodParameter;
 import org.springframework.lang.Nullable;
@@ -27,7 +26,6 @@ import org.springframework.messaging.converter.MessageConverter;
 import org.springframework.messaging.converter.SmartMessageConverter;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.handler.invocation.HandlerMethodArgumentResolver;
-import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.ObjectUtils;
@@ -45,7 +43,7 @@ import org.springframework.validation.annotation.ValidationAnnotationUtils;
  *
  * <p>Validation is applied if the method argument is annotated with
  * {@link org.springframework.validation.annotation.Validated} or
- * {@code @jakarta.validation.Valid}. Validation failure results in an
+ * {@code @javax.validation.Valid}. Validation failure results in an
  * {@link MethodArgumentNotValidException}.
  *
  * <p>This {@link HandlerMethodArgumentResolver} should be ordered last as it
@@ -118,29 +116,28 @@ public class PayloadMethodArgumentResolver implements HandlerMethodArgumentResol
 			throw new IllegalStateException("@Payload SpEL expressions not supported by this resolver");
 		}
 
-		boolean isOptionalTargetClass = (parameter.getParameterType() == Optional.class);
 		Object payload = message.getPayload();
 		if (isEmptyPayload(payload)) {
-			if ((ann == null || ann.required()) && !isOptionalTargetClass) {
+			if (ann == null || ann.required()) {
 				String paramName = getParameterName(parameter);
 				BindingResult bindingResult = new BeanPropertyBindingResult(payload, paramName);
 				bindingResult.addError(new ObjectError(paramName, "Payload value must not be empty"));
 				throw new MethodArgumentNotValidException(message, parameter, bindingResult);
 			}
 			else {
-				return (isOptionalTargetClass ? Optional.empty() : null);
+				return null;
 			}
-		}
-
-		if (payload instanceof Optional<?> optional) {
-			payload = optional.get();
-			message = MessageBuilder.createMessage(payload, message.getHeaders());
 		}
 
 		Class<?> targetClass = resolveTargetClass(parameter, message);
 		Class<?> payloadClass = payload.getClass();
-		if (!ClassUtils.isAssignable(targetClass, payloadClass)) {
-			if (this.converter instanceof SmartMessageConverter smartConverter) {
+		if (ClassUtils.isAssignable(targetClass, payloadClass)) {
+			validate(message, parameter, payload);
+			return payload;
+		}
+		else {
+			if (this.converter instanceof SmartMessageConverter) {
+				SmartMessageConverter smartConverter = (SmartMessageConverter) this.converter;
 				payload = smartConverter.fromMessage(message, targetClass, parameter);
 			}
 			else {
@@ -150,9 +147,9 @@ public class PayloadMethodArgumentResolver implements HandlerMethodArgumentResol
 				throw new MessageConversionException(message, "Cannot convert from [" +
 						payloadClass.getName() + "] to [" + targetClass.getName() + "] for " + message);
 			}
+			validate(message, parameter, payload);
+			return payload;
 		}
-		validate(message, parameter, payload);
-		return (isOptionalTargetClass ? Optional.of(payload) : payload);
 	}
 
 	private String getParameterName(MethodParameter param) {
@@ -168,14 +165,11 @@ public class PayloadMethodArgumentResolver implements HandlerMethodArgumentResol
 		if (payload == null) {
 			return true;
 		}
-		else if (payload instanceof byte[] bytes) {
-			return bytes.length == 0;
+		else if (payload instanceof byte[]) {
+			return ((byte[]) payload).length == 0;
 		}
-		else if (payload instanceof String text) {
-			return !StringUtils.hasText(text);
-		}
-		else if (payload instanceof Optional<?> optional) {
-			return optional.isEmpty();
+		else if (payload instanceof String) {
+			return !StringUtils.hasText((String) payload);
 		}
 		else {
 			return false;
@@ -186,7 +180,7 @@ public class PayloadMethodArgumentResolver implements HandlerMethodArgumentResol
 	 * Resolve the target class to convert the payload to.
 	 * <p>By default this is simply {@link MethodParameter#getParameterType()}
 	 * but that can be overridden to select a more specific target type after
-	 * also taking into account the "Content-Type", for example, return {@code String}
+	 * also taking into account the "Content-Type", e.g. return {@code String}
 	 * if target type is {@code Object} and {@code "Content-Type:text/**"}.
 	 * @param parameter the target method parameter
 	 * @param message the message being processed
@@ -194,7 +188,7 @@ public class PayloadMethodArgumentResolver implements HandlerMethodArgumentResol
 	 * @since 5.2
 	 */
 	protected Class<?> resolveTargetClass(MethodParameter parameter, Message<?> message) {
-		return parameter.nestedIfOptional().getNestedParameterType();
+		return parameter.getParameterType();
 	}
 
 	/**
@@ -213,8 +207,8 @@ public class PayloadMethodArgumentResolver implements HandlerMethodArgumentResol
 			if (validationHints != null) {
 				BeanPropertyBindingResult bindingResult =
 						new BeanPropertyBindingResult(target, getParameterName(parameter));
-				if (!ObjectUtils.isEmpty(validationHints) && this.validator instanceof SmartValidator sv) {
-					sv.validate(target, bindingResult, validationHints);
+				if (!ObjectUtils.isEmpty(validationHints) && this.validator instanceof SmartValidator) {
+					((SmartValidator) this.validator).validate(target, bindingResult, validationHints);
 				}
 				else {
 					this.validator.validate(target, bindingResult);

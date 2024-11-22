@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,9 +33,9 @@ import java.util.Set;
 
 import javax.annotation.Nonnull;
 import javax.annotation.ParametersAreNonnullByDefault;
+import javax.annotation.Resource;
 import javax.annotation.meta.When;
 
-import jakarta.annotation.Resource;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -69,7 +69,7 @@ import static org.springframework.core.annotation.AnnotatedElementUtils.isAnnota
 import static org.springframework.core.annotation.AnnotationUtilsTests.asArray;
 
 /**
- * Tests for {@link AnnotatedElementUtils}.
+ * Unit tests for {@link AnnotatedElementUtils}.
  *
  * @author Sam Brannen
  * @author Rossen Stoyanchev
@@ -171,8 +171,8 @@ class AnnotatedElementUtilsTests {
 
 	@Test
 	void getMetaAnnotationTypesOnNonAnnotatedClass() {
-		assertThat(getMetaAnnotationTypes(NonAnnotatedClass.class, TransactionalComponent.class)).isEmpty();
-		assertThat(getMetaAnnotationTypes(NonAnnotatedClass.class, TransactionalComponent.class.getName())).isEmpty();
+		assertThat(getMetaAnnotationTypes(NonAnnotatedClass.class, TransactionalComponent.class).isEmpty()).isTrue();
+		assertThat(getMetaAnnotationTypes(NonAnnotatedClass.class, TransactionalComponent.class.getName()).isEmpty()).isTrue();
 	}
 
 	@Test
@@ -293,7 +293,7 @@ class AnnotatedElementUtilsTests {
 	void getAllAnnotationAttributesOnClassWithLocalAnnotation() {
 		MultiValueMap<String, Object> attributes = getAllAnnotationAttributes(TxConfig.class, TX_NAME);
 		assertThat(attributes).as("Annotation attributes map for @Transactional on TxConfig").isNotNull();
-		assertThat(attributes.get("value")).as("value for TxConfig").isEqualTo(List.of("TxConfig"));
+		assertThat(attributes.get("value")).as("value for TxConfig").isEqualTo(asList("TxConfig"));
 	}
 
 	@Test
@@ -307,14 +307,14 @@ class AnnotatedElementUtilsTests {
 	void getAllAnnotationAttributesFavorsInheritedAnnotationsOverMoreLocallyDeclaredComposedAnnotations() {
 		MultiValueMap<String, Object> attributes = getAllAnnotationAttributes(SubSubClassWithInheritedAnnotation.class, TX_NAME);
 		assertThat(attributes).as("Annotation attributes map for @Transactional on SubSubClassWithInheritedAnnotation").isNotNull();
-		assertThat(attributes.get("qualifier")).isEqualTo(List.of("transactionManager"));
+		assertThat(attributes.get("qualifier")).isEqualTo(asList("transactionManager"));
 	}
 
 	@Test
 	void getAllAnnotationAttributesFavorsInheritedComposedAnnotationsOverMoreLocallyDeclaredComposedAnnotations() {
 		MultiValueMap<String, Object> attributes = getAllAnnotationAttributes( SubSubClassWithInheritedComposedAnnotation.class, TX_NAME);
 		assertThat(attributes).as("Annotation attributes map for @Transactional on SubSubClassWithInheritedComposedAnnotation").isNotNull();
-		assertThat(attributes.get("qualifier")).isEqualTo(List.of("composed1"));
+		assertThat(attributes.get("qualifier")).isEqualTo(asList("composed1"));
 	}
 
 	/**
@@ -329,7 +329,7 @@ class AnnotatedElementUtilsTests {
 		// See org.springframework.core.env.EnvironmentSystemIntegrationTests#mostSpecificDerivedClassDrivesEnvironment_withDevEnvAndDerivedDevConfigClass
 		MultiValueMap<String, Object> attributes = getAllAnnotationAttributes(DerivedTxConfig.class, TX_NAME);
 		assertThat(attributes).as("Annotation attributes map for @Transactional on DerivedTxConfig").isNotNull();
-		assertThat(attributes.get("value")).as("value for DerivedTxConfig").isEqualTo(List.of("DerivedTxConfig"));
+		assertThat(attributes.get("value")).as("value for DerivedTxConfig").isEqualTo(asList("DerivedTxConfig"));
 	}
 
 	/**
@@ -348,7 +348,7 @@ class AnnotatedElementUtilsTests {
 		MultiValueMap<String, Object> attributes = getAllAnnotationAttributes(
 				NonNullApi.class, Nonnull.class.getName());
 		assertThat(attributes).as("Annotation attributes map for @Nonnull on NonNullApi").isNotNull();
-		assertThat(attributes.get("when")).as("value for NonNullApi").isEqualTo(List.of(When.ALWAYS));
+		assertThat(attributes.get("when")).as("value for NonNullApi").isEqualTo(asList(When.ALWAYS));
 	}
 
 	@Test
@@ -356,7 +356,7 @@ class AnnotatedElementUtilsTests {
 		MultiValueMap<String, Object> attributes = getAllAnnotationAttributes(
 				ParametersAreNonnullByDefault.class, Nonnull.class.getName());
 		assertThat(attributes).as("Annotation attributes map for @Nonnull on NonNullApi").isNotNull();
-		assertThat(attributes.get("when")).as("value for NonNullApi").isEqualTo(List.of(When.ALWAYS));
+		assertThat(attributes.get("when")).as("value for NonNullApi").isEqualTo(asList(When.ALWAYS));
 	}
 
 	@Test
@@ -752,7 +752,7 @@ class AnnotatedElementUtilsTests {
 	 * @see <a href="https://github.com/spring-projects/spring-framework/issues/23767">#23767</a>
 	 */
 	@Test
-	void findMergedAnnotationAttributesOnClassWithComposedMetaTransactionalAnnotation() {
+	void findMergedAnnotationAttributesOnClassWithComposedMetaTransactionalAnnotation() throws Exception {
 		Class<?> clazz = ComposedTransactionalClass.class;
 
 		AnnotationAttributes attributes = findMergedAnnotationAttributes(clazz, AliasedTransactional.class);
@@ -766,7 +766,7 @@ class AnnotatedElementUtilsTests {
 	 * @see <a href="https://github.com/spring-projects/spring-framework/issues/23767">#23767</a>
 	 */
 	@Test
-	void findMergedAnnotationOnClassWithComposedMetaTransactionalAnnotation() {
+	void findMergedAnnotationOnClassWithComposedMetaTransactionalAnnotation() throws Exception {
 		Class<?> clazz = ComposedTransactionalClass.class;
 
 		AliasedTransactional annotation = findMergedAnnotation(clazz, AliasedTransactional.class);
@@ -848,13 +848,13 @@ class AnnotatedElementUtilsTests {
 	}
 
 	@Test
-	void javaxAnnotationTypeViaFindMergedAnnotation() {
+	void javaxAnnotationTypeViaFindMergedAnnotation() throws Exception {
 		assertThat(findMergedAnnotation(ResourceHolder.class, Resource.class)).isEqualTo(ResourceHolder.class.getAnnotation(Resource.class));
 		assertThat(findMergedAnnotation(SpringAppConfigClass.class, Resource.class)).isEqualTo(SpringAppConfigClass.class.getAnnotation(Resource.class));
 	}
 
 	@Test
-	void javaxMetaAnnotationTypeViaFindMergedAnnotation() {
+	void javaxMetaAnnotationTypeViaFindMergedAnnotation() throws Exception {
 		assertThat(findMergedAnnotation(ParametersAreNonnullByDefault.class, Nonnull.class)).isEqualTo(ParametersAreNonnullByDefault.class.getAnnotation(Nonnull.class));
 		assertThat(findMergedAnnotation(ResourceHolder.class, Nonnull.class)).isEqualTo(ParametersAreNonnullByDefault.class.getAnnotation(Nonnull.class));
 	}
@@ -869,14 +869,14 @@ class AnnotatedElementUtilsTests {
 	void getAllMergedAnnotationsOnClassWithInterface() throws Exception {
 		Method method = TransactionalServiceImpl.class.getMethod("doIt");
 		Set<Transactional> allMergedAnnotations = getAllMergedAnnotations(method, Transactional.class);
-		assertThat(allMergedAnnotations).isEmpty();
+		assertThat(allMergedAnnotations.isEmpty()).isTrue();
 	}
 
 	@Test
 	void findAllMergedAnnotationsOnClassWithInterface() throws Exception {
 		Method method = TransactionalServiceImpl.class.getMethod("doIt");
 		Set<Transactional> allMergedAnnotations = findAllMergedAnnotations(method, Transactional.class);
-		assertThat(allMergedAnnotations).hasSize(1);
+		assertThat(allMergedAnnotations.size()).isEqualTo(1);
 	}
 
 	@Test  // SPR-16060
@@ -1088,8 +1088,6 @@ class AnnotatedElementUtilsTests {
 	@Retention(RetentionPolicy.RUNTIME)
 	@interface ConventionBasedComposedContextConfig {
 
-		// Do NOT use @AliasFor here until Spring 6.1
-		// @AliasFor(annotation = ContextConfig.class)
 		String[] locations() default {};
 	}
 
@@ -1097,8 +1095,6 @@ class AnnotatedElementUtilsTests {
 	@Retention(RetentionPolicy.RUNTIME)
 	@interface InvalidConventionBasedComposedContextConfig {
 
-		// Do NOT use @AliasFor here until Spring 6.1
-		// @AliasFor(annotation = ContextConfig.class)
 		String[] locations();
 	}
 
@@ -1256,13 +1252,9 @@ class AnnotatedElementUtilsTests {
 		@AliasFor(annotation = ContextConfig.class, attribute = "locations")
 		String[] locations() default {};
 
-		// Do NOT use @AliasFor(annotation = ...) here until Spring 6.1
-		// @AliasFor(annotation = ContextConfig.class, attribute = "classes")
 		@AliasFor("value")
 		Class<?>[] classes() default {};
 
-		// Do NOT use @AliasFor(annotation = ...) here until Spring 6.1
-		// @AliasFor(annotation = ContextConfig.class, attribute = "classes")
 		@AliasFor("classes")
 		Class<?>[] value() default {};
 	}
@@ -1301,8 +1293,6 @@ class AnnotatedElementUtilsTests {
 	@Retention(RetentionPolicy.RUNTIME)
 	@interface ConventionBasedSinglePackageComponentScan {
 
-		// Do NOT use @AliasFor here until Spring 6.1
-		// @AliasFor(annotation = ComponentScan.class)
 		String basePackages();
 	}
 
@@ -1388,7 +1378,7 @@ class AnnotatedElementUtilsTests {
 		void handleFromInterface();
 	}
 
-	abstract static class AbstractClassWithInheritedAnnotation<T> implements InterfaceWithInheritedAnnotation {
+	static abstract class AbstractClassWithInheritedAnnotation<T> implements InterfaceWithInheritedAnnotation {
 
 		@Transactional
 		public abstract void handle();

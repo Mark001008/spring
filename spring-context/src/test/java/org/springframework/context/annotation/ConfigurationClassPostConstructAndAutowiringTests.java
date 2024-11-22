@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2021 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,8 @@
 
 package org.springframework.context.annotation;
 
-import jakarta.annotation.PostConstruct;
+import javax.annotation.PostConstruct;
+
 import org.junit.jupiter.api.Test;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,14 +40,14 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author Chris Beams
  * @since 3.1
  */
-class ConfigurationClassPostConstructAndAutowiringTests {
+public class ConfigurationClassPostConstructAndAutowiringTests {
 
 	/**
 	 * Prior to the fix for SPR-8080, this method would succeed due to ordering of
 	 * configuration class registration.
 	 */
 	@Test
-	void control() {
+	public void control() {
 		AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext();
 		ctx.register(Config1.class, Config2.class);
 		ctx.refresh();
@@ -62,7 +63,7 @@ class ConfigurationClassPostConstructAndAutowiringTests {
 	 * configuration class registration.
 	 */
 	@Test
-	void originalReproCase() {
+	public void originalReproCase() {
 		AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext();
 		ctx.register(Config2.class, Config1.class);
 		ctx.refresh();

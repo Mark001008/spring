@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,14 +16,15 @@
 
 package org.springframework.web.servlet.config.annotation;
 
-import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
+import javax.servlet.http.HttpServletRequest;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
-import jakarta.servlet.http.HttpServletRequest;
+import org.joda.time.DateTime;
 import org.junit.jupiter.api.Test;
 
 import org.springframework.beans.DirectFieldAccessor;
@@ -69,6 +70,7 @@ import org.springframework.web.servlet.HandlerInterceptor;
 import org.springframework.web.servlet.HandlerMapping;
 import org.springframework.web.servlet.LocaleResolver;
 import org.springframework.web.servlet.RequestToViewNameTranslator;
+import org.springframework.web.servlet.ThemeResolver;
 import org.springframework.web.servlet.ViewResolver;
 import org.springframework.web.servlet.handler.BeanNameUrlHandlerMapping;
 import org.springframework.web.servlet.handler.ConversionServiceExposingInterceptor;
@@ -84,6 +86,7 @@ import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandl
 import org.springframework.web.servlet.mvc.support.DefaultHandlerExceptionResolver;
 import org.springframework.web.servlet.resource.ResourceUrlProviderExposingInterceptor;
 import org.springframework.web.servlet.support.SessionFlashMapManager;
+import org.springframework.web.servlet.theme.FixedThemeResolver;
 import org.springframework.web.servlet.view.BeanNameViewResolver;
 import org.springframework.web.servlet.view.DefaultRequestToViewNameTranslator;
 import org.springframework.web.servlet.view.InternalResourceViewResolver;
@@ -111,10 +114,10 @@ import static org.springframework.web.servlet.DispatcherServlet.THEME_RESOLVER_B
  * @author Sam Brannen
  * @author Marten Deinum
  */
-class WebMvcConfigurationSupportTests {
+public class WebMvcConfigurationSupportTests {
 
 	@Test
-	void requestMappingHandlerMapping() throws Exception {
+	public void requestMappingHandlerMapping() throws Exception {
 		ApplicationContext context = initContext(WebConfig.class, ScopedController.class, ScopedProxyController.class);
 		RequestMappingHandlerMapping handlerMapping = context.getBean(RequestMappingHandlerMapping.class);
 		assertThat(handlerMapping.getOrder()).isEqualTo(0);
@@ -133,7 +136,7 @@ class WebMvcConfigurationSupportTests {
 	}
 
 	@Test
-	void emptyHandlerMappings() {
+	public void emptyHandlerMappings() {
 		ApplicationContext context = initContext(WebConfig.class);
 
 		Map<String, HandlerMapping> handlerMappings = context.getBeansOfType(HandlerMapping.class);
@@ -142,17 +145,17 @@ class WebMvcConfigurationSupportTests {
 		assertThat(handlerMappings.containsKey("defaultServletHandlerMapping")).isFalse();
 
 		Object nullBean = context.getBean("viewControllerHandlerMapping");
-		assertThat(nullBean).isEqualTo(null);
+		assertThat(nullBean.equals(null)).isTrue();
 
 		nullBean = context.getBean("resourceHandlerMapping");
-		assertThat(nullBean).isEqualTo(null);
+		assertThat(nullBean.equals(null)).isTrue();
 
 		nullBean = context.getBean("defaultServletHandlerMapping");
-		assertThat(nullBean).isEqualTo(null);
+		assertThat(nullBean.equals(null)).isTrue();
 	}
 
 	@Test
-	void beanNameHandlerMapping() throws Exception {
+	public void beanNameHandlerMapping() throws Exception {
 		ApplicationContext context = initContext(WebConfig.class);
 		BeanNameUrlHandlerMapping handlerMapping = context.getBean(BeanNameUrlHandlerMapping.class);
 		assertThat(handlerMapping.getOrder()).isEqualTo(2);
@@ -163,19 +166,19 @@ class WebMvcConfigurationSupportTests {
 		assertThat(chain).isNotNull();
 		HandlerInterceptor[] interceptors = chain.getInterceptors();
 		assertThat(interceptors).isNotNull();
-		assertThat(interceptors).hasSize(3);
+		assertThat(interceptors.length).isEqualTo(3);
 		assertThat(interceptors[1].getClass()).isEqualTo(ConversionServiceExposingInterceptor.class);
 		assertThat(interceptors[2].getClass()).isEqualTo(ResourceUrlProviderExposingInterceptor.class);
 	}
 
 	@Test
-	void requestMappingHandlerAdapter() {
+	public void requestMappingHandlerAdapter() {
 		ApplicationContext context = initContext(WebConfig.class);
 		RequestMappingHandlerAdapter adapter = context.getBean(RequestMappingHandlerAdapter.class);
 		List<HttpMessageConverter<?>> converters = adapter.getMessageConverters();
-		assertThat(converters).hasSizeGreaterThanOrEqualTo(14);
+		assertThat(converters.size()).isEqualTo(12);
 		converters.stream()
-				.filter(AbstractJackson2HttpMessageConverter.class::isInstance)
+				.filter(converter -> converter instanceof AbstractJackson2HttpMessageConverter)
 				.forEach(converter -> {
 					ObjectMapper mapper = ((AbstractJackson2HttpMessageConverter) converter).getObjectMapper();
 					assertThat(mapper.getDeserializationConfig().isEnabled(DEFAULT_VIEW_INCLUSION)).isFalse();
@@ -203,13 +206,13 @@ class WebMvcConfigurationSupportTests {
 		DirectFieldAccessor fieldAccessor = new DirectFieldAccessor(adapter);
 		@SuppressWarnings("unchecked")
 		List<Object> bodyAdvice = (List<Object>) fieldAccessor.getPropertyValue("requestResponseBodyAdvice");
-		assertThat(bodyAdvice).hasSize(2);
+		assertThat(bodyAdvice.size()).isEqualTo(2);
 		assertThat(bodyAdvice.get(0).getClass()).isEqualTo(JsonViewRequestBodyAdvice.class);
 		assertThat(bodyAdvice.get(1).getClass()).isEqualTo(JsonViewResponseBodyAdvice.class);
 	}
 
 	@Test
-	void uriComponentsContributor() {
+	public void uriComponentsContributor() {
 		ApplicationContext context = initContext(WebConfig.class);
 		CompositeUriComponentsContributor uriComponentsContributor = context.getBean(
 				MvcUriComponentsBuilder.MVC_URI_COMPONENTS_CONTRIBUTOR_BEAN_NAME,
@@ -237,7 +240,7 @@ class WebMvcConfigurationSupportTests {
 
 		DirectFieldAccessor fieldAccessor = new DirectFieldAccessor(eher);
 		List<Object> interceptors = (List<Object>) fieldAccessor.getPropertyValue("responseBodyAdvice");
-		assertThat(interceptors).hasSize(1);
+		assertThat(interceptors.size()).isEqualTo(1);
 		assertThat(interceptors.get(0).getClass()).isEqualTo(JsonViewResponseBodyAdvice.class);
 
 		LocaleContextHolder.setLocale(Locale.ENGLISH);
@@ -254,66 +257,66 @@ class WebMvcConfigurationSupportTests {
 	}
 
 	@Test
-	void customArgumentResolvers() {
+	public void customArgumentResolvers() {
 		ApplicationContext context = initContext(CustomArgumentResolverConfig.class);
 		RequestMappingHandlerAdapter adapter = context.getBean(RequestMappingHandlerAdapter.class);
 		HandlerExceptionResolverComposite composite = context.getBean(HandlerExceptionResolverComposite.class);
 
 		assertThat(adapter).isNotNull();
-		assertThat(adapter.getCustomArgumentResolvers()).hasSize(1);
+		assertThat(adapter.getCustomArgumentResolvers().size()).isEqualTo(1);
 		assertThat(adapter.getCustomArgumentResolvers().get(0).getClass()).isEqualTo(TestArgumentResolver.class);
-		assertThat(adapter.getCustomReturnValueHandlers()).hasSize(1);
+		assertThat(adapter.getCustomReturnValueHandlers().size()).isEqualTo(1);
 		assertThat(adapter.getCustomReturnValueHandlers().get(0).getClass()).isEqualTo(TestReturnValueHandler.class);
 
 		assertThat(composite).isNotNull();
-		assertThat(composite.getExceptionResolvers()).hasSize(3);
+		assertThat(composite.getExceptionResolvers().size()).isEqualTo(3);
 		assertThat(composite.getExceptionResolvers().get(0).getClass()).isEqualTo(ExceptionHandlerExceptionResolver.class);
 
 		ExceptionHandlerExceptionResolver resolver =
 				(ExceptionHandlerExceptionResolver) composite.getExceptionResolvers().get(0);
 
-		assertThat(resolver.getCustomArgumentResolvers()).hasSize(1);
+		assertThat(resolver.getCustomArgumentResolvers().size()).isEqualTo(1);
 		assertThat(resolver.getCustomArgumentResolvers().get(0).getClass()).isEqualTo(TestArgumentResolver.class);
-		assertThat(resolver.getCustomReturnValueHandlers()).hasSize(1);
+		assertThat(resolver.getCustomReturnValueHandlers().size()).isEqualTo(1);
 		assertThat(resolver.getCustomReturnValueHandlers().get(0).getClass()).isEqualTo(TestReturnValueHandler.class);
 	}
 
 
 	@Test
-	void mvcViewResolver() {
+	public void mvcViewResolver() {
 		ApplicationContext context = initContext(WebConfig.class);
 		ViewResolverComposite resolver = context.getBean("mvcViewResolver", ViewResolverComposite.class);
 
 		assertThat(resolver).isNotNull();
-		assertThat(resolver.getViewResolvers()).hasSize(1);
+		assertThat(resolver.getViewResolvers().size()).isEqualTo(1);
 		assertThat(resolver.getViewResolvers().get(0).getClass()).isEqualTo(InternalResourceViewResolver.class);
 		assertThat(resolver.getOrder()).isEqualTo(Ordered.LOWEST_PRECEDENCE);
 	}
 
 	@Test
-	void mvcViewResolverWithExistingResolver() throws Exception {
+	public void mvcViewResolverWithExistingResolver() throws Exception {
 		ApplicationContext context = initContext(WebConfig.class, ViewResolverConfig.class);
 		ViewResolverComposite resolver = context.getBean("mvcViewResolver", ViewResolverComposite.class);
 
 		assertThat(resolver).isNotNull();
-		assertThat(resolver.getViewResolvers()).isEmpty();
+		assertThat(resolver.getViewResolvers().size()).isEqualTo(0);
 		assertThat(resolver.getOrder()).isEqualTo(Ordered.LOWEST_PRECEDENCE);
 		assertThat(resolver.resolveViewName("anyViewName", Locale.ENGLISH)).isNull();
 	}
 
 	@Test
-	void mvcViewResolverWithOrderSet() {
+	public void mvcViewResolverWithOrderSet() {
 		ApplicationContext context = initContext(CustomViewResolverOrderConfig.class);
 		ViewResolverComposite resolver = context.getBean("mvcViewResolver", ViewResolverComposite.class);
 
 		assertThat(resolver).isNotNull();
-		assertThat(resolver.getViewResolvers()).hasSize(1);
+		assertThat(resolver.getViewResolvers().size()).isEqualTo(1);
 		assertThat(resolver.getViewResolvers().get(0).getClass()).isEqualTo(InternalResourceViewResolver.class);
 		assertThat(resolver.getOrder()).isEqualTo(123);
 	}
 
 	@Test
-	void defaultPathMatchConfiguration() {
+	public void defaultPathMatchConfiguration() {
 		ApplicationContext context = initContext(WebConfig.class);
 		UrlPathHelper urlPathHelper = context.getBean(UrlPathHelper.class);
 		PathMatcher pathMatcher = context.getBean(PathMatcher.class);
@@ -324,7 +327,7 @@ class WebMvcConfigurationSupportTests {
 	}
 
 	@Test
-	void defaultLocaleResolverConfiguration() {
+	public void defaultLocaleResolverConfiguration() {
 		ApplicationContext context = initContext(WebConfig.class);
 		LocaleResolver localeResolver = context.getBean(LOCALE_RESOLVER_BEAN_NAME, LocaleResolver.class);
 
@@ -333,18 +336,16 @@ class WebMvcConfigurationSupportTests {
 	}
 
 	@Test
-	@SuppressWarnings("deprecation")
 	public void defaultThemeResolverConfiguration() {
 		ApplicationContext context = initContext(WebConfig.class);
-		org.springframework.web.servlet.ThemeResolver themeResolver =
-				context.getBean(THEME_RESOLVER_BEAN_NAME, org.springframework.web.servlet.ThemeResolver.class);
+		ThemeResolver themeResolver = context.getBean(THEME_RESOLVER_BEAN_NAME, ThemeResolver.class);
 
 		assertThat(themeResolver).isNotNull();
-		assertThat(themeResolver).isInstanceOf(org.springframework.web.servlet.theme.FixedThemeResolver.class);
+		assertThat(themeResolver).isInstanceOf(FixedThemeResolver.class);
 	}
 
 	@Test
-	void defaultFlashMapManagerConfiguration() {
+	public void defaultFlashMapManagerConfiguration() {
 		ApplicationContext context = initContext(WebConfig.class);
 		FlashMapManager flashMapManager = context.getBean(FLASH_MAP_MANAGER_BEAN_NAME, FlashMapManager.class);
 
@@ -353,7 +354,7 @@ class WebMvcConfigurationSupportTests {
 	}
 
 	@Test
-	void defaultRequestToViewNameConfiguration() {
+	public void defaultRequestToViewNameConfiguration() throws Exception {
 		ApplicationContext context = initContext(WebConfig.class);
 		RequestToViewNameTranslator requestToViewNameTranslator;
 		requestToViewNameTranslator = context.getBean(REQUEST_TO_VIEW_NAME_TRANSLATOR_BEAN_NAME,
@@ -436,7 +437,7 @@ class WebMvcConfigurationSupportTests {
 
 		@RequestMapping("/foo/{id}/bar/{date}")
 		public HttpEntity<Void> methodWithTwoPathVariables(@PathVariable Integer id,
-				@DateTimeFormat(iso = ISO.DATE) @PathVariable Date date) {
+				@DateTimeFormat(iso = ISO.DATE) @PathVariable DateTime date) {
 			return null;
 		}
 	}

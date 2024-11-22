@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -45,9 +45,9 @@ class DefaultServerHttpRequestBuilder implements ServerHttpRequest.Builder {
 
 	private URI uri;
 
-	private final HttpHeaders headers;
+	private HttpHeaders headers;
 
-	private HttpMethod httpMethod;
+	private String httpMethodValue;
 
 	@Nullable
 	private String uriPath;
@@ -61,7 +61,7 @@ class DefaultServerHttpRequestBuilder implements ServerHttpRequest.Builder {
 	@Nullable
 	private InetSocketAddress remoteAddress;
 
-	private final Flux<DataBuffer> body;
+	private Flux<DataBuffer> body;
 
 	private final ServerHttpRequest originalRequest;
 
@@ -70,13 +70,8 @@ class DefaultServerHttpRequestBuilder implements ServerHttpRequest.Builder {
 		Assert.notNull(original, "ServerHttpRequest is required");
 
 		this.uri = original.getURI();
-		// Some containers (including Jetty and Netty4) can have an immutable
-		// representation of headers. Since mutability is always desirable here,
-		// we always create a mutable case-insensitive copy of the original
-		// headers by using the basic constructor and addAll.
-		this.headers = new HttpHeaders();
-		this.headers.addAll(original.getHeaders());
-		this.httpMethod = original.getMethod();
+		this.headers = HttpHeaders.writableHttpHeaders(original.getHeaders());
+		this.httpMethodValue = original.getMethodValue();
 		this.contextPath = original.getPath().contextPath().value();
 		this.remoteAddress = original.getRemoteAddress();
 		this.body = original.getBody();
@@ -86,8 +81,7 @@ class DefaultServerHttpRequestBuilder implements ServerHttpRequest.Builder {
 
 	@Override
 	public ServerHttpRequest.Builder method(HttpMethod httpMethod) {
-		Assert.notNull(httpMethod, "HttpMethod must not be null");
-		this.httpMethod = httpMethod;
+		this.httpMethodValue = httpMethod.name();
 		return this;
 	}
 
@@ -138,7 +132,7 @@ class DefaultServerHttpRequestBuilder implements ServerHttpRequest.Builder {
 	@Override
 	public ServerHttpRequest build() {
 		return new MutatedServerHttpRequest(getUriToUse(), this.contextPath,
-				this.httpMethod, this.sslInfo, this.remoteAddress, this.headers, this.body, this.originalRequest);
+				this.httpMethodValue, this.sslInfo, this.remoteAddress, this.headers, this.body, this.originalRequest);
 	}
 
 	private URI getUriToUse() {
@@ -182,25 +176,34 @@ class DefaultServerHttpRequestBuilder implements ServerHttpRequest.Builder {
 
 	private static class MutatedServerHttpRequest extends AbstractServerHttpRequest {
 
+		private final String methodValue;
+
 		@Nullable
 		private final SslInfo sslInfo;
 
 		@Nullable
-		private final InetSocketAddress remoteAddress;
+		private InetSocketAddress remoteAddress;
 
 		private final Flux<DataBuffer> body;
 
 		private final ServerHttpRequest originalRequest;
 
+
 		public MutatedServerHttpRequest(URI uri, @Nullable String contextPath,
-				HttpMethod method, @Nullable SslInfo sslInfo, @Nullable InetSocketAddress remoteAddress,
+				String methodValue, @Nullable SslInfo sslInfo, @Nullable InetSocketAddress remoteAddress,
 				HttpHeaders headers, Flux<DataBuffer> body, ServerHttpRequest originalRequest) {
 
-			super(method, uri, contextPath, headers);
+			super(uri, contextPath, headers);
+			this.methodValue = methodValue;
 			this.remoteAddress = (remoteAddress != null ? remoteAddress : originalRequest.getRemoteAddress());
 			this.sslInfo = (sslInfo != null ? sslInfo : originalRequest.getSslInfo());
 			this.body = body;
 			this.originalRequest = originalRequest;
+		}
+
+		@Override
+		public String getMethodValue() {
+			return this.methodValue;
 		}
 
 		@Override
@@ -231,6 +234,7 @@ class DefaultServerHttpRequestBuilder implements ServerHttpRequest.Builder {
 			return this.body;
 		}
 
+		@SuppressWarnings("unchecked")
 		@Override
 		public <T> T getNativeRequest() {
 			return ServerHttpRequestDecorator.getNativeRequest(this.originalRequest);

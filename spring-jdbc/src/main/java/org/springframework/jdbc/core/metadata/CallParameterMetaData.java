@@ -46,6 +46,16 @@ public class CallParameterMetaData {
 
 
 	/**
+	 * Constructor taking all the properties except the function marker.
+	 */
+	@Deprecated
+	public CallParameterMetaData(
+			@Nullable String columnName, int columnType, int sqlType, @Nullable String typeName, boolean nullable) {
+
+		this(false, columnName, columnType, sqlType, typeName, nullable);
+	}
+
+	/**
 	 * Constructor taking all the properties including the function marker.
 	 * @since 5.2.9
 	 */

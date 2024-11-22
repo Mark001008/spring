@@ -28,10 +28,10 @@ import java.net.URL;
 import java.time.DayOfWeek;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
-import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -147,7 +147,7 @@ class BeanUtilsTests {
 		for (PropertyDescriptor descriptor : descriptors) {
 			if ("containedBeans".equals(descriptor.getName())) {
 				assertThat(descriptor.getPropertyType().isArray()).as("Property should be an array").isTrue();
-				assertThat(ContainedBean.class).isEqualTo(descriptor.getPropertyType().componentType());
+				assertThat(ContainedBean.class).isEqualTo(descriptor.getPropertyType().getComponentType());
 			}
 		}
 	}
@@ -238,7 +238,7 @@ class BeanUtilsTests {
 	 */
 	@Test
 	void copyPropertiesHonorsGenericTypeMatchesFromWildcardToWildcard() {
-		List<?> list = List.of("foo", 42);
+		List<?> list = Arrays.asList("foo", 42);
 		WildcardListHolder1 wildcardListHolder1 = new WildcardListHolder1();
 		wildcardListHolder1.setList(list);
 		WildcardListHolder2 wildcardListHolder2 = new WildcardListHolder2();
@@ -260,7 +260,7 @@ class BeanUtilsTests {
 
 		BeanUtils.copyProperties(integerListHolder1, wildcardListHolder2);
 		assertThat(integerListHolder1.getList()).containsExactly(42);
-		assertThat(wildcardListHolder2.getList()).isEqualTo(List.of(42));
+		assertThat(wildcardListHolder2.getList()).isEqualTo(Arrays.asList(42));
 	}
 
 	/**
@@ -274,7 +274,7 @@ class BeanUtilsTests {
 
 		BeanUtils.copyProperties(integerListHolder1, numberListHolder);
 		assertThat(integerListHolder1.getList()).containsExactly(42);
-		assertThat(numberListHolder.getList()).isEqualTo(List.of(42));
+		assertThat(numberListHolder.getList()).isEqualTo(Arrays.asList(42));
 	}
 
 	/**
@@ -321,7 +321,7 @@ class BeanUtilsTests {
 
 	@Test  // gh-26531
 	void copyPropertiesIgnoresGenericsIfSourceOrTargetHasUnresolvableGenerics() throws Exception {
-		Order original = new Order("test", List.of("foo", "bar"));
+		Order original = new Order("test", Arrays.asList("foo", "bar"));
 
 		// Create a Proxy that loses the generic type information for the getLineItems() method.
 		OrderSummary proxy = (OrderSummary) Proxy.newProxyInstance(getClass().getClassLoader(),
@@ -474,8 +474,8 @@ class BeanUtilsTests {
 		assertSignatureEquals(desiredMethod, "doSomethingWithAMultiDimensionalArray(java.lang.String[][])");
 	}
 
-	@Test  // gh-10731
-	void propertyDescriptorShouldMatchWithCachedDescriptors() {
+	@Test
+	void spr6063() {
 		PropertyDescriptor[] descrs = BeanUtils.getPropertyDescriptors(Bean.class);
 
 		PropertyDescriptor keyDescr = BeanUtils.getPropertyDescriptor(Bean.class, "value");
@@ -491,8 +491,7 @@ class BeanUtilsTests {
 	@ValueSource(classes = {
 		boolean.class, char.class, byte.class, short.class, int.class, long.class, float.class, double.class,
 		Boolean.class, Character.class, Byte.class, Short.class, Integer.class, Long.class, Float.class, Double.class,
-		DayOfWeek.class, String.class, LocalDateTime.class, Date.class, UUID.class, URI.class, URL.class,
-		Locale.class, Class.class
+		DayOfWeek.class, String.class, LocalDateTime.class, Date.class, URI.class, URL.class, Locale.class, Class.class
 	})
 	void isSimpleValueType(Class<?> type) {
 		assertThat(BeanUtils.isSimpleValueType(type)).as("Type [" + type.getName() + "] should be a simple value type").isTrue();
@@ -508,8 +507,8 @@ class BeanUtilsTests {
 	@ValueSource(classes = {
 		boolean.class, char.class, byte.class, short.class, int.class, long.class, float.class, double.class,
 		Boolean.class, Character.class, Byte.class, Short.class, Integer.class, Long.class, Float.class, Double.class,
-		DayOfWeek.class, String.class, LocalDateTime.class, Date.class, UUID.class, URI.class, URL.class,
-		Locale.class, Class.class, boolean[].class, Boolean[].class, LocalDateTime[].class, Date[].class
+		DayOfWeek.class, String.class, LocalDateTime.class, Date.class, URI.class, URL.class, Locale.class, Class.class,
+		boolean[].class, Boolean[].class, LocalDateTime[].class, Date[].class
 	})
 	void isSimpleProperty(Class<?> type) {
 		assertThat(BeanUtils.isSimpleProperty(type)).as("Type [" + type.getName() + "] should be a simple property").isTrue();
@@ -521,36 +520,10 @@ class BeanUtilsTests {
 		assertThat(BeanUtils.isSimpleProperty(type)).as("Type [" + type.getName() + "] should not be a simple property").isFalse();
 	}
 
-	@Test
-	void resolveMultipleRecordPublicConstructor() throws NoSuchMethodException {
-		assertThat(BeanUtils.getResolvableConstructor(RecordWithMultiplePublicConstructors.class))
-				.isEqualTo(RecordWithMultiplePublicConstructors.class.getDeclaredConstructor(String.class, String.class));
-	}
-
-	@Test
-	void resolveMultipleRecordePackagePrivateConstructor() throws NoSuchMethodException {
-		assertThat(BeanUtils.getResolvableConstructor(RecordWithMultiplePackagePrivateConstructors.class))
-				.isEqualTo(RecordWithMultiplePackagePrivateConstructors.class.getDeclaredConstructor(String.class, String.class));
-	}
-
 	private void assertSignatureEquals(Method desiredMethod, String signature) {
 		assertThat(BeanUtils.resolveSignature(signature, MethodSignatureBean.class)).isEqualTo(desiredMethod);
 	}
 
-
-	public record RecordWithMultiplePublicConstructors(String value, String name) {
-		@SuppressWarnings("unused")
-		public RecordWithMultiplePublicConstructors(String value) {
-			this(value, "default value");
-		}
-	}
-
-	record RecordWithMultiplePackagePrivateConstructors(String value, String name) {
-		@SuppressWarnings("unused")
-		RecordWithMultiplePackagePrivateConstructors(String value) {
-			this(value, "default value");
-		}
-	}
 
 	@SuppressWarnings("unused")
 	private static class NumberHolder {

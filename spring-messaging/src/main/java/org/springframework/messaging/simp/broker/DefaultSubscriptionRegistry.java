@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -41,7 +41,6 @@ import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageHeaders;
 import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.messaging.support.MessageHeaderAccessor;
-import org.springframework.messaging.support.NativeMessageHeaderAccessor;
 import org.springframework.util.AntPathMatcher;
 import org.springframework.util.Assert;
 import org.springframework.util.LinkedMultiValueMap;
@@ -54,16 +53,13 @@ import org.springframework.util.StringUtils;
  * in memory and uses a {@link org.springframework.util.PathMatcher PathMatcher}
  * for matching destinations.
  *
- * <p>This class also supports an optional <em>selector</em> header on subscription
- * messages with Spring Expression Language (SpEL) expressions evaluated against
- * the headers to filter out messages in addition to destination matching. As of
- * Spring Framework 6.1, the SpEL support is disabled by default, but it can be
- * enabled by setting a {@linkplain #setSelectorHeaderName selector header name}.
+ * <p>As of 4.2, this class supports a {@link #setSelectorHeaderName selector}
+ * header on subscription messages with Spring EL expressions evaluated against
+ * the headers to filter out messages in addition to destination matching.
  *
  * @author Rossen Stoyanchev
  * @author Sebastien Deleuze
  * @author Juergen Hoeller
- * @author Sam Brannen
  * @since 4.0
  */
 public class DefaultSubscriptionRegistry extends AbstractSubscriptionRegistry {
@@ -81,7 +77,7 @@ public class DefaultSubscriptionRegistry extends AbstractSubscriptionRegistry {
 	private int cacheLimit = DEFAULT_CACHE_LIMIT;
 
 	@Nullable
-	private String selectorHeaderName;
+	private String selectorHeaderName = "selector";
 
 	private volatile boolean selectorHeaderInUse;
 
@@ -124,19 +120,16 @@ public class DefaultSubscriptionRegistry extends AbstractSubscriptionRegistry {
 
 	/**
 	 * Configure the name of a header that a subscription message can have for
-	 * the purpose of filtering messages matched to the subscription.
-	 * <p>The header value is expected to be a Spring Expression Language (SpEL)
-	 * boolean expression to be applied to the headers of messages matched to the
-	 * subscription.
+	 * the purpose of filtering messages matched to the subscription. The header
+	 * value is expected to be a Spring EL boolean expression to be applied to
+	 * the headers of messages matched to the subscription.
 	 * <p>For example:
-	 * <pre style="code">
+	 * <pre>
 	 * headers.foo == 'bar'
 	 * </pre>
-	 * <p>By default the selector header name is set to {@code null} which disables
-	 * this feature. You can set it to {@code "selector"} or a different name to
-	 * enable support for a selector header.
-	 * @param selectorHeaderName the name to use for a selector header, or {@code null}
-	 * or blank to disable selector header support
+	 * <p>By default this is set to "selector". You can set it to a different
+	 * name, or to {@code null} to turn off support for a selector header.
+	 * @param selectorHeaderName the name to use for a selector header
 	 * @since 4.2
 	 */
 	public void setSelectorHeaderName(@Nullable String selectorHeaderName) {
@@ -144,9 +137,8 @@ public class DefaultSubscriptionRegistry extends AbstractSubscriptionRegistry {
 	}
 
 	/**
-	 * Return the name of the selector header.
+	 * Return the name for the selector header name.
 	 * @since 4.2
-	 * @see #setSelectorHeaderName(String)
 	 */
 	@Nullable
 	public String getSelectorHeaderName() {
@@ -170,7 +162,7 @@ public class DefaultSubscriptionRegistry extends AbstractSubscriptionRegistry {
 		if (getSelectorHeaderName() == null) {
 			return null;
 		}
-		String selector = NativeMessageHeaderAccessor.getFirstNativeHeader(getSelectorHeaderName(), headers);
+		String selector = SimpMessageHeaderAccessor.getFirstNativeHeader(getSelectorHeaderName(), headers);
 		if (selector == null) {
 			return null;
 		}
@@ -305,9 +297,6 @@ public class DefaultSubscriptionRegistry extends AbstractSubscriptionRegistry {
 					return Collections.singletonList(subscriptionId);
 				}
 				else {
-					if (subscriptionIds.contains(subscriptionId)) {
-						return subscriptionIds;
-					}
 					List<String> result = new ArrayList<>(subscriptionIds.size() + 1);
 					result.addAll(subscriptionIds);
 					result.add(subscriptionId);
@@ -485,7 +474,8 @@ public class DefaultSubscriptionRegistry extends AbstractSubscriptionRegistry {
 
 		@Override
 		public boolean equals(@Nullable Object other) {
-			return (this == other || (other instanceof Subscription that && this.id.equals(that.id)));
+			return (this == other ||
+					(other instanceof Subscription && this.id.equals(((Subscription) other).id)));
 		}
 
 		@Override
@@ -516,10 +506,11 @@ public class DefaultSubscriptionRegistry extends AbstractSubscriptionRegistry {
 		@SuppressWarnings("rawtypes")
 		public TypedValue read(EvaluationContext context, @Nullable Object target, String name) {
 			Object value;
-			if (target instanceof Message message) {
-				value = name.equals("headers") ? message.getHeaders() : null;
+			if (target instanceof Message) {
+				value = name.equals("headers") ? ((Message) target).getHeaders() : null;
 			}
-			else if (target instanceof MessageHeaders headers) {
+			else if (target instanceof MessageHeaders) {
+				MessageHeaders headers = (MessageHeaders) target;
 				SimpMessageHeaderAccessor accessor =
 						MessageHeaderAccessor.getAccessor(headers, SimpMessageHeaderAccessor.class);
 				Assert.state(accessor != null, "No SimpMessageHeaderAccessor");

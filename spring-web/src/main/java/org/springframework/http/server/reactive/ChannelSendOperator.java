@@ -99,7 +99,7 @@ public class ChannelSendOperator<T> extends Mono<Void> implements Scannable {
 		 * The write subscriber has subscribed, and cached signals have been
 		 * emitted to it; we're ready to switch to a simple pass-through mode
 		 * for all remaining signals.
-		 */
+		 **/
 		READY_TO_WRITE
 
 	}
@@ -301,10 +301,9 @@ public class ChannelSendOperator<T> extends Mono<Void> implements Scannable {
 		}
 
 		private boolean emitCachedSignals() {
-			Throwable error = this.error;
-			if (error != null) {
+			if (this.error != null) {
 				try {
-					requiredWriteSubscriber().onError(error);
+					requiredWriteSubscriber().onError(this.error);
 				}
 				finally {
 					releaseCachedItem();
@@ -340,8 +339,8 @@ public class ChannelSendOperator<T> extends Mono<Void> implements Scannable {
 		private void releaseCachedItem() {
 			synchronized (this) {
 				Object item = this.item;
-				if (item instanceof DataBuffer dataBuffer) {
-					DataBufferUtils.release(dataBuffer);
+				if (item instanceof DataBuffer) {
+					DataBufferUtils.release((DataBuffer) item);
 				}
 				this.item = null;
 			}

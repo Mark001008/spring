@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,8 @@
 
 package org.springframework.web.context.request;
 
-import jakarta.servlet.ServletRequestEvent;
+import javax.servlet.ServletRequestEvent;
+
 import org.junit.jupiter.api.Test;
 
 import org.springframework.core.task.MockRunnable;
@@ -28,10 +29,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * @author Juergen Hoeller
  */
-class RequestContextListenerTests {
+public class RequestContextListenerTests {
 
 	@Test
-	void requestContextListenerWithSameThread() {
+	public void requestContextListenerWithSameThread() {
 		RequestContextListener listener = new RequestContextListener();
 		MockServletContext context = new MockServletContext();
 		MockHttpServletRequest request = new MockHttpServletRequest(context);
@@ -51,7 +52,7 @@ class RequestContextListenerTests {
 	}
 
 	@Test
-	void requestContextListenerWithSameThreadAndAttributesGone() {
+	public void requestContextListenerWithSameThreadAndAttributesGone() {
 		RequestContextListener listener = new RequestContextListener();
 		MockServletContext context = new MockServletContext();
 		MockHttpServletRequest request = new MockHttpServletRequest(context);
@@ -72,7 +73,7 @@ class RequestContextListenerTests {
 	}
 
 	@Test
-	void requestContextListenerWithDifferentThread() {
+	public void requestContextListenerWithDifferentThread() {
 		final RequestContextListener listener = new RequestContextListener();
 		final MockServletContext context = new MockServletContext();
 		final MockHttpServletRequest request = new MockHttpServletRequest(context);
@@ -87,8 +88,12 @@ class RequestContextListenerTests {
 				"test", runnable, RequestAttributes.SCOPE_REQUEST);
 
 		// Execute requestDestroyed callback in different thread.
-		Thread thread = new Thread(() -> listener.requestDestroyed(
-				new ServletRequestEvent(context, request)));
+		Thread thread = new Thread() {
+			@Override
+			public void run() {
+				listener.requestDestroyed(new ServletRequestEvent(context, request));
+			}
+		};
 		thread.start();
 		try {
 			thread.join();

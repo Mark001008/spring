@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,7 +34,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author Chris Beams
  * @since 06.04.2004
  */
-class ConcurrencyThrottleInterceptorTests {
+public class ConcurrencyThrottleInterceptorTests {
 
 	protected static final Log logger = LogFactory.getLog(ConcurrencyThrottleInterceptorTests.class);
 
@@ -44,7 +44,7 @@ class ConcurrencyThrottleInterceptorTests {
 
 
 	@Test
-	void testSerializable() throws Exception {
+	public void testSerializable() throws Exception {
 		DerivedTestBean tb = new DerivedTestBean();
 		ProxyFactory proxyFactory = new ProxyFactory();
 		proxyFactory.setInterfaces(ITestBean.class);
@@ -63,12 +63,12 @@ class ConcurrencyThrottleInterceptorTests {
 	}
 
 	@Test
-	void testMultipleThreadsWithLimit1() {
+	public void testMultipleThreadsWithLimit1() {
 		testMultipleThreads(1);
 	}
 
 	@Test
-	void testMultipleThreadsWithLimit10() {
+	public void testMultipleThreadsWithLimit10() {
 		testMultipleThreads(10);
 	}
 
@@ -95,7 +95,7 @@ class ConcurrencyThrottleInterceptorTests {
 				ex.printStackTrace();
 			}
 			threads[i] = new ConcurrencyThread(proxy,
-					(i % 2 == 0 ? new OutOfMemoryError() : new IllegalStateException()));
+					i % 2 == 0 ? new OutOfMemoryError() : new IllegalStateException());
 			threads[i].start();
 		}
 		for (int i = 0; i < NR_OF_THREADS; i++) {
@@ -111,8 +111,8 @@ class ConcurrencyThrottleInterceptorTests {
 
 	private static class ConcurrencyThread extends Thread {
 
-		private final ITestBean proxy;
-		private final Throwable ex;
+		private ITestBean proxy;
+		private Throwable ex;
 
 		public ConcurrencyThread(ITestBean proxy, Throwable ex) {
 			this.proxy = proxy;

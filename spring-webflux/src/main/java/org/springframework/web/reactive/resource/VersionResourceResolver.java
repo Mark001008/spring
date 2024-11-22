@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2023 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,7 +22,6 @@ import java.io.InputStream;
 import java.net.URI;
 import java.net.URL;
 import java.nio.channels.ReadableByteChannel;
-import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -43,7 +42,7 @@ import org.springframework.web.server.ServerWebExchange;
 /**
  * Resolves request paths containing a version string that can be used as part
  * of an HTTP caching strategy in which a resource is cached with a date in the
- * distant future (for example, 1 year) and cached until the version, and therefore the
+ * distant future (e.g. 1 year) and cached until the version, and therefore the
  * URL, is changed.
  *
  * <p>Different versioning strategies exist, and this resolver must be configured
@@ -93,7 +92,7 @@ public class VersionResourceResolver extends AbstractResourceResolver {
 
 	/**
 	 * Insert a content-based version in resource URLs that match the given path
-	 * patterns. The version is computed from the content of the file, for example,
+	 * patterns. The version is computed from the content of the file, e.g.
 	 * {@code "css/main-e36d2e05253c6c7085a91522ce43a0b4.css"}. This is a good
 	 * default strategy to use except when it cannot be, for example when using
 	 * JavaScript module loaders, use {@link #addFixedVersionStrategy} instead
@@ -114,7 +113,7 @@ public class VersionResourceResolver extends AbstractResourceResolver {
 	 * content-based versions) when using JavaScript module loaders.
 	 * <p>The version may be a random number, the current date, or a value
 	 * fetched from a git commit sha, a property file, or environment variable
-	 * and set with SpEL expressions in the configuration (for example, see {@code @Value}
+	 * and set with SpEL expressions in the configuration (e.g. see {@code @Value}
 	 * in Java config).
 	 * <p>If not done already, variants of the given {@code pathPatterns}, prefixed with
 	 * the {@code version} will be also configured. For example, adding a {@code "/js/**"} path pattern
@@ -295,16 +294,6 @@ public class VersionResourceResolver extends AbstractResourceResolver {
 		}
 
 		@Override
-		public byte[] getContentAsByteArray() throws IOException {
-			return this.original.getContentAsByteArray();
-		}
-
-		@Override
-		public String getContentAsString(Charset charset) throws IOException {
-			return this.original.getContentAsString(charset);
-		}
-
-		@Override
 		public long contentLength() throws IOException {
 			return this.original.contentLength();
 		}
@@ -332,7 +321,8 @@ public class VersionResourceResolver extends AbstractResourceResolver {
 
 		@Override
 		public HttpHeaders getResponseHeaders() {
-			HttpHeaders headers = (this.original instanceof HttpResource hr ? hr.getResponseHeaders() : new HttpHeaders());
+			HttpHeaders headers = (this.original instanceof HttpResource ?
+					((HttpResource) this.original).getResponseHeaders() : new HttpHeaders());
 			headers.setETag("W/\"" + this.version + "\"");
 			return headers;
 		}

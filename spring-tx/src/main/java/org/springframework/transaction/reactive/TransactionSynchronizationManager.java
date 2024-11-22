@@ -39,7 +39,7 @@ import org.springframework.util.Assert;
  * to be removed before a new one can be set for the same key.
  * Supports a list of transaction synchronizations if synchronization is active.
  *
- * <p>Resource management code should check for context-bound resources, for example,
+ * <p>Resource management code should check for context-bound resources, e.g.
  * database connections, via {@code getResource}. Such code is normally not
  * supposed to bind resources to units of work, as this is the responsibility
  * of transaction managers. A further option is to lazily bind on first use if
@@ -58,7 +58,7 @@ import org.springframework.util.Assert;
  * doesn't support transaction synchronization.
  *
  * <p>Synchronization is for example used to always return the same resources within
- * a transaction, for example, a database connection for any given connection factory.
+ * a transaction, e.g. a database connection for any given connection factory.
  *
  * @author Mark Paluch
  * @author Juergen Hoeller
@@ -358,10 +358,10 @@ public class TransactionSynchronizationManager {
 	 * Return whether there currently is an actual transaction active.
 	 * This indicates whether the current context is associated with an actual
 	 * transaction rather than just with active transaction synchronization.
-	 * <p>To be called by resource management code that wants to differentiate
-	 * between active transaction synchronization (with or without a backing
+	 * <p>To be called by resource management code that wants to discriminate
+	 * between active transaction synchronization (with or without backing
 	 * resource transaction; also on PROPAGATION_SUPPORTS) and an actual
-	 * transaction being active (with a backing resource transaction;
+	 * transaction being active (with backing resource transaction;
 	 * on PROPAGATION_REQUIRED, PROPAGATION_REQUIRES_NEW, etc).
 	 * @see #isSynchronizationActive()
 	 */

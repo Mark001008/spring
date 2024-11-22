@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2021 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,9 +22,6 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-import org.springframework.aot.hint.annotation.Reflective;
-import org.springframework.core.annotation.AliasFor;
-
 /**
  * Annotation for handling exceptions in specific handler classes and/or
  * handler methods.
@@ -40,9 +37,9 @@ import org.springframework.core.annotation.AliasFor;
  * cause within a wrapper exception. As of 5.3, any cause level is being
  * exposed, whereas previously only an immediate cause was considered.
  * <li>Request and/or response objects (typically from the Servlet API).
- * You may choose any specific request/response type, for example,
- * {@link jakarta.servlet.ServletRequest} / {@link jakarta.servlet.http.HttpServletRequest}.
- * <li>Session object: typically {@link jakarta.servlet.http.HttpSession}.
+ * You may choose any specific request/response type, e.g.
+ * {@link javax.servlet.ServletRequest} / {@link javax.servlet.http.HttpServletRequest}.
+ * <li>Session object: typically {@link javax.servlet.http.HttpSession}.
  * An argument of this type will enforce the presence of a corresponding session.
  * As a consequence, such an argument will never be {@code null}.
  * <i>Note that session access may not be thread-safe, in particular in a
@@ -91,7 +88,7 @@ import org.springframework.core.annotation.AliasFor;
  * {@linkplain org.springframework.http.converter.HttpMessageConverter message converters}.
  * <li>{@code void} if the method handles the response itself (by
  * writing the response content directly, declaring an argument of type
- * {@link jakarta.servlet.ServletResponse} / {@link jakarta.servlet.http.HttpServletResponse}
+ * {@link javax.servlet.ServletResponse} / {@link javax.servlet.http.HttpServletResponse}
  * for that purpose) or if the view name is supposed to be implicitly determined
  * through a {@link org.springframework.web.servlet.RequestToViewNameTranslator}
  * (not declaring a response argument in the handler method signature).
@@ -102,7 +99,6 @@ import org.springframework.core.annotation.AliasFor;
  *
  * @author Arjen Poutsma
  * @author Juergen Hoeller
- * @author Brian Clozel
  * @since 3.0
  * @see ControllerAdvice
  * @see org.springframework.web.context.request.WebRequest
@@ -110,28 +106,12 @@ import org.springframework.core.annotation.AliasFor;
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
-@Reflective(ExceptionHandlerReflectiveProcessor.class)
 public @interface ExceptionHandler {
-
-	/**
-	 * Exceptions handled by the annotated method.
-	 * <p>This is an alias for {@link #exception}.
-	 */
-	@AliasFor("exception")
-	Class<? extends Throwable>[] value() default {};
 
 	/**
 	 * Exceptions handled by the annotated method. If empty, will default to any
 	 * exceptions listed in the method argument list.
-	 * @since 6.2
 	 */
-	@AliasFor("value")
-	Class<? extends Throwable>[] exception() default {};
-
-	/**
-	 * Media Types that can be produced by the annotated method.
-	 * @since 6.2
-	 */
-	String[] produces() default {};
+	Class<? extends Throwable>[] value() default {};
 
 }

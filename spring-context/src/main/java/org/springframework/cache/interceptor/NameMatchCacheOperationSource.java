@@ -52,7 +52,7 @@ public class NameMatchCacheOperationSource implements CacheOperationSource, Seri
 
 	/**
 	 * Set a name/attribute map, consisting of method names
-	 * (for example, "myMethod") and CacheOperation instances
+	 * (e.g. "myMethod") and CacheOperation instances
 	 * (or Strings to be converted to CacheOperation instances).
 	 * @see CacheOperation
 	 */
@@ -111,8 +111,14 @@ public class NameMatchCacheOperationSource implements CacheOperationSource, Seri
 
 	@Override
 	public boolean equals(@Nullable Object other) {
-		return (this == other || (other instanceof NameMatchCacheOperationSource otherCos &&
-				ObjectUtils.nullSafeEquals(this.nameMap, otherCos.nameMap)));
+		if (this == other) {
+			return true;
+		}
+		if (!(other instanceof NameMatchCacheOperationSource)) {
+			return false;
+		}
+		NameMatchCacheOperationSource otherCos = (NameMatchCacheOperationSource) other;
+		return ObjectUtils.nullSafeEquals(this.nameMap, otherCos.nameMap);
 	}
 
 	@Override

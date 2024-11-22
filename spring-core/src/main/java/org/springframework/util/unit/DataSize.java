@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,8 +25,9 @@ import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 
 /**
- * A data size, such as '12MB'. This class models data size in terms of
- * bytes and is immutable and thread-safe.
+ * A data size, such as '12MB'.
+ *
+ * <p>This class models data size in terms of bytes and is immutable and thread-safe.
  *
  * <p>The terms and units used in this class are based on
  * <a href="https://en.wikipedia.org/wiki/Binary_prefix">binary prefixes</a>
@@ -83,7 +84,7 @@ public final class DataSize implements Comparable<DataSize>, Serializable {
 	/**
 	 * Obtain a {@link DataSize} representing the specified number of bytes.
 	 * @param bytes the number of bytes, positive or negative
-	 * @return a {@code DataSize}
+	 * @return a {@link DataSize}
 	 */
 	public static DataSize ofBytes(long bytes) {
 		return new DataSize(bytes);
@@ -92,7 +93,7 @@ public final class DataSize implements Comparable<DataSize>, Serializable {
 	/**
 	 * Obtain a {@link DataSize} representing the specified number of kilobytes.
 	 * @param kilobytes the number of kilobytes, positive or negative
-	 * @return a {@code DataSize}
+	 * @return a {@link DataSize}
 	 */
 	public static DataSize ofKilobytes(long kilobytes) {
 		return new DataSize(Math.multiplyExact(kilobytes, BYTES_PER_KB));
@@ -101,7 +102,7 @@ public final class DataSize implements Comparable<DataSize>, Serializable {
 	/**
 	 * Obtain a {@link DataSize} representing the specified number of megabytes.
 	 * @param megabytes the number of megabytes, positive or negative
-	 * @return a {@code DataSize}
+	 * @return a {@link DataSize}
 	 */
 	public static DataSize ofMegabytes(long megabytes) {
 		return new DataSize(Math.multiplyExact(megabytes, BYTES_PER_MB));
@@ -110,7 +111,7 @@ public final class DataSize implements Comparable<DataSize>, Serializable {
 	/**
 	 * Obtain a {@link DataSize} representing the specified number of gigabytes.
 	 * @param gigabytes the number of gigabytes, positive or negative
-	 * @return a {@code DataSize}
+	 * @return a {@link DataSize}
 	 */
 	public static DataSize ofGigabytes(long gigabytes) {
 		return new DataSize(Math.multiplyExact(gigabytes, BYTES_PER_GB));
@@ -119,7 +120,7 @@ public final class DataSize implements Comparable<DataSize>, Serializable {
 	/**
 	 * Obtain a {@link DataSize} representing the specified number of terabytes.
 	 * @param terabytes the number of terabytes, positive or negative
-	 * @return a {@code DataSize}
+	 * @return a {@link DataSize}
 	 */
 	public static DataSize ofTerabytes(long terabytes) {
 		return new DataSize(Math.multiplyExact(terabytes, BYTES_PER_TB));
@@ -129,7 +130,7 @@ public final class DataSize implements Comparable<DataSize>, Serializable {
 	 * Obtain a {@link DataSize} representing an amount in the specified {@link DataUnit}.
 	 * @param amount the amount of the size, measured in terms of the unit,
 	 * positive or negative
-	 * @return a corresponding {@code DataSize}
+	 * @return a corresponding {@link DataSize}
 	 */
 	public static DataSize of(long amount, DataUnit unit) {
 		Assert.notNull(unit, "Unit must not be null");
@@ -139,14 +140,15 @@ public final class DataSize implements Comparable<DataSize>, Serializable {
 	/**
 	 * Obtain a {@link DataSize} from a text string such as {@code 12MB} using
 	 * {@link DataUnit#BYTES} if no unit is specified.
-	 * <p>Examples:
+	 * <p>
+	 * Examples:
 	 * <pre>
 	 * "12KB" -- parses as "12 kilobytes"
 	 * "5MB"  -- parses as "5 megabytes"
 	 * "20"   -- parses as "20 bytes"
 	 * </pre>
 	 * @param text the text to parse
-	 * @return the parsed {@code DataSize}
+	 * @return the parsed {@link DataSize}
 	 * @see #parse(CharSequence, DataUnit)
 	 */
 	public static DataSize parse(CharSequence text) {
@@ -156,29 +158,26 @@ public final class DataSize implements Comparable<DataSize>, Serializable {
 	/**
 	 * Obtain a {@link DataSize} from a text string such as {@code 12MB} using
 	 * the specified default {@link DataUnit} if no unit is specified.
-	 * <p>The string starts with a number followed optionally by a unit matching
-	 * one of the supported {@linkplain DataUnit suffixes}.
-	 * <p>If neither a unit nor a default {@code DataUnit} is specified,
-	 * {@link DataUnit#BYTES} will be inferred.
-	 * <p>Examples:
+	 * <p>
+	 * The string starts with a number followed optionally by a unit matching one of the
+	 * supported {@linkplain DataUnit suffixes}.
+	 * <p>
+	 * Examples:
 	 * <pre>
 	 * "12KB" -- parses as "12 kilobytes"
 	 * "5MB"  -- parses as "5 megabytes"
 	 * "20"   -- parses as "20 kilobytes" (where the {@code defaultUnit} is {@link DataUnit#KILOBYTES})
-	 * "20"   -- parses as "20 bytes" (if the {@code defaultUnit} is {@code null})
 	 * </pre>
 	 * @param text the text to parse
-	 * @param defaultUnit the default {@code DataUnit} to use
-	 * @return the parsed {@code DataSize}
+	 * @return the parsed {@link DataSize}
 	 */
 	public static DataSize parse(CharSequence text, @Nullable DataUnit defaultUnit) {
 		Assert.notNull(text, "Text must not be null");
 		try {
-			CharSequence trimmedText = StringUtils.trimAllWhitespace(text);
-			Matcher matcher = DataSizeUtils.PATTERN.matcher(trimmedText);
-			Assert.state(matcher.matches(), () -> "'" + text + "' does not match data size pattern");
+			Matcher matcher = DataSizeUtils.PATTERN.matcher(StringUtils.trimAllWhitespace(text));
+			Assert.state(matcher.matches(), "Does not match data size pattern");
 			DataUnit unit = DataSizeUtils.determineDataUnit(matcher.group(2), defaultUnit);
-			long amount = Long.parseLong(trimmedText, matcher.start(1), matcher.end(1), 10);
+			long amount = Long.parseLong(matcher.group(1));
 			return DataSize.of(amount, unit);
 		}
 		catch (Exception ex) {
@@ -253,8 +252,8 @@ public final class DataSize implements Comparable<DataSize>, Serializable {
 		if (other == null || getClass() != other.getClass()) {
 			return false;
 		}
-		DataSize that = (DataSize) other;
-		return (this.bytes == that.bytes);
+		DataSize otherSize = (DataSize) other;
+		return (this.bytes == otherSize.bytes);
 	}
 
 	@Override
@@ -278,6 +277,7 @@ public final class DataSize implements Comparable<DataSize>, Serializable {
 			DataUnit defaultUnitToUse = (defaultUnit != null ? defaultUnit : DataUnit.BYTES);
 			return (StringUtils.hasLength(suffix) ? DataUnit.fromSuffix(suffix) : defaultUnitToUse);
 		}
+
 	}
 
 }

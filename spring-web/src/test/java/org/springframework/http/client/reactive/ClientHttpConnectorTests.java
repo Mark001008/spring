@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2023 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,15 +23,11 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
-import java.time.Duration;
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Random;
-import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.function.Consumer;
 
@@ -61,16 +57,14 @@ import static org.assertj.core.api.Assertions.fail;
 import static org.junit.jupiter.api.Named.named;
 
 /**
- * Tests for {@link ClientHttpConnector} implementations.
  * @author Arjen Poutsma
- * @author Brian Clozel
  */
-class ClientHttpConnectorTests {
+public class ClientHttpConnectorTests {
 
 	private static final int BUF_SIZE = 1024;
 
-	private static final Set<HttpMethod> METHODS_WITH_BODY =
-			Set.of(HttpMethod.PUT, HttpMethod.POST, HttpMethod.PATCH);
+	private static final EnumSet<HttpMethod> METHODS_WITH_BODY =
+			EnumSet.of(HttpMethod.PUT, HttpMethod.POST, HttpMethod.PATCH);
 
 	private final MockWebServer server = new MockWebServer();
 
@@ -178,26 +172,6 @@ class ClientHttpConnectorTests {
 				.verify();
 	}
 
-	@ParameterizedConnectorTest
-	void cookieExpireValueSetAsMaxAge(ClientHttpConnector connector) {
-		ZonedDateTime tomorrow = ZonedDateTime.now(ZoneId.of("UTC")).plusDays(1);
-		String formattedDate = tomorrow.format(DateTimeFormatter.RFC_1123_DATE_TIME);
-
-		prepareResponse(response -> {
-			response.setResponseCode(200);
-			response.addHeader("Set-Cookie", "id=test; Expires= " + formattedDate + ";");
-		});
-		Mono<ClientHttpResponse> futureResponse =
-				connector.connect(HttpMethod.GET, this.server.url("/").uri(), ReactiveHttpOutputMessage::setComplete);
-		StepVerifier.create(futureResponse)
-				.assertNext(response -> {
-							assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-							assertThat(response.getCookies().getFirst("id").getMaxAge()).isCloseTo(Duration.ofDays(1), Duration.ofSeconds(10));
-						}
-				)
-				.verifyComplete();
-	}
-
 	private Buffer randomBody(int size) {
 		Buffer responseBody = new Buffer();
 		Random rnd = new Random();
@@ -237,8 +211,7 @@ class ClientHttpConnectorTests {
 		return Arrays.asList(
 				named("Reactor Netty", new ReactorClientHttpConnector()),
 				named("Jetty", new JettyClientHttpConnector()),
-				named("HttpComponents", new HttpComponentsClientHttpConnector()),
-				named("Jdk", new JdkClientHttpConnector())
+				named("HttpComponents", new HttpComponentsClientHttpConnector())
 		);
 	}
 

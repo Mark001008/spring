@@ -100,7 +100,7 @@ public interface ScriptFactory {
 			throws IOException, ScriptCompilationException;
 
 	/**
-	 * Determine whether a refresh is required (for example, through
+	 * Determine whether a refresh is required (e.g. through
 	 * ScriptSource's {@code isModified()} method).
 	 * @param scriptSource the actual ScriptSource to retrieve
 	 * the script source text from (never {@code null})

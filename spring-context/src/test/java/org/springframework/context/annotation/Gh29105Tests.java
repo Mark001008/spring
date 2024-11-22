@@ -16,7 +16,8 @@
 
 package org.springframework.context.annotation;
 
-import java.util.stream.Stream;
+import java.util.List;
+import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.Test;
 
@@ -33,19 +34,20 @@ class Gh29105Tests {
 
 	@Test
 	void beanProviderWithParentContextReuseOrder() {
-		AnnotationConfigApplicationContext parent =
-				new AnnotationConfigApplicationContext(DefaultConfiguration.class, CustomConfiguration.class);
+		AnnotationConfigApplicationContext parent = new AnnotationConfigApplicationContext();
+		parent.register(DefaultConfiguration.class);
+		parent.register(CustomConfiguration.class);
+		parent.refresh();
 
 		AnnotationConfigApplicationContext child = new AnnotationConfigApplicationContext();
 		child.setParent(parent);
 		child.register(DefaultConfiguration.class);
 		child.refresh();
 
-		Stream<Class<?>> orderedTypes = child.getBeanProvider(MyService.class).orderedStream().map(Object::getClass);
+		List<Class<?>> orderedTypes = child.getBeanProvider(MyService.class)
+				.orderedStream().map(Object::getClass).collect(Collectors.toList());
 		assertThat(orderedTypes).containsExactly(CustomService.class, DefaultService.class);
-
 		child.close();
-		parent.close();
 	}
 
 

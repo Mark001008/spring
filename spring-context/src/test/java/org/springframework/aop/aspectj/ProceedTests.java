@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -74,9 +74,8 @@ class ProceedTests {
 	@Test
 	void testProceedWithArgsInSameAspect() {
 		this.testBean.setMyFloat(1.0F);
-		assertThat(this.testBean.getMyFloat()).as("value changed in around advice").isGreaterThan(1.9F);
-		assertThat(this.firstTestAspect.getLastBeforeFloatValue()).as("changed value visible to next advice in chain")
-				.isGreaterThan(1.9F);
+		assertThat(this.testBean.getMyFloat() > 1.9F).as("value changed in around advice").isTrue();
+		assertThat(this.firstTestAspect.getLastBeforeFloatValue() > 1.9F).as("changed value visible to next advice in chain").isTrue();
 	}
 
 	@Test
@@ -168,14 +167,14 @@ class ProceedTestingAspect implements Ordered {
 	}
 
 	public Object doubleOrQuits(ProceedingJoinPoint pjp) throws Throwable {
-		int value = (Integer) pjp.getArgs()[0];
-		pjp.getArgs()[0] = value * 2;
+		int value = ((Integer) pjp.getArgs()[0]).intValue();
+		pjp.getArgs()[0] = Integer.valueOf(value * 2);
 		return pjp.proceed();
 	}
 
 	public Object addOne(ProceedingJoinPoint pjp, Float value) throws Throwable {
-		float fv = value;
-		return pjp.proceed(new Object[] {fv + 1.0F});
+		float fv = value.floatValue();
+		return pjp.proceed(new Object[] {Float.valueOf(fv + 1.0F)});
 	}
 
 	public void captureStringArgument(JoinPoint tjp, String arg) {
@@ -199,7 +198,7 @@ class ProceedTestingAspect implements Ordered {
 	}
 
 	public void captureFloatArgument(JoinPoint tjp, float arg) {
-		float tjpArg = (Float) tjp.getArgs()[0];
+		float tjpArg = ((Float) tjp.getArgs()[0]).floatValue();
 		if (Math.abs(tjpArg - arg) > 0.000001) {
 			throw new IllegalStateException(
 					"argument is '" + arg + "', " +

@@ -18,7 +18,7 @@ package org.springframework.web.servlet.resource;
 
 import java.util.Collections;
 
-import jakarta.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletRequest;
 
 import org.springframework.core.io.Resource;
 import org.springframework.lang.Nullable;
@@ -42,7 +42,7 @@ public abstract class ResourceTransformerSupport implements ResourceTransformer 
 
 	/**
 	 * Configure a {@link ResourceUrlProvider} to use when resolving the public
-	 * URL of links in a transformed resource (for example, import links in a CSS file).
+	 * URL of links in a transformed resource (e.g. import links in a CSS file).
 	 * This is required only for links expressed as full paths and not for
 	 * relative links.
 	 */
@@ -62,7 +62,7 @@ public abstract class ResourceTransformerSupport implements ResourceTransformer 
 	/**
 	 * A transformer can use this method when a resource being transformed
 	 * contains links to other resources. Such links need to be replaced with the
-	 * public facing link as determined by the resource resolver chain (for example, the
+	 * public facing link as determined by the resource resolver chain (e.g. the
 	 * public URL may have a version inserted).
 	 * @param resourcePath the path to a resource that needs to be re-written
 	 * @param request the current request

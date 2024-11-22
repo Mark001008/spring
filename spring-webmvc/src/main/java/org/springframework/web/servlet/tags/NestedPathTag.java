@@ -16,10 +16,10 @@
 
 package org.springframework.web.servlet.tags;
 
-import jakarta.servlet.jsp.JspException;
-import jakarta.servlet.jsp.PageContext;
-import jakarta.servlet.jsp.tagext.TagSupport;
-import jakarta.servlet.jsp.tagext.TryCatchFinally;
+import javax.servlet.jsp.JspException;
+import javax.servlet.jsp.PageContext;
+import javax.servlet.jsp.tagext.TagSupport;
+import javax.servlet.jsp.tagext.TryCatchFinally;
 
 import org.springframework.beans.PropertyAccessor;
 import org.springframework.lang.Nullable;
@@ -50,7 +50,7 @@ import org.springframework.lang.Nullable;
  * <td>path</td>
  * <td>true</td>
  * <td>true</td>
- * <td>Set the path that this tag should apply. For example, 'customer' to allow bind
+ * <td>Set the path that this tag should apply. E.g. 'customer' to allow bind
  * paths like 'address.street' rather than 'customer.address.street'.</td>
  * </tr>
  * </tbody>
@@ -78,7 +78,7 @@ public class NestedPathTag extends TagSupport implements TryCatchFinally {
 
 	/**
 	 * Set the path that this tag should apply.
-	 * <p>For example, "customer" to allow bind paths like "address.street"
+	 * <p>E.g. "customer" to allow bind paths like "address.street"
 	 * rather than "customer.address.street".
 	 * @see BindTag#setPath
 	 */

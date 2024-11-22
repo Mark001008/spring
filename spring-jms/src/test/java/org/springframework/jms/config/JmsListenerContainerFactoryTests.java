@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,11 +16,11 @@
 
 package org.springframework.jms.config;
 
-import io.micrometer.observation.tck.TestObservationRegistry;
-import jakarta.jms.ConnectionFactory;
-import jakarta.jms.MessageListener;
-import jakarta.jms.Session;
-import jakarta.transaction.TransactionManager;
+import javax.jms.ConnectionFactory;
+import javax.jms.MessageListener;
+import javax.jms.Session;
+import javax.transaction.TransactionManager;
+
 import org.junit.jupiter.api.Test;
 
 import org.springframework.beans.DirectFieldAccessor;
@@ -47,7 +47,7 @@ import static org.mockito.Mockito.mock;
 /**
  * @author Stephane Nicoll
  */
-class JmsListenerContainerFactoryTests {
+public class JmsListenerContainerFactoryTests {
 
 	private final ConnectionFactory connectionFactory = new StubConnectionFactory();
 
@@ -55,11 +55,11 @@ class JmsListenerContainerFactoryTests {
 
 	private final MessageConverter messageConverter = new SimpleMessageConverter();
 
-	private final TransactionManager transactionManager = mock();
+	private final TransactionManager transactionManager = mock(TransactionManager.class);
 
 
 	@Test
-	void createSimpleContainer() {
+	public void createSimpleContainer() {
 		SimpleJmsListenerContainerFactory factory = new SimpleJmsListenerContainerFactory();
 		setDefaultJmsConfig(factory);
 		SimpleJmsListenerEndpoint endpoint = new SimpleJmsListenerEndpoint();
@@ -76,14 +76,12 @@ class JmsListenerContainerFactoryTests {
 	}
 
 	@Test
-	void createJmsContainerFullConfig() {
+	public void createJmsContainerFullConfig() {
 		DefaultJmsListenerContainerFactory factory = new DefaultJmsListenerContainerFactory();
-		TestObservationRegistry testObservationRegistry = TestObservationRegistry.create();
 		setDefaultJmsConfig(factory);
 		factory.setCacheLevel(DefaultMessageListenerContainer.CACHE_CONSUMER);
 		factory.setConcurrency("3-10");
 		factory.setMaxMessagesPerTask(5);
-		factory.setObservationRegistry(testObservationRegistry);
 
 		SimpleJmsListenerEndpoint endpoint = new SimpleJmsListenerEndpoint();
 		MessageListener messageListener = new MessageListenerAdapter();
@@ -96,14 +94,13 @@ class JmsListenerContainerFactoryTests {
 		assertThat(container.getConcurrentConsumers()).isEqualTo(3);
 		assertThat(container.getMaxConcurrentConsumers()).isEqualTo(10);
 		assertThat(container.getMaxMessagesPerTask()).isEqualTo(5);
-		assertThat(container.getObservationRegistry()).isEqualTo(testObservationRegistry);
 
 		assertThat(container.getMessageListener()).isEqualTo(messageListener);
 		assertThat(container.getDestinationName()).isEqualTo("myQueue");
 	}
 
 	@Test
-	void createJcaContainerFullConfig() {
+	public void createJcaContainerFullConfig() {
 		DefaultJcaListenerContainerFactory factory = new DefaultJcaListenerContainerFactory();
 		setDefaultJcaConfig(factory);
 		factory.setConcurrency("10");
@@ -121,7 +118,7 @@ class JmsListenerContainerFactoryTests {
 	}
 
 	@Test
-	void jcaExclusiveProperties() {
+	public void jcaExclusiveProperties() {
 		DefaultJcaListenerContainerFactory factory = new DefaultJcaListenerContainerFactory();
 		factory.setDestinationResolver(this.destinationResolver);
 		factory.setActivationSpecFactory(new StubJmsActivationSpecFactory());
@@ -133,7 +130,7 @@ class JmsListenerContainerFactoryTests {
 	}
 
 	@Test
-	void backOffOverridesRecoveryInterval() {
+	public void backOffOverridesRecoveryInterval() {
 		DefaultJmsListenerContainerFactory factory = new DefaultJmsListenerContainerFactory();
 		BackOff backOff = new FixedBackOff();
 		factory.setBackOff(backOff);
@@ -149,7 +146,7 @@ class JmsListenerContainerFactoryTests {
 	}
 
 	@Test
-	void endpointConcurrencyTakesPrecedence() {
+	public void endpointConcurrencyTakesPrecedence() {
 		DefaultJmsListenerContainerFactory factory = new DefaultJmsListenerContainerFactory();
 		factory.setConcurrency("2-10");
 

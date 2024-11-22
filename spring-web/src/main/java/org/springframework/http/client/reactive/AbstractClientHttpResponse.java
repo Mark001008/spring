@@ -26,7 +26,7 @@ import reactor.core.publisher.Flux;
 
 import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatusCode;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.util.Assert;
 import org.springframework.util.MultiValueMap;
@@ -39,7 +39,7 @@ import org.springframework.util.MultiValueMap;
  */
 public abstract class AbstractClientHttpResponse implements ClientHttpResponse {
 
-	private final HttpStatusCode statusCode;
+	private final int statusCode;
 
 	private final HttpHeaders headers;
 
@@ -49,10 +49,9 @@ public abstract class AbstractClientHttpResponse implements ClientHttpResponse {
 
 
 
-	protected AbstractClientHttpResponse(HttpStatusCode statusCode, HttpHeaders headers,
+	protected AbstractClientHttpResponse(int statusCode, HttpHeaders headers,
 			MultiValueMap<String, ResponseCookie> cookies, Flux<DataBuffer> body) {
 
-		Assert.notNull(statusCode, "StatusCode must not be null");
 		Assert.notNull(headers, "Headers must not be null");
 		Assert.notNull(body, "Body must not be null");
 
@@ -64,7 +63,12 @@ public abstract class AbstractClientHttpResponse implements ClientHttpResponse {
 
 
 	@Override
-	public HttpStatusCode getStatusCode() {
+	public HttpStatus getStatusCode() {
+		return HttpStatus.valueOf(this.statusCode);
+	}
+
+	@Override
+	public int getRawStatusCode() {
 		return this.statusCode;
 	}
 

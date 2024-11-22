@@ -17,7 +17,6 @@
 package org.springframework.aop.target;
 
 import java.io.Serializable;
-import java.util.Objects;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -57,7 +56,7 @@ public abstract class AbstractBeanFactoryBasedTargetSource implements TargetSour
 
 
 	/** Logger available to subclasses. */
-	protected final transient Log logger = LogFactory.getLog(getClass());
+	protected final Log logger = LogFactory.getLog(getClass());
 
 	/** Name of the target bean we will create on each invocation. */
 	@Nullable
@@ -153,6 +152,16 @@ public abstract class AbstractBeanFactoryBasedTargetSource implements TargetSour
 		}
 	}
 
+	@Override
+	public boolean isStatic() {
+		return false;
+	}
+
+	@Override
+	public void releaseTarget(Object target) throws Exception {
+		// Nothing to do here.
+	}
+
 
 	/**
 	 * Copy configuration from the other AbstractBeanFactoryBasedTargetSource object.
@@ -167,7 +176,7 @@ public abstract class AbstractBeanFactoryBasedTargetSource implements TargetSour
 
 
 	@Override
-	public boolean equals(@Nullable Object other) {
+	public boolean equals(Object other) {
 		if (this == other) {
 			return true;
 		}
@@ -181,7 +190,7 @@ public abstract class AbstractBeanFactoryBasedTargetSource implements TargetSour
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(getClass(), this.targetBeanName);
+		return getClass().hashCode() * 13 + ObjectUtils.nullSafeHashCode(this.targetBeanName);
 	}
 
 	@Override

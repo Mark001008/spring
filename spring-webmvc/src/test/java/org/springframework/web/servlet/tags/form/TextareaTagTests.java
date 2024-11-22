@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,8 @@
 
 package org.springframework.web.servlet.tags.form;
 
-import jakarta.servlet.jsp.tagext.Tag;
+import javax.servlet.jsp.tagext.Tag;
+
 import org.junit.jupiter.api.Test;
 
 import org.springframework.beans.testfixture.beans.TestBean;
@@ -30,13 +31,14 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author Juergen Hoeller
  * @author Jeremy Grelle
  */
-class TextareaTagTests extends AbstractFormTagTests {
+public class TextareaTagTests extends AbstractFormTagTests {
 
 	private TextareaTag tag;
 
 	private TestBean rob;
 
 	@Override
+	@SuppressWarnings("serial")
 	protected void onSetUp() {
 		this.tag = new TextareaTag() {
 			@Override
@@ -48,7 +50,7 @@ class TextareaTagTests extends AbstractFormTagTests {
 	}
 
 	@Test
-	void simpleBind() throws Exception {
+	public void simpleBind() throws Exception {
 		this.tag.setPath("name");
 		this.tag.setReadonly(true);
 
@@ -60,7 +62,7 @@ class TextareaTagTests extends AbstractFormTagTests {
 	}
 
 	@Test
-	void simpleBindWithDynamicAttributes() throws Exception {
+	public void simpleBindWithDynamicAttributes() throws Exception {
 		String dynamicAttribute1 = "attr1";
 		String dynamicAttribute2 = "attr2";
 
@@ -79,7 +81,7 @@ class TextareaTagTests extends AbstractFormTagTests {
 	}
 
 	@Test
-	void complexBind() throws Exception {
+	public void complexBind() throws Exception {
 		String onselect = "doSelect()";
 
 		this.tag.setPath("spouse.name");
@@ -93,7 +95,7 @@ class TextareaTagTests extends AbstractFormTagTests {
 	}
 
 	@Test
-	void simpleBindWithHtmlEscaping() throws Exception {
+	public void simpleBindWithHtmlEscaping() throws Exception {
 		final String NAME = "Rob \"I Love Mangos\" Harrop";
 		final String HTML_ESCAPED_NAME = "Rob &quot;I Love Mangos&quot; Harrop";
 
@@ -102,12 +104,13 @@ class TextareaTagTests extends AbstractFormTagTests {
 
 		assertThat(this.tag.doStartTag()).isEqualTo(Tag.SKIP_BODY);
 		String output = getOutput();
+		System.out.println(output);
 		assertContainsAttribute(output, "name", "name");
 		assertBlockTagContains(output, HTML_ESCAPED_NAME);
 	}
 
 	@Test
-	void customBind() throws Exception {
+	public void customBind() throws Exception {
 		BeanPropertyBindingResult result = new BeanPropertyBindingResult(createTestBean(), "testBean");
 		result.getPropertyAccessor().registerCustomEditor(Float.class, new SimpleFloatEditor());
 		exposeBindingResult(result);
@@ -119,7 +122,7 @@ class TextareaTagTests extends AbstractFormTagTests {
 	}
 
 	@Test
-	void firstNewLine() throws Exception {
+	public void firstNewLine() throws Exception {
 		this.tag.setPath("name");
 		this.tag.setReadonly(true);
 

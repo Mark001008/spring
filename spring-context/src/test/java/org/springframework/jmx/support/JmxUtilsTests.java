@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,7 +37,7 @@ import org.springframework.util.ObjectUtils;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Tests for {@link JmxUtils}.
+ * Unit tests for {@link JmxUtils}.
  *
  * @author Rob Harrop
  * @author Juergen Hoeller
@@ -58,42 +58,42 @@ class JmxUtilsTests {
 	}
 
 	@Test
-	void isMBeanWithDynamicMBean() {
+	void isMBeanWithDynamicMBean() throws Exception {
 		DynamicMBean mbean = new TestDynamicMBean();
 		assertThat(JmxUtils.isMBean(mbean.getClass())).as("Dynamic MBean not detected correctly").isTrue();
 	}
 
 	@Test
-	void isMBeanWithStandardMBeanWrapper() throws NotCompliantMBeanException {
+	void isMBeanWithStandardMBeanWrapper() throws Exception {
 		StandardMBean mbean = new StandardMBean(new JmxTestBean(), IJmxTestBean.class);
 		assertThat(JmxUtils.isMBean(mbean.getClass())).as("Standard MBean not detected correctly").isTrue();
 	}
 
 	@Test
-	void isMBeanWithStandardMBeanInherited() throws NotCompliantMBeanException {
+	void isMBeanWithStandardMBeanInherited() throws Exception {
 		StandardMBean mbean = new StandardMBeanImpl();
 		assertThat(JmxUtils.isMBean(mbean.getClass())).as("Standard MBean not detected correctly").isTrue();
 	}
 
 	@Test
-	void notAnMBean() {
+	void notAnMBean() throws Exception {
 		assertThat(JmxUtils.isMBean(Object.class)).as("Object incorrectly identified as an MBean").isFalse();
 	}
 
 	@Test
-	void simpleMBean() {
+	void simpleMBean() throws Exception {
 		Foo foo = new Foo();
 		assertThat(JmxUtils.isMBean(foo.getClass())).as("Simple MBean not detected correctly").isTrue();
 	}
 
 	@Test
-	void simpleMXBean() {
+	void simpleMXBean() throws Exception {
 		FooX foo = new FooX();
 		assertThat(JmxUtils.isMBean(foo.getClass())).as("Simple MXBean not detected correctly").isTrue();
 	}
 
 	@Test
-	void simpleMBeanThroughInheritance() {
+	void simpleMBeanThroughInheritance() throws Exception {
 		Bar bar = new Bar();
 		Abc abc = new Abc();
 		assertThat(JmxUtils.isMBean(bar.getClass())).as("Simple MBean (through inheritance) not detected correctly").isTrue();

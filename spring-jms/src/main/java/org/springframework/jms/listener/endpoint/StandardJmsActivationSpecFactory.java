@@ -18,12 +18,12 @@ package org.springframework.jms.listener.endpoint;
 
 import java.util.Map;
 
-import jakarta.jms.JMSException;
-import jakarta.jms.Queue;
-import jakarta.jms.Session;
-import jakarta.jms.Topic;
-import jakarta.resource.spi.ActivationSpec;
-import jakarta.resource.spi.ResourceAdapter;
+import javax.jms.JMSException;
+import javax.jms.Queue;
+import javax.jms.Session;
+import javax.jms.Topic;
+import javax.resource.spi.ActivationSpec;
+import javax.resource.spi.ResourceAdapter;
 
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.BeanWrapper;
@@ -39,7 +39,7 @@ import org.springframework.lang.Nullable;
  *
  * <p>The 'activationSpecClass' property is required, explicitly defining
  * the fully-qualified class name of the provider's ActivationSpec class
- * (for example, "org.apache.activemq.ra.ActiveMQActivationSpec").
+ * (e.g. "org.apache.activemq.ra.ActiveMQActivationSpec").
  *
  * <p>Check out {@link DefaultJmsActivationSpecFactory} for an extended variant
  * of this class, supporting some further default conventions beyond the plain
@@ -64,7 +64,7 @@ public class StandardJmsActivationSpecFactory implements JmsActivationSpecFactor
 
 	/**
 	 * Specify the fully-qualified ActivationSpec class name for the target
-	 * provider (for example, "org.apache.activemq.ra.ActiveMQActivationSpec").
+	 * provider (e.g. "org.apache.activemq.ra.ActiveMQActivationSpec").
 	 */
 	public void setActivationSpecClass(Class<?> activationSpecClass) {
 		this.activationSpecClass = activationSpecClass;
@@ -86,7 +86,7 @@ public class StandardJmsActivationSpecFactory implements JmsActivationSpecFactor
 	 * <p>If not specified, destination names will simply be passed in as Strings.
 	 * If specified, destination names will be resolved into Destination objects first.
 	 * <p>Note that a DestinationResolver for use with this factory must be
-	 * able to work <i>without</i> an active JMS Session: for example,
+	 * able to work <i>without</i> an active JMS Session: e.g.
 	 * {@link org.springframework.jms.support.destination.JndiDestinationResolver}
 	 * or {@link org.springframework.jms.support.destination.BeanFactoryDestinationResolver}
 	 * but not {@link org.springframework.jms.support.destination.DynamicDestinationResolver}.
@@ -193,11 +193,11 @@ public class StandardJmsActivationSpecFactory implements JmsActivationSpecFactor
 	 * having been requested.
 	 * @param bw the BeanWrapper wrapping the ActivationSpec object
 	 * @param ackMode the configured acknowledgment mode
-	 * (according to the constants in {@link jakarta.jms.Session})
-	 * @see jakarta.jms.Session#AUTO_ACKNOWLEDGE
-	 * @see jakarta.jms.Session#DUPS_OK_ACKNOWLEDGE
-	 * @see jakarta.jms.Session#CLIENT_ACKNOWLEDGE
-	 * @see jakarta.jms.Session#SESSION_TRANSACTED
+	 * (according to the constants in {@link javax.jms.Session})
+	 * @see javax.jms.Session#AUTO_ACKNOWLEDGE
+	 * @see javax.jms.Session#DUPS_OK_ACKNOWLEDGE
+	 * @see javax.jms.Session#CLIENT_ACKNOWLEDGE
+	 * @see javax.jms.Session#SESSION_TRANSACTED
 	 */
 	protected void applyAcknowledgeMode(BeanWrapper bw, int ackMode) {
 		if (ackMode == Session.SESSION_TRANSACTED) {
@@ -213,7 +213,7 @@ public class StandardJmsActivationSpecFactory implements JmsActivationSpecFactor
 					ackMode == Session.DUPS_OK_ACKNOWLEDGE ? "Dups-ok-acknowledge" : "Auto-acknowledge");
 		}
 		else if (ackMode == Session.DUPS_OK_ACKNOWLEDGE) {
-			// Standard JCA 1.5 "acknowledgeMode" apparently not supported (for example, WebSphere MQ 6.0.2.1)
+			// Standard JCA 1.5 "acknowledgeMode" apparently not supported (e.g. WebSphere MQ 6.0.2.1)
 			throw new IllegalArgumentException("Dups-ok-acknowledge not supported by underlying provider");
 		}
 	}

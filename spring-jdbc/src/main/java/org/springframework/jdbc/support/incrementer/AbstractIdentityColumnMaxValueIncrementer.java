@@ -53,11 +53,9 @@ public abstract class AbstractIdentityColumnMaxValueIncrementer extends Abstract
 	 * @see #setIncrementerName
 	 * @see #setColumnName
 	 */
-	@SuppressWarnings("NullAway")
 	public AbstractIdentityColumnMaxValueIncrementer() {
 	}
 
-	@SuppressWarnings("NullAway")
 	public AbstractIdentityColumnMaxValueIncrementer(DataSource dataSource, String incrementerName, String columnName) {
 		super(dataSource, incrementerName, columnName);
 	}

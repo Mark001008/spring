@@ -24,12 +24,14 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicReference;
 
-import jakarta.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletRequest;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import org.springframework.core.task.AsyncTaskExecutor;
 import org.springframework.core.task.SimpleAsyncTaskExecutor;
+import org.springframework.core.task.SyncTaskExecutor;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.web.context.request.RequestAttributes;
@@ -73,13 +75,13 @@ public final class WebAsyncManager {
 	private static final DeferredResultProcessingInterceptor timeoutDeferredResultInterceptor =
 			new TimeoutDeferredResultProcessingInterceptor();
 
+	private static Boolean taskExecutorWarning = true;
+
 
 	@Nullable
 	private AsyncWebRequest asyncWebRequest;
 
 	private AsyncTaskExecutor taskExecutor = DEFAULT_TASK_EXECUTOR;
-
-	private boolean isMultipartRequestParsed;
 
 	@Nullable
 	private volatile Object concurrentResult = RESULT_NONE;
@@ -96,7 +98,7 @@ public final class WebAsyncManager {
 
 	/**
 	 * Package-private constructor.
-	 * @see WebAsyncUtils#getAsyncManager(jakarta.servlet.ServletRequest)
+	 * @see WebAsyncUtils#getAsyncManager(javax.servlet.ServletRequest)
 	 * @see WebAsyncUtils#getAsyncManager(org.springframework.web.context.request.WebRequest)
 	 */
 	WebAsyncManager() {
@@ -106,7 +108,7 @@ public final class WebAsyncManager {
 	/**
 	 * Configure the {@link AsyncWebRequest} to use. This property may be set
 	 * more than once during a single request to accurately reflect the current
-	 * state of the request (for example, following a forward, request/response
+	 * state of the request (e.g. following a forward, request/response
 	 * wrapping, etc). However, it should not be set while concurrent handling
 	 * is in progress, i.e. while {@link #isConcurrentHandlingStarted()} is
 	 * {@code true}.
@@ -245,23 +247,6 @@ public final class WebAsyncManager {
 	}
 
 	/**
-	 * Mark the {@link WebAsyncManager} as wrapping a multipart async request.
-	 * @since 6.1.12
-	 */
-	public void setMultipartRequestParsed(boolean isMultipart) {
-		this.isMultipartRequestParsed = isMultipart;
-	}
-
-	/**
-	 * Return {@code true} if this {@link WebAsyncManager} was previously marked
-	 * as wrapping a multipart async request, {@code false} otherwise.
-	 * @since 6.1.12
-	 */
-	public boolean isMultipartRequestParsed() {
-		return this.isMultipartRequestParsed;
-	}
-
-	/**
 	 * Clear {@linkplain #getConcurrentResult() concurrentResult} and
 	 * {@linkplain #getConcurrentResultContext() concurrentResultContext}.
 	 */
@@ -306,7 +291,6 @@ public final class WebAsyncManager {
 	 * via {@link #getConcurrentResultContext()}
 	 * @throws Exception if concurrent processing failed to start
 	 */
-	@SuppressWarnings("NullAway")
 	public void startCallableProcessing(final WebAsyncTask<?> webAsyncTask, Object... processingContext)
 			throws Exception {
 
@@ -326,6 +310,9 @@ public final class WebAsyncManager {
 		AsyncTaskExecutor executor = webAsyncTask.getExecutor();
 		if (executor != null) {
 			this.taskExecutor = executor;
+		}
+		else {
+			logExecutorWarning(this.asyncWebRequest);
 		}
 
 		List<CallableProcessingInterceptor> interceptors = new ArrayList<>();
@@ -383,20 +370,41 @@ public final class WebAsyncManager {
 		}
 	}
 
+	private void logExecutorWarning(AsyncWebRequest asyncWebRequest) {
+		if (taskExecutorWarning && logger.isWarnEnabled()) {
+			synchronized (DEFAULT_TASK_EXECUTOR) {
+				AsyncTaskExecutor executor = this.taskExecutor;
+				if (taskExecutorWarning &&
+						(executor instanceof SimpleAsyncTaskExecutor || executor instanceof SyncTaskExecutor)) {
+					String executorTypeName = executor.getClass().getSimpleName();
+					logger.warn("\n!!!\n" +
+							"An Executor is required to handle java.util.concurrent.Callable return values.\n" +
+							"Please, configure a TaskExecutor in the MVC config under \"async support\".\n" +
+							"The " + executorTypeName + " currently in use is not suitable under load.\n" +
+							"-------------------------------\n" +
+							"Request URI: '" + formatUri(asyncWebRequest) + "'\n" +
+							"!!!");
+					taskExecutorWarning = false;
+				}
+			}
+		}
+	}
+
 	private void setConcurrentResultAndDispatch(@Nullable Object result) {
 		Assert.state(this.asyncWebRequest != null, "AsyncWebRequest must not be null");
 		synchronized (WebAsyncManager.this) {
 			if (!this.state.compareAndSet(State.ASYNC_PROCESSING, State.RESULT_SET)) {
 				if (logger.isDebugEnabled()) {
-					logger.debug("Async result already set: [" + this.state.get() +
-							"], ignored result for " + formatUri(this.asyncWebRequest));
+					logger.debug("Async result already set: " +
+							"[" + this.state.get() + "], ignored result: " + result +
+							" for " + formatUri(this.asyncWebRequest));
 				}
 				return;
 			}
 
 			this.concurrentResult = result;
 			if (logger.isDebugEnabled()) {
-				logger.debug("Async result set for " + formatUri(this.asyncWebRequest));
+				logger.debug("Async result set to: " + result + " for " + formatUri(this.asyncWebRequest));
 			}
 
 			if (this.asyncWebRequest.isAsyncComplete()) {
@@ -427,7 +435,6 @@ public final class WebAsyncManager {
 	 * @see #getConcurrentResult()
 	 * @see #getConcurrentResultContext()
 	 */
-	@SuppressWarnings("NullAway")
 	public void startDeferredResultProcessing(
 			final DeferredResult<?> deferredResult, Object... processingContext) throws Exception {
 

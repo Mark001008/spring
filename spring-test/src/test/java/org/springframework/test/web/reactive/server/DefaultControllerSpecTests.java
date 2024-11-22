@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,8 +36,7 @@ import org.springframework.web.reactive.result.method.annotation.ArgumentResolve
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Tests for {@link DefaultControllerSpec}.
- *
+ * Unit tests for {@link DefaultControllerSpec}.
  * @author Rossen Stoyanchev
  */
 public class DefaultControllerSpecTests {
@@ -46,12 +45,6 @@ public class DefaultControllerSpecTests {
 	public void controller() {
 		new DefaultControllerSpec(new MyController()).build()
 				.get().uri("/")
-				.exchange()
-				.expectStatus().isOk()
-				.expectBody(String.class).isEqualTo("Success");
-
-		new DefaultControllerSpec(new MyController()).build()
-				.get().uri("")
 				.exchange()
 				.expectStatus().isOk()
 				.expectBody(String.class).isEqualTo("Success");
@@ -119,12 +112,11 @@ public class DefaultControllerSpecTests {
 	}
 
 
-	@SuppressWarnings("unused")
 	@RestController
 	private static class MyController {
 
-		@GetMapping
-		public String handleRootPath() {
+		@GetMapping("/")
+		public String handle() {
 			return "Success";
 		}
 

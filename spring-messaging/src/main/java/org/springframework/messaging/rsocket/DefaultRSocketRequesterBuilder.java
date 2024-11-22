@@ -90,9 +90,9 @@ final class DefaultRSocketRequesterBuilder implements RSocketRequester.Builder {
 	@Nullable
 	private RSocketStrategies strategies;
 
-	private final List<Consumer<RSocketStrategies.Builder>> strategiesConfigurers = new ArrayList<>();
+	private List<Consumer<RSocketStrategies.Builder>> strategiesConfigurers = new ArrayList<>();
 
-	private final List<RSocketConnectorConfigurer> rsocketConnectorConfigurers = new ArrayList<>();
+	private List<RSocketConnectorConfigurer> rsocketConnectorConfigurers = new ArrayList<>();
 
 
 	@Override
@@ -245,13 +245,13 @@ final class DefaultRSocketRequesterBuilder implements RSocketRequester.Builder {
 		if (this.dataMimeType != null) {
 			return this.dataMimeType;
 		}
-		// First non-basic Decoder (for example, CBOR, Protobuf)
+		// First non-basic Decoder (e.g. CBOR, Protobuf)
 		for (Decoder<?> candidate : strategies.decoders()) {
 			if (!isCoreCodec(candidate) && !candidate.getDecodableMimeTypes().isEmpty()) {
 				return getMimeType(candidate);
 			}
 		}
-		// First core decoder (for example, String)
+		// First core decoder (e.g. String)
 		for (Decoder<?> decoder : strategies.decoders()) {
 			if (!decoder.getDecodableMimeTypes().isEmpty()) {
 				return getMimeType(decoder);

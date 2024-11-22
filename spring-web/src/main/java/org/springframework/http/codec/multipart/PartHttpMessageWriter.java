@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2022 the original author or authors.
+ * Copyright 2002-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,6 +27,7 @@ import org.springframework.core.codec.Hints;
 import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.core.io.buffer.DataBufferFactory;
 import org.springframework.core.io.buffer.DataBufferUtils;
+import org.springframework.core.io.buffer.PooledDataBuffer;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ReactiveHttpOutputMessage;
@@ -48,21 +49,6 @@ public class PartHttpMessageWriter extends MultipartWriterSupport implements Htt
 		super(MultipartHttpMessageReader.MIME_TYPES);
 	}
 
-	@Override
-	public boolean canWrite(ResolvableType elementType, @Nullable MediaType mediaType) {
-		if (Part.class.isAssignableFrom(elementType.toClass())) {
-			if (mediaType == null) {
-				return true;
-			}
-			for (MediaType supportedMediaType : getWritableMediaTypes()) {
-				if (supportedMediaType.isCompatibleWith(mediaType)) {
-					return true;
-				}
-			}
-		}
-		return false;
-	}
-
 
 	@Override
 	public Mono<Void> write(Publisher<? extends Part> parts,
@@ -81,7 +67,7 @@ public class PartHttpMessageWriter extends MultipartWriterSupport implements Htt
 		Flux<DataBuffer> body = Flux.from(parts)
 				.concatMap(part -> encodePart(boundary, part, outputMessage.bufferFactory()))
 				.concatWith(generateLastLine(boundary, outputMessage.bufferFactory()))
-				.doOnDiscard(DataBuffer.class, DataBufferUtils::release);
+				.doOnDiscard(PooledDataBuffer.class, DataBufferUtils::release);
 
 		if (logger.isDebugEnabled()) {
 			body = body.doOnNext(buffer -> Hints.touchDataBuffer(buffer, hints, logger));
@@ -96,7 +82,7 @@ public class PartHttpMessageWriter extends MultipartWriterSupport implements Htt
 		String name = part.name();
 		if (!headers.containsKey(HttpHeaders.CONTENT_DISPOSITION)) {
 			headers.setContentDispositionFormData(name,
-					(part instanceof FilePart filePart ? filePart.filename() : null));
+					(part instanceof FilePart ? ((FilePart) part).filename() : null));
 		}
 
 		return Flux.concat(

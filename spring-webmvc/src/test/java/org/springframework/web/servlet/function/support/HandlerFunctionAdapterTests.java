@@ -17,10 +17,11 @@
 package org.springframework.web.servlet.function.support;
 
 import java.io.IOException;
-import java.util.List;
+import java.util.Collections;
 
-import jakarta.servlet.AsyncEvent;
-import jakarta.servlet.http.HttpServletResponse;
+import javax.servlet.AsyncEvent;
+import javax.servlet.http.HttpServletResponse;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -58,7 +59,7 @@ public class HandlerFunctionAdapterTests {
 	@BeforeEach
 	void setUp() {
 		this.servletRequest.setAttribute(RouterFunctions.REQUEST_ATTRIBUTE,
-				ServerRequest.create(this.servletRequest, List.of(new StringHttpMessageConverter())));
+				ServerRequest.create(this.servletRequest, Collections.singletonList(new StringHttpMessageConverter())));
 	}
 
 

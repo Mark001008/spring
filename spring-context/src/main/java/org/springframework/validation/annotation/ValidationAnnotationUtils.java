@@ -38,7 +38,7 @@ public abstract class ValidationAnnotationUtils {
 	 * Determine any validation hints by the given annotation.
 	 * <p>This implementation checks for Spring's
 	 * {@link org.springframework.validation.annotation.Validated},
-	 * {@code @jakarta.validation.Valid}, and custom annotations whose
+	 * {@code @javax.validation.Valid}, and custom annotations whose
 	 * name starts with "Valid" which may optionally declare validation
 	 * hints through the "value" attribute.
 	 * @param ann the annotation (potentially a validation annotation)
@@ -48,12 +48,12 @@ public abstract class ValidationAnnotationUtils {
 	@Nullable
 	public static Object[] determineValidationHints(Annotation ann) {
 		// Direct presence of @Validated ?
-		if (ann instanceof Validated validated) {
-			return validated.value();
+		if (ann instanceof Validated) {
+			return ((Validated) ann).value();
 		}
 		// Direct presence of @Valid ?
 		Class<? extends Annotation> annotationType = ann.annotationType();
-		if ("jakarta.validation.Valid".equals(annotationType.getName())) {
+		if ("javax.validation.Valid".equals(annotationType.getName())) {
 			return EMPTY_OBJECT_ARRAY;
 		}
 		// Meta presence of @Validated ?
@@ -73,7 +73,7 @@ public abstract class ValidationAnnotationUtils {
 		if (hints == null) {
 			return EMPTY_OBJECT_ARRAY;
 		}
-		return (hints instanceof Object[] objectHints ? objectHints : new Object[] {hints});
+		return (hints instanceof Object[] ? (Object[]) hints : new Object[]{hints});
 	}
 
 }

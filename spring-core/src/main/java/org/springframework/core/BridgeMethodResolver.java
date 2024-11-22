@@ -17,7 +17,6 @@
 package org.springframework.core;
 
 import java.lang.reflect.Method;
-import java.lang.reflect.Proxy;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -51,7 +50,7 @@ import org.springframework.util.ReflectionUtils.MethodFilter;
  */
 public final class BridgeMethodResolver {
 
-	private static final Map<Object, Method> cache = new ConcurrentReferenceHashMap<>();
+	private static final Map<Method, Method> cache = new ConcurrentReferenceHashMap<>();
 
 	private BridgeMethodResolver() {
 	}
@@ -65,67 +64,28 @@ public final class BridgeMethodResolver {
 	 * @param bridgeMethod the method to introspect against its declaring class
 	 * @return the original method (either the bridged method or the passed-in method
 	 * if no more specific one could be found)
-	 * @see #getMostSpecificMethod(Method, Class)
 	 */
 	public static Method findBridgedMethod(Method bridgeMethod) {
-		return resolveBridgeMethod(bridgeMethod, bridgeMethod.getDeclaringClass());
-	}
-
-	/**
-	 * Determine the most specific method for the supplied {@link Method bridge Method}
-	 * in the given class hierarchy, even if not available on the local declaring class.
-	 * <p>This is effectively a combination of {@link ClassUtils#getMostSpecificMethod}
-	 * and {@link #findBridgedMethod}, resolving the original method even if no bridge
-	 * method has been generated at the same class hierarchy level (a known difference
-	 * between the Eclipse compiler and regular javac).
-	 * @param bridgeMethod the method to introspect against the given target class
-	 * @param targetClass the target class to find the most specific method on
-	 * @return the most specific method corresponding to the given bridge method
-	 * (can be the original method if no more specific one could be found)
-	 * @since 6.1.3
-	 * @see #findBridgedMethod
-	 * @see org.springframework.util.ClassUtils#getMostSpecificMethod
-	 */
-	public static Method getMostSpecificMethod(Method bridgeMethod, @Nullable Class<?> targetClass) {
-		if (targetClass != null &&
-				!ClassUtils.getUserClass(bridgeMethod.getDeclaringClass()).isAssignableFrom(targetClass) &&
-				!Proxy.isProxyClass(bridgeMethod.getDeclaringClass())) {
-			// From a different class hierarchy, and not a JDK or CGLIB proxy either -> return as-is.
+		if (!bridgeMethod.isBridge()) {
 			return bridgeMethod;
 		}
-
-		Method specificMethod = ClassUtils.getMostSpecificMethod(bridgeMethod, targetClass);
-		return resolveBridgeMethod(specificMethod,
-				(targetClass != null ? targetClass : specificMethod.getDeclaringClass()));
-	}
-
-	private static Method resolveBridgeMethod(Method bridgeMethod, Class<?> targetClass) {
-		boolean localBridge = (targetClass == bridgeMethod.getDeclaringClass());
-		Class<?> userClass = targetClass;
-		if (!bridgeMethod.isBridge() && localBridge) {
-			userClass = ClassUtils.getUserClass(targetClass);
-			if (userClass == targetClass) {
-				return bridgeMethod;
-			}
-		}
-
-		Object cacheKey = (localBridge ? bridgeMethod : new MethodClassKey(bridgeMethod, targetClass));
-		Method bridgedMethod = cache.get(cacheKey);
+		Method bridgedMethod = cache.get(bridgeMethod);
 		if (bridgedMethod == null) {
 			// Gather all methods with matching name and parameter size.
 			List<Method> candidateMethods = new ArrayList<>();
 			MethodFilter filter = (candidateMethod -> isBridgedCandidateFor(candidateMethod, bridgeMethod));
-			ReflectionUtils.doWithMethods(userClass, candidateMethods::add, filter);
+			ReflectionUtils.doWithMethods(bridgeMethod.getDeclaringClass(), candidateMethods::add, filter);
 			if (!candidateMethods.isEmpty()) {
-				bridgedMethod = (candidateMethods.size() == 1 ? candidateMethods.get(0) :
-						searchCandidates(candidateMethods, bridgeMethod));
+				bridgedMethod = candidateMethods.size() == 1 ?
+						candidateMethods.get(0) :
+						searchCandidates(candidateMethods, bridgeMethod);
 			}
 			if (bridgedMethod == null) {
 				// A bridge method was passed in but we couldn't find the bridged method.
 				// Let's proceed with the passed-in method and hope for the best...
 				bridgedMethod = bridgeMethod;
 			}
-			cache.put(cacheKey, bridgedMethod);
+			cache.put(bridgeMethod, bridgedMethod);
 		}
 		return bridgedMethod;
 	}
@@ -197,7 +157,7 @@ public final class BridgeMethodResolver {
 			Class<?> candidateParameter = candidateParameters[i];
 			if (candidateParameter.isArray()) {
 				// An array type: compare the component type.
-				if (!candidateParameter.componentType().equals(genericParameter.getComponentType().toClass())) {
+				if (!candidateParameter.getComponentType().equals(genericParameter.getComponentType().toClass())) {
 					return false;
 				}
 			}
@@ -217,10 +177,6 @@ public final class BridgeMethodResolver {
 	 */
 	@Nullable
 	private static Method findGenericDeclaration(Method bridgeMethod) {
-		if (!bridgeMethod.isBridge()) {
-			return bridgeMethod;
-		}
-
 		// Search parent types for method that has same signature as bridge.
 		Class<?> superclass = bridgeMethod.getDeclaringClass().getSuperclass();
 		while (superclass != null && Object.class != superclass) {
@@ -276,12 +232,7 @@ public final class BridgeMethodResolver {
 	 */
 	public static boolean isVisibilityBridgeMethodPair(Method bridgeMethod, Method bridgedMethod) {
 		if (bridgeMethod == bridgedMethod) {
-			// Same method: for common purposes, return true to proceed as if it was a visibility bridge.
 			return true;
-		}
-		if (ClassUtils.getUserClass(bridgeMethod.getDeclaringClass()) != bridgeMethod.getDeclaringClass()) {
-			// Method on generated subclass: return false to consistently ignore it for visibility purposes.
-			return false;
 		}
 		return (bridgeMethod.getReturnType().equals(bridgedMethod.getReturnType()) &&
 				bridgeMethod.getParameterCount() == bridgedMethod.getParameterCount() &&

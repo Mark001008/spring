@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,12 +28,12 @@ import org.springframework.jdbc.BadSqlGrammarException;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Tests for custom SQLException translation.
+ * Unit tests for custom SQLException translation.
  *
  * @author Thomas Risberg
  * @author Sam Brannen
  */
-class SQLExceptionCustomTranslatorTests {
+public class SQLExceptionCustomTranslatorTests {
 
 	private static SQLErrorCodes ERROR_CODES = new SQLErrorCodes();
 
@@ -47,7 +47,7 @@ class SQLExceptionCustomTranslatorTests {
 
 
 	@Test
-	void badSqlGrammarException() {
+	public void badSqlGrammarException() {
 		SQLException badSqlGrammarExceptionEx = new SQLDataException("", "", 1);
 		DataAccessException dae = sext.translate("task", "SQL", badSqlGrammarExceptionEx);
 		assertThat(dae.getCause()).isEqualTo(badSqlGrammarExceptionEx);
@@ -55,8 +55,8 @@ class SQLExceptionCustomTranslatorTests {
 	}
 
 	@Test
-	void dataAccessResourceException() {
-		SQLException dataAccessResourceEx = new SQLDataException("", "", 2);
+	public void dataAccessResourceException() {
+		SQLException dataAccessResourceEx =  new SQLDataException("", "", 2);
 		DataAccessException dae = sext.translate("task", "SQL", dataAccessResourceEx);
 		assertThat(dae.getCause()).isEqualTo(dataAccessResourceEx);
 		assertThat(dae).isInstanceOf(TransientDataAccessResourceException.class);

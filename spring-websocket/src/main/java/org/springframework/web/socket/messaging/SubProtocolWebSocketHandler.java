@@ -103,9 +103,6 @@ public class SubProtocolWebSocketHandler
 
 	private final DefaultStats stats = new DefaultStats();
 
-	@Nullable
-	private Integer phase;
-
 	private volatile boolean running;
 
 	private final Object lifecycleMonitor = new Object();
@@ -232,7 +229,7 @@ public class SubProtocolWebSocketHandler
 	 * is established and before the first sub-protocol message is received.
 	 * <p>This handler is for WebSocket connections that use a sub-protocol.
 	 * Therefore, we expect the client to send at least one sub-protocol message
-	 * in the beginning, or else we assume the connection isn't doing well, for example,
+	 * in the beginning, or else we assume the connection isn't doing well, e.g.
 	 * proxy issue, slow network, and can be closed.
 	 * <p>By default this is set to {@code 60,000} (1 minute).
 	 * @param timeToFirstMessage the maximum time allowed in milliseconds
@@ -250,21 +247,6 @@ public class SubProtocolWebSocketHandler
 	 */
 	public int getTimeToFirstMessage() {
 		return this.timeToFirstMessage;
-	}
-
-	/**
-	 * Set the phase that this handler should run in.
-	 * <p>By default, this is {@link SmartLifecycle#DEFAULT_PHASE}, but with
-	 * {@code @EnableWebSocketMessageBroker} configuration it is set to 0.
-	 * @since 6.1.4
-	 */
-	public void setPhase(int phase) {
-		this.phase = phase;
-	}
-
-	@Override
-	public int getPhase() {
-		return (this.phase != null ? this.phase : SmartLifecycle.super.getPhase());
 	}
 
 	/**
@@ -336,8 +318,6 @@ public class SubProtocolWebSocketHandler
 			return;
 		}
 
-		checkSessions();
-
 		this.stats.incrementSessionCount(session);
 		session = decorateSession(session);
 		this.sessions.put(session.getId(), new WebSocketSessionHolder(session));
@@ -358,6 +338,7 @@ public class SubProtocolWebSocketHandler
 		if (holder != null) {
 			holder.setHasHandledMessages();
 		}
+		checkSessions();
 	}
 
 	/**
@@ -403,7 +384,7 @@ public class SubProtocolWebSocketHandler
 			}
 		}
 		catch (Exception ex) {
-			// Could be part of normal workflow (for example, browser tab closed)
+			// Could be part of normal workflow (e.g. browser tab closed)
 			if (logger.isDebugEnabled()) {
 				logger.debug("Failed to send message to client in " + session + ": " + message, ex);
 			}
@@ -495,17 +476,16 @@ public class SubProtocolWebSocketHandler
 	}
 
 	/**
-	 * A higher-level protocol can use heartbeats to detect sessions that need to
-	 * be cleaned up. However, if a WebSocket session is established, but messages
-	 * can't flow (for example, due to a proxy issue), then the higher level protocol is
-	 * never successfully negotiated, and without heartbeats, sessions can hang.
-	 * The method  checks for sessions that have not received any messages 60
-	 * seconds after the WebSocket session was established, and closes them.
+	 * When a session is connected through a higher-level protocol it has a chance
+	 * to use heartbeat management to shut down sessions that are too slow to send
+	 * or receive messages. However, after a WebSocketSession is established and
+	 * before the higher level protocol is fully connected there is a possibility for
+	 * sessions to hang. This method checks and closes any sessions that have been
+	 * connected for more than 60 seconds without having received a single message.
 	 */
 	private void checkSessions() {
 		long currentTime = System.currentTimeMillis();
-		long timeSinceLastCheck = currentTime - this.lastSessionCheckTime;
-		if (!isRunning() || timeSinceLastCheck < getTimeToFirstMessage() / 2) {
+		if (!isRunning() || (currentTime - this.lastSessionCheckTime < getTimeToFirstMessage())) {
 			return;
 		}
 

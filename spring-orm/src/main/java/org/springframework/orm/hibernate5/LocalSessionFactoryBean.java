@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -40,10 +40,8 @@ import org.springframework.beans.factory.BeanFactoryAware;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.FactoryBean;
 import org.springframework.beans.factory.InitializingBean;
-import org.springframework.beans.factory.SmartInitializingSingleton;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.context.ResourceLoaderAware;
-import org.springframework.core.InfrastructureProxy;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
@@ -53,24 +51,21 @@ import org.springframework.core.io.support.ResourcePatternUtils;
 import org.springframework.core.task.AsyncTaskExecutor;
 import org.springframework.core.type.filter.TypeFilter;
 import org.springframework.lang.Nullable;
+import org.springframework.util.ClassUtils;
 
 /**
  * {@link FactoryBean} that creates a Hibernate {@link SessionFactory}. This is the usual
  * way to set up a shared Hibernate SessionFactory in a Spring application context; the
  * SessionFactory can then be passed to data access objects via dependency injection.
  *
- * <p>Compatible with Hibernate ORM 5.5/5.6, as of Spring Framework 6.0.
+ * <p>Compatible with Hibernate 5.2/5.3/5.4, as of Spring 5.3.
  * This Hibernate-specific {@code LocalSessionFactoryBean} can be an immediate alternative
- * to {@link org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean} for
- * common JPA purposes: The Hibernate {@code SessionFactory} will natively expose the JPA
- * {@code EntityManagerFactory} interface as well, and Hibernate {@code BeanContainer}
- * integration will be registered out of the box. In combination with
- * {@link HibernateTransactionManager}, this naturally allows for mixing JPA access code
- * with native Hibernate access code within the same transaction.
- *
- * <p><b>NOTE: Hibernate ORM 6.x is officially only supported as a JPA provider.
- * Please use {@link org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean}
- * with {@link org.springframework.orm.jpa.JpaTransactionManager} there instead.</b>
+ * to {@link org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean} for common
+ * JPA purposes: In particular with Hibernate 5.3/5.4, the Hibernate {@code SessionFactory}
+ * will natively expose the JPA {@code EntityManagerFactory} interface as well, and
+ * Hibernate {@code BeanContainer} integration will be registered out of the box.
+ * In combination with {@link HibernateTransactionManager}, this naturally allows for
+ * mixing JPA access code with native Hibernate access code within the same transaction.
  *
  * @author Juergen Hoeller
  * @since 4.2
@@ -81,8 +76,7 @@ import org.springframework.lang.Nullable;
  * @see org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean
  */
 public class LocalSessionFactoryBean extends HibernateExceptionTranslator
-		implements FactoryBean<SessionFactory>, ResourceLoaderAware, BeanFactoryAware,
-		InitializingBean, SmartInitializingSingleton, DisposableBean {
+		implements FactoryBean<SessionFactory>, ResourceLoaderAware, BeanFactoryAware, InitializingBean, DisposableBean {
 
 	@Nullable
 	private DataSource dataSource;
@@ -287,7 +281,7 @@ public class LocalSessionFactoryBean extends HibernateExceptionTranslator
 
 	/**
 	 * Set the Spring {@link org.springframework.transaction.jta.JtaTransactionManager}
-	 * or the JTA {@link jakarta.transaction.TransactionManager} to be used with Hibernate,
+	 * or the JTA {@link javax.transaction.TransactionManager} to be used with Hibernate,
 	 * if any. Implicitly sets up {@code JtaPlatform}.
 	 * @see LocalSessionFactoryBuilder#setJtaTransactionManager
 	 */
@@ -349,8 +343,8 @@ public class LocalSessionFactoryBean extends HibernateExceptionTranslator
 	/**
 	 * Specify custom type filters for Spring-based scanning for entity classes.
 	 * <p>Default is to search all specified packages for classes annotated with
-	 * {@code @jakarta.persistence.Entity}, {@code @jakarta.persistence.Embeddable}
-	 * or {@code @jakarta.persistence.MappedSuperclass}.
+	 * {@code @javax.persistence.Entity}, {@code @javax.persistence.Embeddable}
+	 * or {@code @javax.persistence.MappedSuperclass}.
 	 * @see #setPackagesToScan
 	 */
 	public void setEntityTypeFilters(TypeFilter... entityTypeFilters) {
@@ -385,7 +379,7 @@ public class LocalSessionFactoryBean extends HibernateExceptionTranslator
 
 	/**
 	 * Specify an asynchronous executor for background bootstrapping,
-	 * for example, a {@link org.springframework.core.task.SimpleAsyncTaskExecutor}.
+	 * e.g. a {@link org.springframework.core.task.SimpleAsyncTaskExecutor}.
 	 * <p>{@code SessionFactory} initialization will then switch into background
 	 * bootstrap mode, with a {@code SessionFactory} proxy immediately returned for
 	 * injection purposes instead of waiting for Hibernate's bootstrapping to complete.
@@ -393,8 +387,6 @@ public class LocalSessionFactoryBean extends HibernateExceptionTranslator
 	 * then block until Hibernate's bootstrapping completed, if not ready by then.
 	 * For maximum benefit, make sure to avoid early {@code SessionFactory} calls
 	 * in init methods of related beans, even for metadata introspection purposes.
-	 * <p>As of 6.2, Hibernate initialization is enforced before context refresh
-	 * completion, waiting for asynchronous bootstrapping to complete by then.
 	 * @since 4.3
 	 * @see LocalSessionFactoryBuilder#buildSessionFactory(AsyncTaskExecutor)
 	 */
@@ -416,7 +408,7 @@ public class LocalSessionFactoryBean extends HibernateExceptionTranslator
 	}
 
 	/**
-	 * Specify a Hibernate {@link MetadataSources} service to use (for example, reusing an
+	 * Specify a Hibernate {@link MetadataSources} service to use (e.g. reusing an
 	 * existing one), potentially populated with a custom Hibernate bootstrap
 	 * {@link org.hibernate.service.ServiceRegistry} as well.
 	 * @since 4.3
@@ -477,15 +469,18 @@ public class LocalSessionFactoryBean extends HibernateExceptionTranslator
 	/**
 	 * Accept the containing {@link BeanFactory}, registering corresponding Hibernate
 	 * {@link org.hibernate.resource.beans.container.spi.BeanContainer} integration for
-	 * it if possible. This requires a Spring {@link ConfigurableListableBeanFactory}.
+	 * it if possible. This requires a Spring {@link ConfigurableListableBeanFactory}
+	 * and Hibernate 5.3 or higher on the classpath.
 	 * @since 5.1
 	 * @see SpringBeanContainer
 	 * @see LocalSessionFactoryBuilder#setBeanContainer
 	 */
 	@Override
 	public void setBeanFactory(BeanFactory beanFactory) {
-		if (beanFactory instanceof ConfigurableListableBeanFactory clbf) {
-			this.beanFactory = clbf;
+		if (beanFactory instanceof ConfigurableListableBeanFactory &&
+				ClassUtils.isPresent("org.hibernate.resource.beans.container.spi.BeanContainer",
+						getClass().getClassLoader())) {
+			this.beanFactory = (ConfigurableListableBeanFactory) beanFactory;
 		}
 	}
 
@@ -605,20 +600,12 @@ public class LocalSessionFactoryBean extends HibernateExceptionTranslator
 		this.sessionFactory = buildSessionFactory(sfb);
 	}
 
-	@Override
-	public void afterSingletonsInstantiated() {
-		// Enforce completion of asynchronous Hibernate initialization before context refresh completion.
-		if (this.sessionFactory instanceof InfrastructureProxy proxy) {
-			proxy.getWrappedObject();
-		}
-	}
-
 	/**
 	 * Subclasses can override this method to perform custom initialization
 	 * of the SessionFactory instance, creating it via the given Configuration
 	 * object that got prepared by this LocalSessionFactoryBean.
 	 * <p>The default implementation invokes LocalSessionFactoryBuilder's buildSessionFactory.
-	 * A custom implementation could prepare the instance in a specific way (for example, applying
+	 * A custom implementation could prepare the instance in a specific way (e.g. applying
 	 * a custom ServiceRegistry) or use a custom SessionFactoryImpl subclass.
 	 * @param sfb a LocalSessionFactoryBuilder prepared by this LocalSessionFactoryBean
 	 * @return the SessionFactory instance

@@ -1,1 +1,1 @@
-html { body(hello + ", Java Café") }
+html { body(hello) }

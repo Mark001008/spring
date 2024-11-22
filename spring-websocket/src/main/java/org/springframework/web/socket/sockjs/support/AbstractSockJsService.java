@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,6 @@ package org.springframework.web.socket.sockjs.support;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -28,7 +27,8 @@ import java.util.List;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
-import jakarta.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletRequest;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -56,7 +56,7 @@ import org.springframework.web.util.WebUtils;
 
 /**
  * An abstract base class for {@link SockJsService} implementations that provides SockJS
- * path resolution and handling of static SockJS requests (for example, "/info", "/iframe.html",
+ * path resolution and handling of static SockJS requests (e.g. "/info", "/iframe.html",
  * etc). Sub-classes must handle session URLs (i.e. transport-specific requests).
  *
  * <p>By default, only same origin requests are allowed. Use {@link #setAllowedOrigins}
@@ -73,7 +73,7 @@ public abstract class AbstractSockJsService implements SockJsService, CorsConfig
 	private static final long ONE_YEAR = TimeUnit.DAYS.toSeconds(365);
 
 
-	private static final Random random = new SecureRandom();
+	private static final Random random = new Random();
 
 	protected final Log logger = LogFactory.getLog(getClass());
 
@@ -81,7 +81,7 @@ public abstract class AbstractSockJsService implements SockJsService, CorsConfig
 
 	private String name = "SockJSService@" + ObjectUtils.getIdentityHexString(this);
 
-	private String clientLibraryUrl = "https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js";
+	private String clientLibraryUrl = "https://cdn.jsdelivr.net/sockjs/1.0.0/sockjs.min.js";
 
 	private int streamBytesLimit = 128 * 1024;
 
@@ -144,21 +144,20 @@ public abstract class AbstractSockJsService implements SockJsService, CorsConfig
 	}
 
 	/**
-	 * Transports with no native cross-domain communication (for example, "eventsource",
+	 * Transports with no native cross-domain communication (e.g. "eventsource",
 	 * "htmlfile") must get a simple page from the "foreign" domain in an invisible
-	 * {@code iframe} so that code in the {@code iframe} can run from a domain
-	 * local to the SockJS server. Since the {@code iframe} needs to load the
-	 * SockJS JavaScript client library, this property allows specifying where to
-	 * load it from.
+	 * iframe so that code in the iframe can run from  a domain local to the SockJS
+	 * server. Since the iframe needs to load the SockJS javascript client library,
+	 * this property allows specifying where to load it from.
 	 * <p>By default this is set to point to
-	 * <a href="https://cdn.jsdelivr.net/sockjs/1.0.0/sockjs.min.js">"https://cdn.jsdelivr.net/sockjs/1.0.0/sockjs.min.js"</a>.
+	 * "https://cdn.jsdelivr.net/sockjs/1.0.0/sockjs.min.js".
 	 * However, it can also be set to point to a URL served by the application.
 	 * <p>Note that it's possible to specify a relative URL in which case the URL
-	 * must be relative to the {@code iframe} URL. For example assuming a SockJS endpoint
-	 * mapped to "/sockjs", and resulting {@code iframe} URL "/sockjs/iframe.html", then
+	 * must be relative to the iframe URL. For example assuming a SockJS endpoint
+	 * mapped to "/sockjs", and resulting iframe URL "/sockjs/iframe.html", then
 	 * the relative URL must start with "../../" to traverse up to the location
 	 * above the SockJS mapping. In case of a prefix-based Servlet mapping one more
-	 * traversals may be needed.
+	 * traversal may be needed.
 	 */
 	public void setSockJsClientLibraryUrl(String clientLibraryUrl) {
 		this.clientLibraryUrl = clientLibraryUrl;
@@ -196,7 +195,7 @@ public abstract class AbstractSockJsService implements SockJsService, CorsConfig
 	/**
 	 * The SockJS protocol requires a server to respond to an initial "/info" request from
 	 * clients with a "cookie_needed" boolean property that indicates whether the use of a
-	 * JSESSIONID cookie is required for the application to function correctly, for example, for
+	 * JSESSIONID cookie is required for the application to function correctly, e.g. for
 	 * load balancing or in Java Servlet containers for the use of an HTTP session.
 	 * <p>This is especially important for IE 8,9 that support XDomainRequest -- a modified
 	 * AJAX/XHR -- that can do requests across domains but does not send any cookies. In
@@ -342,7 +341,6 @@ public abstract class AbstractSockJsService implements SockJsService, CorsConfig
 	 * @since 4.1.2
 	 */
 	@SuppressWarnings("ConstantConditions")
-	@Nullable
 	public Collection<String> getAllowedOrigins() {
 		return this.corsConfiguration.getAllowedOrigins();
 	}
@@ -365,7 +363,6 @@ public abstract class AbstractSockJsService implements SockJsService, CorsConfig
 	 * @since 5.3.2
 	 */
 	@SuppressWarnings("ConstantConditions")
-	@Nullable
 	public Collection<String> getAllowedOriginPatterns() {
 		return this.corsConfiguration.getAllowedOriginPatterns();
 	}
@@ -418,8 +415,8 @@ public abstract class AbstractSockJsService implements SockJsService, CorsConfig
 			}
 
 			else if (sockJsPath.matches("/iframe[0-9-.a-z_]*.html")) {
-				if (!CollectionUtils.isEmpty(getAllowedOrigins()) && !getAllowedOrigins().contains("*") ||
-						!CollectionUtils.isEmpty(getAllowedOriginPatterns())) {
+				if (!getAllowedOrigins().isEmpty() && !getAllowedOrigins().contains("*") ||
+						!getAllowedOriginPatterns().isEmpty()) {
 					if (requestInfo != null) {
 						logger.debug("Iframe support is disabled when an origin check is required. " +
 								"Ignoring transport request: " + requestInfo);
@@ -427,7 +424,7 @@ public abstract class AbstractSockJsService implements SockJsService, CorsConfig
 					response.setStatusCode(HttpStatus.NOT_FOUND);
 					return;
 				}
-				if (CollectionUtils.isEmpty(getAllowedOrigins())) {
+				if (getAllowedOrigins().isEmpty()) {
 					response.getHeaders().add(XFRAME_OPTIONS_HEADER, "SAMEORIGIN");
 				}
 				if (requestInfo != null) {
@@ -510,7 +507,7 @@ public abstract class AbstractSockJsService implements SockJsService, CorsConfig
 
 	/**
 	 * Ensure the path does not contain a file extension, either in the filename
-	 * (for example, "/jsonp.bat") or possibly after path parameters ("/jsonp;Setup.bat")
+	 * (e.g. "/jsonp.bat") or possibly after path parameters ("/jsonp;Setup.bat")
 	 * which could be used for RFD exploits.
 	 * <p>Since the last part of the path is expected to be a transport type, the
 	 * presence of an extension would not work. All we need to do is check if
@@ -617,24 +614,24 @@ public abstract class AbstractSockJsService implements SockJsService, CorsConfig
 
 	private class IframeHandler implements SockJsRequestHandler {
 
-		private static final String IFRAME_CONTENT = """
-				<!DOCTYPE html>
-				<html>
-				<head>
-					<meta http-equiv="X-UA-Compatible" content="IE=edge" />
-					<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-					<title>SockJS iframe</title>
-					<script>
-						document.domain = document.domain;
-						_sockjs_onload = function(){SockJS.bootstrap_iframe();};
-					</script>
-					<script src="%s"></script>
-				</head>
-				<body>
-					<h2>Don't panic!</h2>
-					<p>This is a SockJS hidden iframe. It's used for cross domain magic.</p>
-				</body>
-				</html>""";
+		private static final String IFRAME_CONTENT =
+				"<!DOCTYPE html>\n" +
+				"<html>\n" +
+				"<head>\n" +
+				"  <meta http-equiv=\"X-UA-Compatible\" content=\"IE=edge\" />\n" +
+				"  <meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\" />\n" +
+				"  <title>SockJS iframe</title>\n" +
+				"  <script>\n" +
+				"    document.domain = document.domain;\n" +
+				"    _sockjs_onload = function(){SockJS.bootstrap_iframe();};\n" +
+				"  </script>\n" +
+				"  <script src=\"%s\"></script>\n" +
+				"</head>\n" +
+				"<body>\n" +
+				"  <h2>Don't panic!</h2>\n" +
+				"  <p>This is a SockJS hidden iframe. It's used for cross domain magic.</p>\n" +
+				"</body>\n" +
+				"</html>";
 
 		@Override
 		public void handle(ServerHttpRequest request, ServerHttpResponse response) throws IOException {

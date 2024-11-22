@@ -34,7 +34,7 @@ public class JndiLocatorDelegate extends JndiLocatorSupport {
 	/**
 	 * System property that instructs Spring to ignore a default JNDI environment, i.e.
 	 * to always return {@code false} from {@link #isDefaultJndiEnvironmentAvailable()}.
-	 * <p>The default is "false", allowing for regular default JNDI access, for example, in
+	 * <p>The default is "false", allowing for regular default JNDI access e.g. in
 	 * {@link JndiPropertySource}. Switching this flag to {@code true} is an optimization
 	 * for scenarios where nothing is ever to be found for such JNDI fallback searches
 	 * to begin with, avoiding the repeated JNDI lookup overhead.
@@ -77,7 +77,7 @@ public class JndiLocatorDelegate extends JndiLocatorSupport {
 	}
 
 	/**
-	 * Check whether a default JNDI environment, as in a Jakarta EE environment,
+	 * Check whether a default JNDI environment, as in a Java EE environment,
 	 * is available on this JVM.
 	 * @return {@code true} if a default InitialContext can be used,
 	 * {@code false} if not

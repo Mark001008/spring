@@ -66,27 +66,25 @@ public class UndertowHttpHandlerAdapter implements io.undertow.server.HttpHandle
 
 	@Override
 	public void handleRequest(HttpServerExchange exchange) {
-		exchange.dispatch(() -> {
-			UndertowServerHttpRequest request = null;
-			try {
-				request = new UndertowServerHttpRequest(exchange, getDataBufferFactory());
+		UndertowServerHttpRequest request = null;
+		try {
+			request = new UndertowServerHttpRequest(exchange, getDataBufferFactory());
+		}
+		catch (URISyntaxException ex) {
+			if (logger.isWarnEnabled()) {
+				logger.debug("Failed to get request URI: " + ex.getMessage());
 			}
-			catch (URISyntaxException ex) {
-				if (logger.isWarnEnabled()) {
-					logger.debug("Failed to get request URI: " + ex.getMessage());
-				}
-				exchange.setStatusCode(400);
-				return;
-			}
-			ServerHttpResponse response = new UndertowServerHttpResponse(exchange, getDataBufferFactory(), request);
+			exchange.setStatusCode(400);
+			return;
+		}
+		ServerHttpResponse response = new UndertowServerHttpResponse(exchange, getDataBufferFactory(), request);
 
-			if (request.getMethod() == HttpMethod.HEAD) {
-				response = new HttpHeadResponseDecorator(response);
-			}
+		if (request.getMethod() == HttpMethod.HEAD) {
+			response = new HttpHeadResponseDecorator(response);
+		}
 
-			HandlerResultSubscriber resultSubscriber = new HandlerResultSubscriber(exchange, request);
-			this.httpHandler.handle(request, response).subscribe(resultSubscriber);
-		});
+		HandlerResultSubscriber resultSubscriber = new HandlerResultSubscriber(exchange, request);
+		this.httpHandler.handle(request, response).subscribe(resultSubscriber);
 	}
 
 

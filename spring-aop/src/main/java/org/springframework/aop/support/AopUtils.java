@@ -25,10 +25,6 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
-import kotlin.coroutines.Continuation;
-import kotlin.coroutines.CoroutineContext;
-import kotlinx.coroutines.Job;
-
 import org.springframework.aop.Advisor;
 import org.springframework.aop.AopInvocationException;
 import org.springframework.aop.IntroductionAdvisor;
@@ -39,10 +35,7 @@ import org.springframework.aop.PointcutAdvisor;
 import org.springframework.aop.SpringProxy;
 import org.springframework.aop.TargetClassAware;
 import org.springframework.core.BridgeMethodResolver;
-import org.springframework.core.CoroutinesUtils;
-import org.springframework.core.KotlinDetector;
 import org.springframework.core.MethodIntrospector;
-import org.springframework.lang.Contract;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
@@ -60,14 +53,9 @@ import org.springframework.util.ReflectionUtils;
  * @author Rod Johnson
  * @author Juergen Hoeller
  * @author Rob Harrop
- * @author Sebastien Deleuze
  * @see org.springframework.aop.framework.AopProxyUtils
  */
 public abstract class AopUtils {
-
-	private static final boolean coroutinesReactorPresent = ClassUtils.isPresent(
-			"kotlinx.coroutines.reactor.MonoKt", AopUtils.class.getClassLoader());
-
 
 	/**
 	 * Check whether the given object is a JDK dynamic proxy or a CGLIB proxy.
@@ -77,7 +65,6 @@ public abstract class AopUtils {
 	 * @see #isJdkDynamicProxy
 	 * @see #isCglibProxy
 	 */
-	@Contract("null -> false")
 	public static boolean isAopProxy(@Nullable Object object) {
 		return (object instanceof SpringProxy && (Proxy.isProxyClass(object.getClass()) ||
 				object.getClass().getName().contains(ClassUtils.CGLIB_CLASS_SEPARATOR)));
@@ -91,7 +78,6 @@ public abstract class AopUtils {
 	 * @param object the object to check
 	 * @see java.lang.reflect.Proxy#isProxyClass
 	 */
-	@Contract("null -> false")
 	public static boolean isJdkDynamicProxy(@Nullable Object object) {
 		return (object instanceof SpringProxy && Proxy.isProxyClass(object.getClass()));
 	}
@@ -104,7 +90,6 @@ public abstract class AopUtils {
 	 * @param object the object to check
 	 * @see ClassUtils#isCglibProxy(Object)
 	 */
-	@Contract("null -> false")
 	public static boolean isCglibProxy(@Nullable Object object) {
 		return (object instanceof SpringProxy &&
 				object.getClass().getName().contains(ClassUtils.CGLIB_CLASS_SEPARATOR));
@@ -122,8 +107,8 @@ public abstract class AopUtils {
 	public static Class<?> getTargetClass(Object candidate) {
 		Assert.notNull(candidate, "Candidate object must not be null");
 		Class<?> result = null;
-		if (candidate instanceof TargetClassAware targetClassAware) {
-			result = targetClassAware.getTargetClass();
+		if (candidate instanceof TargetClassAware) {
+			result = ((TargetClassAware) candidate).getTargetClass();
 		}
 		if (result == null) {
 			result = (isCglibProxy(candidate) ? candidate.getClass().getSuperclass() : candidate.getClass());
@@ -194,7 +179,7 @@ public abstract class AopUtils {
 	/**
 	 * Given a method, which may come from an interface, and a target class used
 	 * in the current AOP invocation, find the corresponding target method if there
-	 * is one. For example, the method may be {@code IFoo.bar()} and the target class
+	 * is one. E.g. the method may be {@code IFoo.bar()} and the target class
 	 * may be {@code DefaultFoo}. In this case, the method may be
 	 * {@code DefaultFoo.bar()}. This enables attributes on that method to be found.
 	 * <p><b>NOTE:</b> In contrast to {@link org.springframework.util.ClassUtils#getMostSpecificMethod},
@@ -206,11 +191,12 @@ public abstract class AopUtils {
 	 * @return the specific target method, or the original method if the
 	 * {@code targetClass} does not implement it
 	 * @see org.springframework.util.ClassUtils#getMostSpecificMethod
-	 * @see org.springframework.core.BridgeMethodResolver#getMostSpecificMethod
 	 */
 	public static Method getMostSpecificMethod(Method method, @Nullable Class<?> targetClass) {
 		Class<?> specificTargetClass = (targetClass != null ? ClassUtils.getUserClass(targetClass) : null);
-		return BridgeMethodResolver.getMostSpecificMethod(method, specificTargetClass);
+		Method resolvedMethod = ClassUtils.getMostSpecificMethod(method, specificTargetClass);
+		// If we are dealing with method with generic parameters, find the original method.
+		return BridgeMethodResolver.findBridgedMethod(resolvedMethod);
 	}
 
 	/**
@@ -248,8 +234,8 @@ public abstract class AopUtils {
 		}
 
 		IntroductionAwareMethodMatcher introductionAwareMethodMatcher = null;
-		if (methodMatcher instanceof IntroductionAwareMethodMatcher iamm) {
-			introductionAwareMethodMatcher = iamm;
+		if (methodMatcher instanceof IntroductionAwareMethodMatcher) {
+			introductionAwareMethodMatcher = (IntroductionAwareMethodMatcher) methodMatcher;
 		}
 
 		Set<Class<?>> classes = new LinkedHashSet<>();
@@ -295,10 +281,11 @@ public abstract class AopUtils {
 	 * @return whether the pointcut can apply on any method
 	 */
 	public static boolean canApply(Advisor advisor, Class<?> targetClass, boolean hasIntroductions) {
-		if (advisor instanceof IntroductionAdvisor ia) {
-			return ia.getClassFilter().matches(targetClass);
+		if (advisor instanceof IntroductionAdvisor) {
+			return ((IntroductionAdvisor) advisor).getClassFilter().matches(targetClass);
 		}
-		else if (advisor instanceof PointcutAdvisor pca) {
+		else if (advisor instanceof PointcutAdvisor) {
+			PointcutAdvisor pca = (PointcutAdvisor) advisor;
 			return canApply(pca.getPointcut(), targetClass, hasIntroductions);
 		}
 		else {
@@ -353,10 +340,8 @@ public abstract class AopUtils {
 
 		// Use reflection to invoke the method.
 		try {
-			Method originalMethod = BridgeMethodResolver.findBridgedMethod(method);
-			ReflectionUtils.makeAccessible(originalMethod);
-			return (coroutinesReactorPresent && KotlinDetector.isSuspendingFunction(originalMethod) ?
-					KotlinDelegate.invokeSuspendingFunction(originalMethod, target, args) : originalMethod.invoke(target, args));
+			ReflectionUtils.makeAccessible(method);
+			return method.invoke(target, args);
 		}
 		catch (InvocationTargetException ex) {
 			// Invoked method threw a checked exception.
@@ -369,20 +354,6 @@ public abstract class AopUtils {
 		}
 		catch (IllegalAccessException ex) {
 			throw new AopInvocationException("Could not access method [" + method + "]", ex);
-		}
-	}
-
-
-	/**
-	 * Inner class to avoid a hard dependency on Kotlin at runtime.
-	 */
-	private static class KotlinDelegate {
-
-		public static Object invokeSuspendingFunction(Method method, @Nullable Object target, Object... args) {
-			Continuation<?> continuation = (Continuation<?>) args[args.length -1];
-			Assert.state(continuation != null, "No Continuation available");
-			CoroutineContext context = continuation.getContext().minusKey(Job.Key);
-			return CoroutinesUtils.invokeSuspendingFunction(context, method, target, args);
 		}
 	}
 

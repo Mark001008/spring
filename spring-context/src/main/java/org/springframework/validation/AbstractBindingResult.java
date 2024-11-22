@@ -169,8 +169,8 @@ public abstract class AbstractBindingResult extends AbstractErrors implements Bi
 	public List<FieldError> getFieldErrors() {
 		List<FieldError> result = new ArrayList<>();
 		for (ObjectError objectError : this.errors) {
-			if (objectError instanceof FieldError fieldError) {
-				result.add(fieldError);
+			if (objectError instanceof FieldError) {
+				result.add((FieldError) objectError);
 			}
 		}
 		return Collections.unmodifiableList(result);
@@ -180,8 +180,8 @@ public abstract class AbstractBindingResult extends AbstractErrors implements Bi
 	@Nullable
 	public FieldError getFieldError() {
 		for (ObjectError objectError : this.errors) {
-			if (objectError instanceof FieldError fieldError) {
-				return fieldError;
+			if (objectError instanceof FieldError) {
+				return (FieldError) objectError;
 			}
 		}
 		return null;
@@ -192,8 +192,8 @@ public abstract class AbstractBindingResult extends AbstractErrors implements Bi
 		List<FieldError> result = new ArrayList<>();
 		String fixedField = fixedField(field);
 		for (ObjectError objectError : this.errors) {
-			if (objectError instanceof FieldError fieldError && isMatchingFieldError(fixedField, fieldError)) {
-				result.add(fieldError);
+			if (objectError instanceof FieldError && isMatchingFieldError(fixedField, (FieldError) objectError)) {
+				result.add((FieldError) objectError);
 			}
 		}
 		return Collections.unmodifiableList(result);
@@ -204,8 +204,11 @@ public abstract class AbstractBindingResult extends AbstractErrors implements Bi
 	public FieldError getFieldError(String field) {
 		String fixedField = fixedField(field);
 		for (ObjectError objectError : this.errors) {
-			if (objectError instanceof FieldError fieldError && isMatchingFieldError(fixedField, fieldError)) {
-				return fieldError;
+			if (objectError instanceof FieldError) {
+				FieldError fieldError = (FieldError) objectError;
+				if (isMatchingFieldError(fixedField, fieldError)) {
+					return fieldError;
+				}
 			}
 		}
 		return null;
@@ -358,10 +361,16 @@ public abstract class AbstractBindingResult extends AbstractErrors implements Bi
 
 	@Override
 	public boolean equals(@Nullable Object other) {
-		return (this == other || (other instanceof BindingResult that &&
-				getObjectName().equals(that.getObjectName()) &&
-				ObjectUtils.nullSafeEquals(getTarget(), that.getTarget()) &&
-				getAllErrors().equals(that.getAllErrors())));
+		if (this == other) {
+			return true;
+		}
+		if (!(other instanceof BindingResult)) {
+			return false;
+		}
+		BindingResult otherResult = (BindingResult) other;
+		return (getObjectName().equals(otherResult.getObjectName()) &&
+				ObjectUtils.nullSafeEquals(getTarget(), otherResult.getTarget()) &&
+				getAllErrors().equals(otherResult.getAllErrors()));
 	}
 
 	@Override

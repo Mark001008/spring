@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,17 +16,14 @@
 
 package org.springframework.http.codec.xml;
 
-import java.io.Serial;
 import java.util.Arrays;
 import java.util.List;
 import java.util.function.Consumer;
 
-import javax.xml.namespace.QName;
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlElements;
+import javax.xml.bind.annotation.XmlRootElement;
 
-import jakarta.xml.bind.JAXBElement;
-import jakarta.xml.bind.annotation.XmlElement;
-import jakarta.xml.bind.annotation.XmlElements;
-import jakarta.xml.bind.annotation.XmlRootElement;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -44,11 +41,10 @@ import static org.springframework.core.ResolvableType.forClass;
 import static org.springframework.core.io.buffer.DataBufferUtils.release;
 
 /**
- * Tests for {@link Jaxb2XmlEncoder}.
  * @author Sebastien Deleuze
  * @author Arjen Poutsma
  */
-class Jaxb2XmlEncoderTests extends AbstractEncoderTests<Jaxb2XmlEncoder> {
+public class Jaxb2XmlEncoderTests extends AbstractEncoderTests<Jaxb2XmlEncoder> {
 
 	public Jaxb2XmlEncoderTests() {
 		super(new Jaxb2XmlEncoder());
@@ -56,17 +52,14 @@ class Jaxb2XmlEncoderTests extends AbstractEncoderTests<Jaxb2XmlEncoder> {
 
 	@Override
 	@Test
-	protected void canEncode() {
+	public void canEncode() {
 		assertThat(this.encoder.canEncode(forClass(Pojo.class), MediaType.APPLICATION_XML)).isTrue();
 		assertThat(this.encoder.canEncode(forClass(Pojo.class), MediaType.TEXT_XML)).isTrue();
 		assertThat(this.encoder.canEncode(forClass(Pojo.class), new MediaType("application", "foo+xml"))).isTrue();
 		assertThat(this.encoder.canEncode(forClass(Pojo.class), MediaType.APPLICATION_JSON)).isFalse();
 
-		assertThat(this.encoder.canEncode(forClass(TypePojo.class), MediaType.APPLICATION_XML)).isTrue();
+		assertThat(this.encoder.canEncode(forClass(Jaxb2XmlDecoderTests.TypePojo.class), MediaType.APPLICATION_XML)).isTrue();
 		assertThat(this.encoder.canEncode(forClass(getClass()), MediaType.APPLICATION_XML)).isFalse();
-
-		assertThat(this.encoder.canEncode(forClass(JAXBElement.class), MediaType.APPLICATION_XML)).isTrue();
-		assertThat(this.encoder.canEncode(forClass(JAXBElementSubclass.class), MediaType.APPLICATION_XML)).isTrue();
 
 		// SPR-15464
 		assertThat(this.encoder.canEncode(ResolvableType.NONE, null)).isFalse();
@@ -74,7 +67,7 @@ class Jaxb2XmlEncoderTests extends AbstractEncoderTests<Jaxb2XmlEncoder> {
 
 	@Override
 	@Test
-	protected void encode() {
+	public void encode() {
 		Mono<Pojo> input = Mono.just(new Pojo("foofoo", "barbar"));
 
 		testEncode(input, Pojo.class, step -> step
@@ -85,25 +78,13 @@ class Jaxb2XmlEncoderTests extends AbstractEncoderTests<Jaxb2XmlEncoder> {
 	}
 
 	@Test
-	void encodeJaxbElement() {
-		Mono<JAXBElement<Pojo>> input = Mono.just(new JAXBElement<>(new QName("baz"), Pojo.class,
-				new Pojo("foofoo", "barbar")));
-
-		testEncode(input, Pojo.class, step -> step
-				.consumeNextWith(expectXml(
-						"<?xml version='1.0' encoding='UTF-8' standalone='yes'?>" +
-								"<baz><bar>barbar</bar><foo>foofoo</foo></baz>"))
-				.verifyComplete());
-	}
-
-	@Test
-	void encodeError() {
+	public void encodeError() {
 		Flux<Pojo> input = Flux.error(RuntimeException::new);
 		testEncode(input, Pojo.class, step -> step.expectError(RuntimeException.class).verify());
 	}
 
 	@Test
-	void encodeElementsWithCommonType() {
+	public void encodeElementsWithCommonType() {
 		Mono<Container> input = Mono.just(new Container());
 
 		testEncode(input, Pojo.class, step -> step
@@ -123,17 +104,6 @@ class Jaxb2XmlEncoderTests extends AbstractEncoderTests<Jaxb2XmlEncoder> {
 			String actual = new String(resultBytes, UTF_8);
 			assertThat(XmlContent.from(actual)).isSimilarTo(expected);
 		};
-	}
-
-	public static class JAXBElementSubclass extends JAXBElement<Pojo> {
-		@Serial
-		private static final long serialVersionUID = 1L;
-
-		protected static final QName NAME = new QName("http://foo/schema/common/1.0", "Pojo");
-
-		public JAXBElementSubclass() {
-			super(NAME, Pojo.class, null, null);
-		}
 	}
 
 	public static class Model {}

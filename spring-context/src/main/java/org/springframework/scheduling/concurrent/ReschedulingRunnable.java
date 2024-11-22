@@ -17,8 +17,7 @@
 package org.springframework.scheduling.concurrent;
 
 import java.time.Clock;
-import java.time.Duration;
-import java.time.Instant;
+import java.util.Date;
 import java.util.concurrent.Delayed;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
@@ -57,7 +56,7 @@ class ReschedulingRunnable extends DelegatingErrorHandlingRunnable implements Sc
 	private ScheduledFuture<?> currentFuture;
 
 	@Nullable
-	private Instant scheduledExecutionTime;
+	private Date scheduledExecutionTime;
 
 	private final Object triggerContextMonitor = new Object();
 
@@ -75,12 +74,12 @@ class ReschedulingRunnable extends DelegatingErrorHandlingRunnable implements Sc
 	@Nullable
 	public ScheduledFuture<?> schedule() {
 		synchronized (this.triggerContextMonitor) {
-			this.scheduledExecutionTime = this.trigger.nextExecution(this.triggerContext);
+			this.scheduledExecutionTime = this.trigger.nextExecutionTime(this.triggerContext);
 			if (this.scheduledExecutionTime == null) {
 				return null;
 			}
-			Duration delay = Duration.between(this.triggerContext.getClock().instant(), this.scheduledExecutionTime);
-			this.currentFuture = this.executor.schedule(this, delay.toNanos(), TimeUnit.NANOSECONDS);
+			long delay = this.scheduledExecutionTime.getTime() - this.triggerContext.getClock().millis();
+			this.currentFuture = this.executor.schedule(this, delay, TimeUnit.MILLISECONDS);
 			return this;
 		}
 	}
@@ -92,9 +91,9 @@ class ReschedulingRunnable extends DelegatingErrorHandlingRunnable implements Sc
 
 	@Override
 	public void run() {
-		Instant actualExecutionTime = this.triggerContext.getClock().instant();
+		Date actualExecutionTime = new Date(this.triggerContext.getClock().millis());
 		super.run();
-		Instant completionTime = this.triggerContext.getClock().instant();
+		Date completionTime = new Date(this.triggerContext.getClock().millis());
 		synchronized (this.triggerContextMonitor) {
 			Assert.state(this.scheduledExecutionTime != null, "No scheduled execution");
 			this.triggerContext.update(this.scheduledExecutionTime, actualExecutionTime, completionTime);
@@ -158,8 +157,8 @@ class ReschedulingRunnable extends DelegatingErrorHandlingRunnable implements Sc
 		if (this == other) {
 			return 0;
 		}
-		long diff = getDelay(TimeUnit.NANOSECONDS) - other.getDelay(TimeUnit.NANOSECONDS);
-		return (diff == 0 ? 0 : (diff < 0 ? -1 : 1));
+		long diff = getDelay(TimeUnit.MILLISECONDS) - other.getDelay(TimeUnit.MILLISECONDS);
+		return (diff == 0 ? 0 : ((diff < 0)? -1 : 1));
 	}
 
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -52,6 +52,10 @@ import org.springframework.messaging.tcp.TcpConnection;
 import org.springframework.messaging.tcp.TcpConnectionHandler;
 import org.springframework.messaging.tcp.TcpOperations;
 import org.springframework.util.Assert;
+import org.springframework.util.concurrent.CompletableToListenableFutureAdapter;
+import org.springframework.util.concurrent.ListenableFuture;
+import org.springframework.util.concurrent.MonoToListenableFutureAdapter;
+import org.springframework.util.concurrent.SettableListenableFuture;
 
 /**
  * Reactor Netty based implementation of {@link TcpOperations}.
@@ -175,18 +179,20 @@ public class ReactorNettyTcpClient<P> implements TcpOperations<P> {
 
 
 	@Override
-	public CompletableFuture<Void> connectAsync(TcpConnectionHandler<P> handler) {
+	public ListenableFuture<Void> connect(final TcpConnectionHandler<P> handler) {
 		Assert.notNull(handler, "TcpConnectionHandler is required");
 
 		if (this.stopping) {
 			return handleShuttingDownConnectFailure(handler);
 		}
 
-		return extendTcpClient(this.tcpClient, handler)
+		Mono<Void> connectMono = extendTcpClient(this.tcpClient, handler)
 				.handle(new ReactorNettyHandler(handler))
 				.connect()
 				.doOnError(handler::afterConnectFailure)
-				.then().toFuture();
+				.then();
+
+		return new MonoToListenableFutureAdapter<>(connectMono);
 	}
 
 	/**
@@ -203,7 +209,7 @@ public class ReactorNettyTcpClient<P> implements TcpOperations<P> {
 	}
 
 	@Override
-	public CompletableFuture<Void> connectAsync(TcpConnectionHandler<P> handler, ReconnectStrategy strategy) {
+	public ListenableFuture<Void> connect(TcpConnectionHandler<P> handler, ReconnectStrategy strategy) {
 		Assert.notNull(handler, "TcpConnectionHandler is required");
 		Assert.notNull(strategy, "ReconnectStrategy is required");
 
@@ -228,13 +234,14 @@ public class ReactorNettyTcpClient<P> implements TcpOperations<P> {
 						.scan(1, (count, element) -> count++)
 						.flatMap(attempt -> reconnect(attempt, strategy)))
 				.subscribe();
-		return connectFuture;
+
+		return new CompletableToListenableFutureAdapter<>(connectFuture);
 	}
 
-	private CompletableFuture<Void> handleShuttingDownConnectFailure(TcpConnectionHandler<P> handler) {
+	private ListenableFuture<Void> handleShuttingDownConnectFailure(TcpConnectionHandler<P> handler) {
 		IllegalStateException ex = new IllegalStateException("Shutting down.");
 		handler.afterConnectFailure(ex);
-		return Mono.<Void>error(ex).toFuture();
+		return new MonoToListenableFutureAdapter<>(Mono.error(ex));
 	}
 
 	private Publisher<? extends Long> reconnect(Integer attempt, ReconnectStrategy reconnectStrategy) {
@@ -243,9 +250,11 @@ public class ReactorNettyTcpClient<P> implements TcpOperations<P> {
 	}
 
 	@Override
-	public CompletableFuture<Void> shutdownAsync() {
+	public ListenableFuture<Void> shutdown() {
 		if (this.stopping) {
-			return CompletableFuture.completedFuture(null);
+			SettableListenableFuture<Void> future = new SettableListenableFuture<>();
+			future.set(null);
+			return future;
 		}
 
 		this.stopping = true;
@@ -254,18 +263,18 @@ public class ReactorNettyTcpClient<P> implements TcpOperations<P> {
 		if (this.channelGroup != null) {
 			result = FutureMono.from(this.channelGroup.close());
 			if (this.loopResources != null) {
-				result = result.onErrorComplete().then(this.loopResources.disposeLater());
+				result = result.onErrorResume(ex -> Mono.empty()).then(this.loopResources.disposeLater());
 			}
 			if (this.poolResources != null) {
-				result = result.onErrorComplete().then(this.poolResources.disposeLater());
+				result = result.onErrorResume(ex -> Mono.empty()).then(this.poolResources.disposeLater());
 			}
-			result = result.onErrorComplete().then(stopScheduler());
+			result = result.onErrorResume(ex -> Mono.empty()).then(stopScheduler());
 		}
 		else {
 			result = stopScheduler();
 		}
 
-		return result.toFuture();
+		return new MonoToListenableFutureAdapter<>(result);
 	}
 
 	private Mono<Void> stopScheduler() {
@@ -308,7 +317,7 @@ public class ReactorNettyTcpClient<P> implements TcpOperations<P> {
 				}
 			});
 			Sinks.Empty<Void> completionSink = Sinks.empty();
-			TcpConnection<P> connection = new ReactorNettyTcpConnection<>(inbound, outbound, codec, completionSink);
+			TcpConnection<P> connection = new ReactorNettyTcpConnection<>(inbound, outbound,  codec, completionSink);
 			scheduler.schedule(() -> this.connectionHandler.afterConnected(connection));
 
 			inbound.withConnection(conn -> conn.addHandlerFirst(new StompMessageDecoder<>(codec)));

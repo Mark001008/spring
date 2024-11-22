@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -48,7 +48,7 @@ import org.springframework.util.StringValueResolver;
  * {@code PropertyPlaceholderConfigurer} to ensure backward compatibility. See the spring-context
  * XSD documentation for complete details.
  *
- * <p>Any local properties (for example, those added via {@link #setProperties}, {@link #setLocations}
+ * <p>Any local properties (e.g. those added via {@link #setProperties}, {@link #setLocations}
  * et al.) are added as a {@code PropertySource}. Search precedence of local properties is
  * based on the value of the {@link #setLocalOverride localOverride} property, which is by
  * default {@code false} meaning that local properties are to be searched last, after all
@@ -137,8 +137,8 @@ public class PropertySourcesPlaceholderConfigurer extends PlaceholderConfigurerS
 				// local PropertyResolver to enforce that setting, since the Environment is most
 				// likely not configured with ignoreUnresolvablePlaceholders set to true.
 				// See https://github.com/spring-projects/spring-framework/issues/27947
-				if (this.ignoreUnresolvablePlaceholders &&
-						(this.environment instanceof ConfigurableEnvironment configurableEnvironment)) {
+				if (this.ignoreUnresolvablePlaceholders && (this.environment instanceof ConfigurableEnvironment)) {
+					ConfigurableEnvironment configurableEnvironment = (ConfigurableEnvironment) this.environment;
 					PropertySourcesPropertyResolver resolver =
 							new PropertySourcesPropertyResolver(configurableEnvironment.getPropertySources());
 					resolver.setIgnoreUnresolvableNestedPlaceholders(true);
@@ -146,7 +146,7 @@ public class PropertySourcesPlaceholderConfigurer extends PlaceholderConfigurerS
 				}
 				PropertyResolver propertyResolverToUse = propertyResolver;
 				this.propertySources.addLast(
-					new PropertySource<>(ENVIRONMENT_PROPERTIES_PROPERTY_SOURCE_NAME, this.environment) {
+					new PropertySource<Environment>(ENVIRONMENT_PROPERTIES_PROPERTY_SOURCE_NAME, this.environment) {
 						@Override
 						@Nullable
 						public String getProperty(String key) {
@@ -170,17 +170,8 @@ public class PropertySourcesPlaceholderConfigurer extends PlaceholderConfigurerS
 			}
 		}
 
-		processProperties(beanFactory, createPropertyResolver(this.propertySources));
+		processProperties(beanFactory, new PropertySourcesPropertyResolver(this.propertySources));
 		this.appliedPropertySources = this.propertySources;
-	}
-
-	/**
-	 * Create a {@link ConfigurablePropertyResolver} for the specified property sources.
-	 * @param propertySources the property sources to use
-	 * @since 6.0.12
-	 */
-	protected ConfigurablePropertyResolver createPropertyResolver(MutablePropertySources propertySources){
-		return new PropertySourcesPropertyResolver(propertySources);
 	}
 
 	/**
@@ -193,7 +184,6 @@ public class PropertySourcesPlaceholderConfigurer extends PlaceholderConfigurerS
 		propertyResolver.setPlaceholderPrefix(this.placeholderPrefix);
 		propertyResolver.setPlaceholderSuffix(this.placeholderSuffix);
 		propertyResolver.setValueSeparator(this.valueSeparator);
-		propertyResolver.setEscapeCharacter(this.escapeCharacter);
 
 		StringValueResolver valueResolver = strVal -> {
 			String resolved = (this.ignoreUnresolvablePlaceholders ?

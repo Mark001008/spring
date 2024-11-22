@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,21 +28,18 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.messaging.simp.SimpSessionScope;
 import org.springframework.messaging.simp.annotation.support.SimpAnnotationMethodMessageHandler;
 import org.springframework.messaging.simp.broker.AbstractBrokerMessageHandler;
-import org.springframework.messaging.simp.broker.OrderedMessageChannelDecorator;
 import org.springframework.messaging.simp.config.AbstractMessageBrokerConfiguration;
 import org.springframework.messaging.simp.stomp.StompBrokerRelayMessageHandler;
 import org.springframework.messaging.simp.user.SimpUserRegistry;
 import org.springframework.messaging.support.AbstractSubscribableChannel;
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.web.servlet.HandlerMapping;
-import org.springframework.web.servlet.handler.AbstractHandlerMapping;
 import org.springframework.web.socket.WebSocketHandler;
 import org.springframework.web.socket.config.WebSocketMessageBrokerStats;
 import org.springframework.web.socket.handler.WebSocketHandlerDecoratorFactory;
 import org.springframework.web.socket.messaging.DefaultSimpUserRegistry;
 import org.springframework.web.socket.messaging.SubProtocolWebSocketHandler;
 import org.springframework.web.socket.messaging.WebSocketAnnotationMethodMessageHandler;
-import org.springframework.web.socket.server.support.WebSocketHandlerMapping;
 
 /**
  * Extends {@link AbstractMessageBrokerConfiguration} and adds configuration for
@@ -68,11 +65,8 @@ public abstract class WebSocketMessageBrokerConfigurationSupport extends Abstrac
 			AbstractSubscribableChannel clientInboundChannel,AbstractSubscribableChannel clientOutboundChannel,
 			SimpMessagingTemplate brokerMessagingTemplate) {
 
-		WebSocketAnnotationMethodMessageHandler handler = new WebSocketAnnotationMethodMessageHandler(
+		return new WebSocketAnnotationMethodMessageHandler(
 				clientInboundChannel, clientOutboundChannel, brokerMessagingTemplate);
-
-		handler.setPhase(getPhase());
-		return handler;
 	}
 
 	@Override
@@ -86,8 +80,7 @@ public abstract class WebSocketMessageBrokerConfigurationSupport extends Abstrac
 
 	@Bean
 	public HandlerMapping stompWebSocketHandlerMapping(
-			WebSocketHandler subProtocolWebSocketHandler, TaskScheduler messageBrokerTaskScheduler,
-			AbstractSubscribableChannel clientInboundChannel) {
+			WebSocketHandler subProtocolWebSocketHandler, TaskScheduler messageBrokerTaskScheduler) {
 
 		WebSocketHandler handler = decorateWebSocketHandler(subProtocolWebSocketHandler);
 		WebMvcStompEndpointRegistry registry =
@@ -97,23 +90,14 @@ public abstract class WebSocketMessageBrokerConfigurationSupport extends Abstrac
 			registry.setApplicationContext(applicationContext);
 		}
 		registerStompEndpoints(registry);
-		OrderedMessageChannelDecorator.configureInterceptor(clientInboundChannel, registry.isPreserveReceiveOrder());
-		AbstractHandlerMapping handlerMapping = registry.getHandlerMapping();
-		if (handlerMapping instanceof WebSocketHandlerMapping webSocketMapping) {
-			webSocketMapping.setPhase(getPhase());
-		}
-		return handlerMapping;
+		return registry.getHandlerMapping();
 	}
 
 	@Bean
 	public WebSocketHandler subProtocolWebSocketHandler(
 			AbstractSubscribableChannel clientInboundChannel, AbstractSubscribableChannel clientOutboundChannel) {
 
-		SubProtocolWebSocketHandler handler =
-				new SubProtocolWebSocketHandler(clientInboundChannel, clientOutboundChannel);
-
-		handler.setPhase(getPhase());
-		return handler;
+		return new SubProtocolWebSocketHandler(clientInboundChannel, clientOutboundChannel);
 	}
 
 	protected WebSocketHandler decorateWebSocketHandler(WebSocketHandler handler) {
@@ -153,8 +137,8 @@ public abstract class WebSocketMessageBrokerConfigurationSupport extends Abstrac
 
 		WebSocketMessageBrokerStats stats = new WebSocketMessageBrokerStats();
 		stats.setSubProtocolWebSocketHandler((SubProtocolWebSocketHandler) subProtocolWebSocketHandler);
-		if (stompBrokerRelayMessageHandler instanceof StompBrokerRelayMessageHandler sbrmh) {
-			stats.setStompBrokerRelay(sbrmh);
+		if (stompBrokerRelayMessageHandler instanceof StompBrokerRelayMessageHandler) {
+			stats.setStompBrokerRelay((StompBrokerRelayMessageHandler) stompBrokerRelayMessageHandler);
 		}
 		stats.setInboundChannelExecutor(inboundExecutor);
 		stats.setOutboundChannelExecutor(outboundExecutor);
@@ -165,7 +149,7 @@ public abstract class WebSocketMessageBrokerConfigurationSupport extends Abstrac
 	@Override
 	protected MappingJackson2MessageConverter createJacksonConverter() {
 		MappingJackson2MessageConverter messageConverter = super.createJacksonConverter();
-		// Use Jackson builder in order to have well-known modules registered automatically.
+		// Use Jackson builder in order to have JSR-310 and Joda-Time modules registered automatically
 		Jackson2ObjectMapperBuilder builder = Jackson2ObjectMapperBuilder.json();
 		ApplicationContext applicationContext = getApplicationContext();
 		if (applicationContext != null) {

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,14 +30,12 @@ import java.sql.SQLTransientConnectionException;
 
 import org.junit.jupiter.api.Test;
 
-import org.springframework.dao.CannotAcquireLockException;
+import org.springframework.dao.ConcurrencyFailureException;
 import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.dao.DuplicateKeyException;
 import org.springframework.dao.InvalidDataAccessApiUsageException;
 import org.springframework.dao.PermissionDeniedDataAccessException;
-import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.dao.QueryTimeoutException;
 import org.springframework.dao.RecoverableDataAccessException;
 import org.springframework.dao.TransientDataAccessResourceException;
@@ -49,30 +47,24 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author Thomas Risberg
  * @author Juergen Hoeller
  */
-class SQLExceptionSubclassTranslatorTests {
+public class SQLExceptionSubclassTranslatorTests {
 
 	@Test
-	void exceptionClassTranslation() {
+	public void exceptionClassTranslation() {
 		doTest(new SQLDataException("", "", 0), DataIntegrityViolationException.class);
 		doTest(new SQLFeatureNotSupportedException("", "", 0), InvalidDataAccessApiUsageException.class);
 		doTest(new SQLIntegrityConstraintViolationException("", "", 0), DataIntegrityViolationException.class);
-		doTest(new SQLIntegrityConstraintViolationException("", "23505", 0), DuplicateKeyException.class);
-		doTest(new SQLIntegrityConstraintViolationException("", "23000", 1), DuplicateKeyException.class);
-		doTest(new SQLIntegrityConstraintViolationException("", "23000", 1062), DuplicateKeyException.class);
-		doTest(new SQLIntegrityConstraintViolationException("", "23000", 2601), DuplicateKeyException.class);
-		doTest(new SQLIntegrityConstraintViolationException("", "23000", 2627), DuplicateKeyException.class);
 		doTest(new SQLInvalidAuthorizationSpecException("", "", 0), PermissionDeniedDataAccessException.class);
 		doTest(new SQLNonTransientConnectionException("", "", 0), DataAccessResourceFailureException.class);
 		doTest(new SQLRecoverableException("", "", 0), RecoverableDataAccessException.class);
 		doTest(new SQLSyntaxErrorException("", "", 0), BadSqlGrammarException.class);
 		doTest(new SQLTimeoutException("", "", 0), QueryTimeoutException.class);
-		doTest(new SQLTransactionRollbackException("", "", 0), PessimisticLockingFailureException.class);
-		doTest(new SQLTransactionRollbackException("", "40001", 0), CannotAcquireLockException.class);
+		doTest(new SQLTransactionRollbackException("", "", 0), ConcurrencyFailureException.class);
 		doTest(new SQLTransientConnectionException("", "", 0), TransientDataAccessResourceException.class);
 	}
 
 	@Test
-	void fallbackStateTranslation() {
+	public void fallbackStateTranslation() {
 		// Test fallback. We assume that no database will ever return this error code,
 		// but 07xxx will be bad grammar picked up by the fallback SQLState translator
 		doTest(new SQLException("", "07xxx", 666666666), BadSqlGrammarException.class);

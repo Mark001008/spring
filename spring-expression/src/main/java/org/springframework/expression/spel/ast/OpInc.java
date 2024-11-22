@@ -39,13 +39,11 @@ import org.springframework.util.Assert;
  */
 public class OpInc extends Operator {
 
-	private static final String INC = "++";
-
 	private final boolean postfix;  // false means prefix
 
 
 	public OpInc(int startPos, int endPos, boolean postfix, SpelNodeImpl... operands) {
-		super(INC, startPos, endPos, operands);
+		super("++", startPos, endPos, operands);
 		this.postfix = postfix;
 		Assert.notEmpty(operands, "Operands must not be empty");
 	}
@@ -65,9 +63,10 @@ public class OpInc extends Operator {
 		TypedValue returnValue = typedValue;
 		TypedValue newValue = null;
 
-		if (value instanceof Number op1) {
-			if (op1 instanceof BigDecimal bigDecimal) {
-				newValue = new TypedValue(bigDecimal.add(BigDecimal.ONE), typedValue.getTypeDescriptor());
+		if (value instanceof Number) {
+			Number op1 = (Number) value;
+			if (op1 instanceof BigDecimal) {
+				newValue = new TypedValue(((BigDecimal) op1).add(BigDecimal.ONE), typedValue.getTypeDescriptor());
 			}
 			else if (op1 instanceof Double) {
 				newValue = new TypedValue(op1.doubleValue() + 1.0d, typedValue.getTypeDescriptor());
@@ -75,8 +74,8 @@ public class OpInc extends Operator {
 			else if (op1 instanceof Float) {
 				newValue = new TypedValue(op1.floatValue() + 1.0f, typedValue.getTypeDescriptor());
 			}
-			else if (op1 instanceof BigInteger bigInteger) {
-				newValue = new TypedValue(bigInteger.add(BigInteger.ONE), typedValue.getTypeDescriptor());
+			else if (op1 instanceof BigInteger) {
+				newValue = new TypedValue(((BigInteger) op1).add(BigInteger.ONE), typedValue.getTypeDescriptor());
 			}
 			else if (op1 instanceof Long) {
 				newValue = new TypedValue(op1.longValue() + 1L, typedValue.getTypeDescriptor());
@@ -115,7 +114,7 @@ public class OpInc extends Operator {
 			valueRef.setValue(newValue.getValue());
 		}
 		catch (SpelEvaluationException see) {
-			// If unable to set the value the operand is not writable (for example, 1++ )
+			// If unable to set the value the operand is not writable (e.g. 1++ )
 			if (see.getMessageCode() == SpelMessage.SETVALUE_NOT_SUPPORTED) {
 				throw new SpelEvaluationException(operand.getStartPosition(), SpelMessage.OPERAND_NOT_INCREMENTABLE);
 			}
@@ -134,8 +133,7 @@ public class OpInc extends Operator {
 
 	@Override
 	public String toStringAST() {
-		String ast = getLeftOperand().toStringAST();
-		return (this.postfix ? ast + INC : INC + ast);
+		return getLeftOperand().toStringAST() + "++";
 	}
 
 	@Override

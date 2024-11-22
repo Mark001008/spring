@@ -20,13 +20,12 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
 
-import jakarta.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletRequest;
 
 import org.springframework.http.server.PathContainer;
 import org.springframework.lang.Nullable;
@@ -52,9 +51,6 @@ public final class PathPatternsRequestCondition extends AbstractRequestCondition
 			new TreeSet<>(Collections.singleton(new PathPatternParser().parse("")));
 
 	private static final Set<String> EMPTY_PATH = Collections.singleton("");
-
-	private static final SortedSet<PathPattern> ROOT_PATH_PATTERNS =
-			new TreeSet<>(List.of(new PathPatternParser().parse(""), new PathPatternParser().parse("/")));
 
 
 	private final SortedSet<PathPattern> patterns;
@@ -148,18 +144,20 @@ public final class PathPatternsRequestCondition extends AbstractRequestCondition
 	}
 
 	/**
-	 * Combine the patterns of the current and of the other instances as follows:
+	 * Returns a new instance with URL patterns from the current instance
+	 * ("this") and the "other" instance as follows:
 	 * <ul>
-	 * <li>If only one instance has patterns, use those.
-	 * <li>If both have patterns, combine patterns from "this" instance with
-	 * patterns from the other instance via {@link PathPattern#combine(PathPattern)}.
-	 * <li>If neither has patterns, use {@code ""} and {@code "/"} as root path patterns.
+	 * <li>If there are patterns in both instances, combine the patterns in
+	 * "this" with the patterns in "other" using
+	 * {@link PathPattern#combine(PathPattern)}.
+	 * <li>If only one instance has patterns, use them.
+	 * <li>If neither instance has patterns, use an empty String (i.e. "").
 	 * </ul>
 	 */
 	@Override
 	public PathPatternsRequestCondition combine(PathPatternsRequestCondition other) {
 		if (isEmptyPathMapping() && other.isEmptyPathMapping()) {
-			return new PathPatternsRequestCondition(ROOT_PATH_PATTERNS);
+			return this;
 		}
 		else if (other.isEmptyPathMapping()) {
 			return this;

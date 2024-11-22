@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2023 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -303,7 +303,7 @@ class TypeDescriptorTests {
 	void fieldArray() throws Exception {
 		TypeDescriptor typeDescriptor = new TypeDescriptor(TypeDescriptorTests.class.getDeclaredField("intArray"));
 		assertThat(typeDescriptor.isArray()).isTrue();
-		assertThat(typeDescriptor.getElementTypeDescriptor().getType()).isEqualTo(int.class);
+		assertThat(typeDescriptor.getElementTypeDescriptor().getType()).isEqualTo(Integer.TYPE);
 		assertThat(typeDescriptor.toString()).isEqualTo("int[]");
 	}
 
@@ -359,21 +359,21 @@ class TypeDescriptorTests {
 		assertThat(typeDescriptor.isArray()).isFalse();
 		assertThat(typeDescriptor.isCollection()).isFalse();
 		assertThat(typeDescriptor.isMap()).isFalse();
-		assertThat(typeDescriptor.getType()).isEqualTo(int.class);
+		assertThat(typeDescriptor.getType()).isEqualTo(Integer.TYPE);
 		assertThat(typeDescriptor.getObjectType()).isEqualTo(Integer.class);
 	}
 
 	@Test
-	void valueOfArray() {
+	void valueOfArray() throws Exception {
 		TypeDescriptor typeDescriptor = TypeDescriptor.valueOf(int[].class);
 		assertThat(typeDescriptor.isArray()).isTrue();
 		assertThat(typeDescriptor.isCollection()).isFalse();
 		assertThat(typeDescriptor.isMap()).isFalse();
-		assertThat(typeDescriptor.getElementTypeDescriptor().getType()).isEqualTo(int.class);
+		assertThat(typeDescriptor.getElementTypeDescriptor().getType()).isEqualTo(Integer.TYPE);
 	}
 
 	@Test
-	void valueOfCollection() {
+	void valueOfCollection() throws Exception {
 		TypeDescriptor typeDescriptor = TypeDescriptor.valueOf(Collection.class);
 		assertThat(typeDescriptor.isCollection()).isTrue();
 		assertThat(typeDescriptor.isArray()).isFalse();
@@ -412,7 +412,7 @@ class TypeDescriptorTests {
 	}
 
 	@Test
-	void nestedMethodParameterNot1NestedLevel() {
+	void nestedMethodParameterNot1NestedLevel() throws Exception {
 		assertThatIllegalArgumentException().isThrownBy(() ->
 				TypeDescriptor.nested(new MethodParameter(getClass().getMethod("test4", List.class), 0, 2), 2));
 	}
@@ -430,7 +430,7 @@ class TypeDescriptorTests {
 	}
 
 	@Test
-	void nestedMethodParameterTypeInvalidNestingLevel() {
+	void nestedMethodParameterTypeInvalidNestingLevel() throws Exception {
 		assertThatIllegalArgumentException().isThrownBy(() ->
 				TypeDescriptor.nested(new MethodParameter(getClass().getMethod("test5", String.class), 0, 2), 2));
 	}

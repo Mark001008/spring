@@ -24,10 +24,11 @@ import org.springframework.context.support.ClassPathXmlApplicationContext;
  * @author Adrian Colyer
  * @author Juergen Hoeller
  */
-class AutoProxyWithCodeStyleAspectsTests {
+public class AutoProxyWithCodeStyleAspectsTests {
 
 	@Test
-	void noAutoProxyingOfAjcCompiledAspects() {
+	@SuppressWarnings("resource")
+	public void noAutoProxyingOfAjcCompiledAspects() {
 		new ClassPathXmlApplicationContext("org/springframework/aop/aspectj/autoproxy/ajcAutoproxyTests.xml");
 	}
 

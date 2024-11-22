@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2023 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
 
 package org.springframework.http.codec.json;
 
-import java.util.List;
+import java.util.Arrays;
 import java.util.Map;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -24,7 +24,6 @@ import com.fasterxml.jackson.databind.ObjectWriter;
 import com.fasterxml.jackson.dataformat.csv.CsvMapper;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
-import reactor.test.StepVerifier.LastStep;
 
 import org.springframework.core.ResolvableType;
 import org.springframework.core.testfixture.codec.AbstractEncoderTests;
@@ -71,7 +70,7 @@ class JacksonCsvEncoderTests extends AbstractEncoderTests<org.springframework.ht
 	// this test did not fail directly but logged a NullPointerException dropped by the reactive pipeline
 	void encodeEmptyFlux() {
 		Flux<Object> input = Flux.empty();
-		testEncode(input, Pojo.class, LastStep::verifyComplete);
+		testEncode(input, Pojo.class, step -> step.verifyComplete());
 	}
 
 	static class JacksonCsvEncoder extends AbstractJackson2Encoder {
@@ -90,12 +89,12 @@ class JacksonCsvEncoderTests extends AbstractEncoderTests<org.springframework.ht
 		public JacksonCsvEncoder(ObjectMapper mapper, MimeType... mimeTypes) {
 			super(mapper, mimeTypes);
 			Assert.isInstanceOf(CsvMapper.class, mapper);
-			setStreamingMediaTypes(List.of(TEXT_CSV));
+			setStreamingMediaTypes(Arrays.asList(TEXT_CSV));
 		}
 
 		@Override
 		protected ObjectWriter customizeWriter(ObjectWriter writer, MimeType mimeType, ResolvableType elementType, Map<String, Object> hints) {
-			var mapper = (CsvMapper) getObjectMapper();
+			CsvMapper mapper = (CsvMapper) getObjectMapper();
 			return writer.with(mapper.schemaFor(elementType.toClass()).withHeader());
 		}
 	}

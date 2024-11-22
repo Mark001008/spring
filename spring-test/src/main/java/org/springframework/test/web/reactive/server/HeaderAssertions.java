@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2021 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,22 +19,23 @@ package org.springframework.test.web.reactive.server;
 import java.net.URI;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import java.util.function.Consumer;
 
 import org.hamcrest.Matcher;
+import org.hamcrest.MatcherAssert;
 
 import org.springframework.http.CacheControl;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.lang.Nullable;
+import org.springframework.test.util.AssertionErrors;
 import org.springframework.util.CollectionUtils;
 
-import static org.hamcrest.MatcherAssert.assertThat;
 import static org.springframework.test.util.AssertionErrors.assertEquals;
 import static org.springframework.test.util.AssertionErrors.assertNotNull;
 import static org.springframework.test.util.AssertionErrors.assertTrue;
-import static org.springframework.test.util.AssertionErrors.fail;
 
 /**
  * Assertions on headers of the response.
@@ -72,8 +73,8 @@ public class HeaderAssertions {
 	public WebTestClient.ResponseSpec valueEquals(String headerName, long value) {
 		String actual = getHeaders().getFirst(headerName);
 		this.exchangeResult.assertWithDiagnostics(() ->
-				assertNotNull("Response does not contain header '" + headerName + "'", actual));
-		return assertHeader(headerName, value, Long.parseLong(actual));
+				assertTrue("Response does not contain header '" + headerName + "'", actual != null));
+		return assertHeader(headerName, value, Long.parseLong(Objects.requireNonNull(actual)));
 	}
 
 	/**
@@ -93,7 +94,7 @@ public class HeaderAssertions {
 			headers.setDate("expected", value);
 			headers.set("actual", headerValue);
 
-			assertEquals(getMessage(headerName) + "='" + headerValue + "' " +
+			assertEquals("Response header '" + headerName + "'='" + headerValue + "' " +
 							"does not match expected value '" + headers.getFirst("expected") + "'",
 					headers.getFirstDate("expected"), headers.getFirstDate("actual"));
 		});
@@ -108,7 +109,7 @@ public class HeaderAssertions {
 	public WebTestClient.ResponseSpec valueMatches(String name, String pattern) {
 		String value = getRequiredValue(name);
 		String message = getMessage(name) + "=[" + value + "] does not match [" + pattern + "]";
-		this.exchangeResult.assertWithDiagnostics(() -> assertTrue(message, value.matches(pattern)));
+		this.exchangeResult.assertWithDiagnostics(() -> AssertionErrors.assertTrue(message, value.matches(pattern)));
 		return this.responseSpec;
 	}
 
@@ -122,16 +123,16 @@ public class HeaderAssertions {
 	 * @since 5.3
 	 */
 	public WebTestClient.ResponseSpec valuesMatch(String name, String... patterns) {
-		List<String> values = getRequiredValues(name);
 		this.exchangeResult.assertWithDiagnostics(() -> {
-			assertTrue(
+			List<String> values = getRequiredValues(name);
+			AssertionErrors.assertTrue(
 					getMessage(name) + " has fewer or more values " + values +
 							" than number of patterns to match with " + Arrays.toString(patterns),
 					values.size() == patterns.length);
 			for (int i = 0; i < values.size(); i++) {
 				String value = values.get(i);
 				String pattern = patterns[i];
-				assertTrue(
+				AssertionErrors.assertTrue(
 						getMessage(name) + "[" + i + "]='" + value + "' does not match '" + pattern + "'",
 						value.matches(pattern));
 			}
@@ -149,7 +150,7 @@ public class HeaderAssertions {
 		String value = getHeaders().getFirst(name);
 		this.exchangeResult.assertWithDiagnostics(() -> {
 			String message = getMessage(name);
-			assertThat(message, value, matcher);
+			MatcherAssert.assertThat(message, value, matcher);
 		});
 		return this.responseSpec;
 	}
@@ -164,7 +165,7 @@ public class HeaderAssertions {
 		List<String> values = getHeaders().get(name);
 		this.exchangeResult.assertWithDiagnostics(() -> {
 			String message = getMessage(name);
-			assertThat(message, values, matcher);
+			MatcherAssert.assertThat(message, values, matcher);
 		});
 		return this.responseSpec;
 	}
@@ -199,13 +200,11 @@ public class HeaderAssertions {
 
 	private List<String> getRequiredValues(String name) {
 		List<String> values = getHeaders().get(name);
-		if (!CollectionUtils.isEmpty(values)) {
-			return values;
+		if (CollectionUtils.isEmpty(values)) {
+			this.exchangeResult.assertWithDiagnostics(() ->
+					AssertionErrors.fail(getMessage(name) + " not found"));
 		}
-		else {
-			this.exchangeResult.assertWithDiagnostics(() -> fail(getMessage(name) + " not found"));
-		}
-		throw new IllegalStateException("This code path should not be reachable");
+		return Objects.requireNonNull(values);
 	}
 
 	/**
@@ -215,7 +214,7 @@ public class HeaderAssertions {
 	public WebTestClient.ResponseSpec exists(String name) {
 		if (!getHeaders().containsKey(name)) {
 			String message = getMessage(name) + " does not exist";
-			this.exchangeResult.assertWithDiagnostics(() -> fail(message));
+			this.exchangeResult.assertWithDiagnostics(() -> AssertionErrors.fail(message));
 		}
 		return this.responseSpec;
 	}
@@ -226,7 +225,7 @@ public class HeaderAssertions {
 	public WebTestClient.ResponseSpec doesNotExist(String name) {
 		if (getHeaders().containsKey(name)) {
 			String message = getMessage(name) + " exists with value=[" + getHeaders().getFirst(name) + "]";
-			this.exchangeResult.assertWithDiagnostics(() -> fail(message));
+			this.exchangeResult.assertWithDiagnostics(() -> AssertionErrors.fail(message));
 		}
 		return this.responseSpec;
 	}
@@ -273,7 +272,7 @@ public class HeaderAssertions {
 		MediaType actual = getHeaders().getContentType();
 		String message = getMessage("Content-Type") + "=[" + actual + "] is not compatible with [" + mediaType + "]";
 		this.exchangeResult.assertWithDiagnostics(() ->
-				assertTrue(message, (actual != null && actual.isCompatibleWith(mediaType))));
+				AssertionErrors.assertTrue(message, (actual != null && actual.isCompatibleWith(mediaType))));
 		return this.responseSpec;
 	}
 
@@ -311,16 +310,16 @@ public class HeaderAssertions {
 		return this.exchangeResult.getResponseHeaders();
 	}
 
+	private String getMessage(String headerName) {
+		return "Response header '" + headerName + "'";
+	}
+
 	private WebTestClient.ResponseSpec assertHeader(String name, @Nullable Object expected, @Nullable Object actual) {
 		this.exchangeResult.assertWithDiagnostics(() -> {
 			String message = getMessage(name);
-			assertEquals(message, expected, actual);
+			AssertionErrors.assertEquals(message, expected, actual);
 		});
 		return this.responseSpec;
-	}
-
-	private static String getMessage(String headerName) {
-		return "Response header '" + headerName + "'";
 	}
 
 }

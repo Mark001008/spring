@@ -16,8 +16,6 @@
 
 package org.springframework.r2dbc.connection;
 
-import java.util.Set;
-
 import io.r2dbc.spi.Connection;
 import io.r2dbc.spi.ConnectionFactory;
 import io.r2dbc.spi.R2dbcBadGrammarException;
@@ -34,13 +32,11 @@ import io.r2dbc.spi.Wrapped;
 import reactor.core.publisher.Mono;
 
 import org.springframework.core.Ordered;
-import org.springframework.dao.CannotAcquireLockException;
+import org.springframework.dao.ConcurrencyFailureException;
 import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.dao.DuplicateKeyException;
 import org.springframework.dao.PermissionDeniedDataAccessException;
-import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.dao.QueryTimeoutException;
 import org.springframework.dao.TransientDataAccessResourceException;
 import org.springframework.lang.Nullable;
@@ -70,14 +66,6 @@ public abstract class ConnectionFactoryUtils {
 	 * Order value for ReactiveTransactionSynchronization objects that clean up R2DBC Connections.
 	 */
 	public static final int CONNECTION_SYNCHRONIZATION_ORDER = 1000;
-
-	private static final Set<Integer> DUPLICATE_KEY_ERROR_CODES = Set.of(
-			1,     // Oracle
-			301,   // SAP HANA
-			1062,  // MySQL/MariaDB
-			2601,  // MS SQL Server
-			2627   // MS SQL Server
-		);
 
 
 	/**
@@ -227,10 +215,7 @@ public abstract class ConnectionFactoryUtils {
 				return new TransientDataAccessResourceException(buildMessage(task, sql, ex), ex);
 			}
 			if (ex instanceof R2dbcRollbackException) {
-				if ("40001".equals(ex.getSqlState())) {
-					return new CannotAcquireLockException(buildMessage(task, sql, ex), ex);
-				}
-				return new PessimisticLockingFailureException(buildMessage(task, sql, ex), ex);
+				return new ConcurrencyFailureException(buildMessage(task, sql, ex), ex);
 			}
 			if (ex instanceof R2dbcTimeoutException) {
 				return new QueryTimeoutException(buildMessage(task, sql, ex), ex);
@@ -241,9 +226,6 @@ public abstract class ConnectionFactoryUtils {
 				return new DataAccessResourceFailureException(buildMessage(task, sql, ex), ex);
 			}
 			if (ex instanceof R2dbcDataIntegrityViolationException) {
-				if (indicatesDuplicateKey(ex.getSqlState(), ex.getErrorCode())) {
-					return new DuplicateKeyException(buildMessage(task, sql, ex), ex);
-				}
 				return new DataIntegrityViolationException(buildMessage(task, sql, ex), ex);
 			}
 			if (ex instanceof R2dbcPermissionDeniedException) {
@@ -254,20 +236,6 @@ public abstract class ConnectionFactoryUtils {
 			}
 		}
 		return new UncategorizedR2dbcException(buildMessage(task, sql, ex), sql, ex);
-	}
-
-	/**
-	 * Check whether the given SQL state and the associated error code (in case
-	 * of a generic SQL state value) indicate a duplicate key exception:
-	 * either SQL state 23505 as a specific indication, or the generic SQL state
-	 * 23000 with a well-known vendor code.
-	 * @param sqlState the SQL state value
-	 * @param errorCode the error code
-	 * @see org.springframework.jdbc.support.SQLStateSQLExceptionTranslator#indicatesDuplicateKey
-	 */
-	static boolean indicatesDuplicateKey(@Nullable String sqlState, int errorCode) {
-		return ("23505".equals(sqlState) ||
-				("23000".equals(sqlState) && DUPLICATE_KEY_ERROR_CODES.contains(errorCode)));
 	}
 
 	/**
@@ -333,9 +301,9 @@ public abstract class ConnectionFactoryUtils {
 	private static int getConnectionSynchronizationOrder(ConnectionFactory connectionFactory) {
 		int order = CONNECTION_SYNCHRONIZATION_ORDER;
 		ConnectionFactory current = connectionFactory;
-		while (current instanceof DelegatingConnectionFactory delegatingConnectionFactory) {
+		while (current instanceof DelegatingConnectionFactory) {
 			order--;
-			current = delegatingConnectionFactory.getTargetConnectionFactory();
+			current = ((DelegatingConnectionFactory) current).getTargetConnectionFactory();
 		}
 		return order;
 	}

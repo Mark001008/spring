@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2023 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,8 +16,6 @@
 
 package org.springframework.expression.spel;
 
-import java.util.Locale;
-
 import org.springframework.core.SpringProperties;
 import org.springframework.lang.Nullable;
 
@@ -27,17 +25,16 @@ import org.springframework.lang.Nullable;
  * @author Juergen Hoeller
  * @author Phillip Webb
  * @author Andy Clement
- * @author Sam Brannen
  * @since 3.0
  * @see org.springframework.expression.spel.standard.SpelExpressionParser#SpelExpressionParser(SpelParserConfiguration)
  */
 public class SpelParserConfiguration {
 
 	/**
-	 * Default maximum length permitted for a SpEL expression: {@value}.
+	 * Default maximum length permitted for a SpEL expression.
 	 * @since 5.2.24
 	 */
-	public static final int DEFAULT_MAX_EXPRESSION_LENGTH = 10_000;
+	private static final int DEFAULT_MAX_EXPRESSION_LENGTH = 10_000;
 
 	/** System property to configure the default compiler mode for SpEL expression parsers: {@value}. */
 	public static final String SPRING_EXPRESSION_COMPILER_MODE_PROPERTY_NAME = "spring.expression.compiler.mode";
@@ -48,7 +45,7 @@ public class SpelParserConfiguration {
 	static {
 		String compilerMode = SpringProperties.getProperty(SPRING_EXPRESSION_COMPILER_MODE_PROPERTY_NAME);
 		defaultCompilerMode = (compilerMode != null ?
-				SpelCompilerMode.valueOf(compilerMode.toUpperCase(Locale.ROOT)) : SpelCompilerMode.OFF);
+				SpelCompilerMode.valueOf(compilerMode.toUpperCase()) : SpelCompilerMode.OFF);
 	}
 
 

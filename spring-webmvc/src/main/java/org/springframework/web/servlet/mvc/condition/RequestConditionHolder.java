@@ -19,13 +19,13 @@ package org.springframework.web.servlet.mvc.condition;
 import java.util.Collection;
 import java.util.Collections;
 
-import jakarta.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletRequest;
 
 import org.springframework.lang.Nullable;
 
 /**
  * A holder for a {@link RequestCondition} useful when the type of the request
- * condition is not known ahead of time, for example, custom condition. Since this
+ * condition is not known ahead of time, e.g. custom condition. Since this
  * class is also an implementation of {@code RequestCondition}, effectively it
  * decorates the held request condition and allows it to be combined and compared
  * with other request conditions in a type and null safe way.

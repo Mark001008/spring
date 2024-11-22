@@ -17,9 +17,7 @@
 package org.springframework.jdbc.datasource.lookup;
 
 import java.sql.Connection;
-import java.sql.ConnectionBuilder;
 import java.sql.SQLException;
-import java.sql.ShardingKeyBuilder;
 import java.util.Collections;
 import java.util.Map;
 
@@ -116,25 +114,8 @@ public abstract class AbstractRoutingDataSource extends AbstractDataSource imple
 	}
 
 
-	/**
-	 * Delegates to {@link #initialize()}.
-	 */
 	@Override
 	public void afterPropertiesSet() {
-		initialize();
-	}
-
-	/**
-	 * Initialize the internal state of this {@code AbstractRoutingDataSource}
-	 * by resolving the configured target DataSources.
-	 * @throws IllegalArgumentException if the target DataSources have not been configured
-	 * @since 6.1
-	 * @see #setTargetDataSources(Map)
-	 * @see #setDefaultTargetDataSource(Object)
-	 * @see #getResolvedDataSources()
-	 * @see #getResolvedDefaultDataSource()
-	 */
-	public void initialize() {
 		if (this.targetDataSources == null) {
 			throw new IllegalArgumentException("Property 'targetDataSources' is required");
 		}
@@ -166,21 +147,21 @@ public abstract class AbstractRoutingDataSource extends AbstractDataSource imple
 	 * Resolve the specified data source object into a DataSource instance.
 	 * <p>The default implementation handles DataSource instances and data source
 	 * names (to be resolved via a {@link #setDataSourceLookup DataSourceLookup}).
-	 * @param dataSourceObject the data source value object as specified in the
+	 * @param dataSource the data source value object as specified in the
 	 * {@link #setTargetDataSources targetDataSources} map
 	 * @return the resolved DataSource (never {@code null})
 	 * @throws IllegalArgumentException in case of an unsupported value type
 	 */
-	protected DataSource resolveSpecifiedDataSource(Object dataSourceObject) throws IllegalArgumentException {
-		if (dataSourceObject instanceof DataSource dataSource) {
-			return dataSource;
+	protected DataSource resolveSpecifiedDataSource(Object dataSource) throws IllegalArgumentException {
+		if (dataSource instanceof DataSource) {
+			return (DataSource) dataSource;
 		}
-		else if (dataSourceObject instanceof String dataSourceName) {
-			return this.dataSourceLookup.getDataSource(dataSourceName);
+		else if (dataSource instanceof String) {
+			return this.dataSourceLookup.getDataSource((String) dataSource);
 		}
 		else {
 			throw new IllegalArgumentException(
-					"Illegal data source value - only [javax.sql.DataSource] and String supported: " + dataSourceObject);
+					"Illegal data source value - only [javax.sql.DataSource] and String supported: " + dataSource);
 		}
 	}
 
@@ -216,16 +197,6 @@ public abstract class AbstractRoutingDataSource extends AbstractDataSource imple
 	@Override
 	public Connection getConnection(String username, String password) throws SQLException {
 		return determineTargetDataSource().getConnection(username, password);
-	}
-
-	@Override
-	public ConnectionBuilder createConnectionBuilder() throws SQLException {
-		return determineTargetDataSource().createConnectionBuilder();
-	}
-
-	@Override
-	public ShardingKeyBuilder createShardingKeyBuilder() throws SQLException {
-		return determineTargetDataSource().createShardingKeyBuilder();
 	}
 
 	@Override

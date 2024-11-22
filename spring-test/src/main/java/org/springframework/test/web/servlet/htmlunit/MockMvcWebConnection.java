@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2023 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,13 +21,13 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.gargoylesoftware.htmlunit.CookieManager;
+import com.gargoylesoftware.htmlunit.WebClient;
+import com.gargoylesoftware.htmlunit.WebConnection;
+import com.gargoylesoftware.htmlunit.WebRequest;
+import com.gargoylesoftware.htmlunit.WebResponse;
+import com.gargoylesoftware.htmlunit.util.Cookie;
 import org.apache.http.impl.cookie.BasicClientCookie;
-import org.htmlunit.CookieManager;
-import org.htmlunit.WebClient;
-import org.htmlunit.WebConnection;
-import org.htmlunit.WebRequest;
-import org.htmlunit.WebResponse;
-import org.htmlunit.util.Cookie;
 
 import org.springframework.lang.Nullable;
 import org.springframework.mock.web.MockHttpServletResponse;
@@ -68,7 +68,7 @@ public final class MockMvcWebConnection implements WebConnection {
 
 	private WebClient webClient;
 
-	private static final int MAX_FORWARDS = 100;
+	private static int MAX_FORWARDS = 100;
 
 
 	/**
@@ -87,7 +87,7 @@ public final class MockMvcWebConnection implements WebConnection {
 	 * Create a new instance with the specified context path.
 	 * <p>The path may be {@code null} in which case the first path segment
 	 * of the URL is turned into the contextPath. Otherwise it must conform
-	 * to {@link jakarta.servlet.http.HttpServletRequest#getContextPath()}
+	 * to {@link javax.servlet.http.HttpServletRequest#getContextPath()}
 	 * which states that it can be an empty string and otherwise must start
 	 * with a "/" character and not end with a "/" character.
 	 * @param mockMvc the {@code MockMvc} instance to use (never {@code null})
@@ -107,7 +107,7 @@ public final class MockMvcWebConnection implements WebConnection {
 	/**
 	 * Validate the supplied {@code contextPath}.
 	 * <p>If the value is not {@code null}, it must conform to
-	 * {@link jakarta.servlet.http.HttpServletRequest#getContextPath()} which
+	 * {@link javax.servlet.http.HttpServletRequest#getContextPath()} which
 	 * states that it can be an empty string and otherwise must start with
 	 * a "/" character and not end with a "/" character.
 	 * @param contextPath the path to validate
@@ -143,7 +143,7 @@ public final class MockMvcWebConnection implements WebConnection {
 			forwards += 1;
 		}
 		if (forwards == MAX_FORWARDS) {
-			throw new IllegalStateException("Forwarded " + forwards + " times in a row, potential infinite forward loop");
+			throw new IllegalStateException("Forwarded more than " + forwards + " times in a row, potential infinite forward loop");
 		}
 		storeCookies(webRequest, httpServletResponse.getCookies());
 
@@ -162,10 +162,10 @@ public final class MockMvcWebConnection implements WebConnection {
 		return resultActions.andReturn().getResponse();
 	}
 
-	private void storeCookies(WebRequest webRequest, jakarta.servlet.http.Cookie[] cookies) {
+	private void storeCookies(WebRequest webRequest, javax.servlet.http.Cookie[] cookies) {
 		Date now = new Date();
 		CookieManager cookieManager = this.webClient.getCookieManager();
-		for (jakarta.servlet.http.Cookie cookie : cookies) {
+		for (javax.servlet.http.Cookie cookie : cookies) {
 			if (cookie.getDomain() == null) {
 				cookie.setDomain(webRequest.getUrl().getHost());
 			}
@@ -180,8 +180,7 @@ public final class MockMvcWebConnection implements WebConnection {
 		}
 	}
 
-	@SuppressWarnings("removal")
-	private static Cookie createCookie(jakarta.servlet.http.Cookie cookie) {
+	private static com.gargoylesoftware.htmlunit.util.Cookie createCookie(javax.servlet.http.Cookie cookie) {
 		Date expires = null;
 		if (cookie.getMaxAge() > -1) {
 			expires = new Date(System.currentTimeMillis() + cookie.getMaxAge() * 1000);
@@ -195,7 +194,7 @@ public final class MockMvcWebConnection implements WebConnection {
 		if (cookie.isHttpOnly()) {
 			result.setAttribute("httponly", "true");
 		}
-		return new Cookie(result);
+		return new com.gargoylesoftware.htmlunit.util.Cookie(result);
 	}
 
 	@Override

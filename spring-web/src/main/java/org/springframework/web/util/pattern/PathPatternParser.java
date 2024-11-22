@@ -35,7 +35,7 @@ import org.springframework.util.StringUtils;
  */
 public class PathPatternParser {
 
-	private boolean matchOptionalTrailingSeparator = false;
+	private boolean matchOptionalTrailingSeparator = true;
 
 	private boolean caseSensitive = true;
 
@@ -43,34 +43,27 @@ public class PathPatternParser {
 
 
 	/**
-	 * Configure whether a {@link PathPattern} produced by this parser should
+	 * Whether a {@link PathPattern} produced by this parser should
 	 * automatically match request paths with a trailing slash.
 	 * <p>If set to {@code true} a {@code PathPattern} without a trailing slash
 	 * will also match request paths with a trailing slash. If set to
 	 * {@code false} a {@code PathPattern} will only match request paths with
 	 * a trailing slash.
-	 * <p>The default was changed in 6.0 from {@code true} to {@code false} in
-	 * order to support the deprecation of the property.
-	 * @deprecated transparent support for trailing slashes is deprecated as of
-	 * 6.0 in favor of configuring explicit redirects through a proxy,
-	 * Servlet/web filter, or a controller.
+	 * <p>The default is {@code true}.
 	 */
-	@Deprecated(since = "6.0")
 	public void setMatchOptionalTrailingSeparator(boolean matchOptionalTrailingSeparator) {
 		this.matchOptionalTrailingSeparator = matchOptionalTrailingSeparator;
 	}
 
 	/**
 	 * Whether optional trailing slashing match is enabled.
-	 * @deprecated as of 6.0 together with {@link #setMatchOptionalTrailingSeparator(boolean)}.
 	 */
-	@Deprecated(since = "6.0")
 	public boolean isMatchOptionalTrailingSeparator() {
 		return this.matchOptionalTrailingSeparator;
 	}
 
 	/**
-	 * Configure whether path pattern matching should be case-sensitive.
+	 * Whether path pattern matching should be case-sensitive.
 	 * <p>The default is {@code true}.
 	 */
 	public void setCaseSensitive(boolean caseSensitive) {
@@ -96,7 +89,7 @@ public class PathPatternParser {
 	}
 
 	/**
-	 * Get the {@link #setPathOptions configured} pattern parsing options.
+	 * Return the {@link #setPathOptions configured} pattern parsing options.
 	 * @since 5.2
 	 */
 	public PathContainer.Options getPathOptions() {
@@ -121,7 +114,7 @@ public class PathPatternParser {
 	 * stage. Produces a PathPattern object that can be used for fast matching
 	 * against paths. Each invocation of this method delegates to a new instance of
 	 * the {@link InternalPathPatternParser} because that class is not thread-safe.
-	 * @param pathPattern the input path pattern, for example, /project/{name}
+	 * @param pathPattern the input path pattern, e.g. /project/{name}
 	 * @return a PathPattern for quickly matching paths against request paths
 	 * @throws PatternParseException in case of parse errors
 	 */
@@ -131,17 +124,15 @@ public class PathPatternParser {
 
 
 	/**
-	 * Shared, read-only instance of {@code PathPatternParser}.
-	 * <p>Uses default settings:
+	 * Shared, read-only instance of {@code PathPatternParser}. Uses default settings:
 	 * <ul>
-	 * <li>{@code matchOptionalTrailingSeparator = false}
-	 * <li>{@code caseSensitive = true}
-	 * <li>{@code pathOptions = PathContainer.Options.HTTP_PATH}
+	 * <li>{@code matchOptionalTrailingSeparator=true}
+	 * <li>{@code caseSensitivetrue}
+	 * <li>{@code pathOptions=PathContainer.Options.HTTP_PATH}
 	 * </ul>
 	 */
-	public static final PathPatternParser defaultInstance = new PathPatternParser() {
+	public final static PathPatternParser defaultInstance = new PathPatternParser() {
 
-		@SuppressWarnings("deprecation")
 		@Override
 		public void setMatchOptionalTrailingSeparator(boolean matchOptionalTrailingSeparator) {
 			raiseError();
@@ -161,7 +152,5 @@ public class PathPatternParser {
 			throw new UnsupportedOperationException(
 					"This is a read-only, shared instance that cannot be modified");
 		}
-
 	};
-
 }

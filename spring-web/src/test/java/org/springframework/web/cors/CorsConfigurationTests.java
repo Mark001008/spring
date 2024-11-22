@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2023 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,7 +28,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 
 /**
- * Tests for {@link CorsConfiguration}.
+ * Unit tests for {@link CorsConfiguration}.
  *
  * @author Sebastien Deleuze
  * @author Sam Brannen
@@ -300,16 +300,6 @@ class CorsConfigurationTests {
 		config.setAllowCredentials(true);
 		assertThatIllegalArgumentException().isThrownBy(() -> config.checkOrigin("https://domain.com"));
 
-		// comma-delimited origins list
-		config.setAllowedOrigins(Collections.singletonList("https://a1.com,https://a2.com"));
-		assertThat(config.checkOrigin("https://a1.com")).isEqualTo("https://a1.com");
-		assertThat(config.checkOrigin("https://a2.com/")).isEqualTo("https://a2.com/");
-
-		// comma-delimited origins list with space
-		config.setAllowedOrigins(Collections.singletonList("https://a1.com, https://a2.com"));
-		assertThat(config.checkOrigin("https://a1.com")).isEqualTo("https://a1.com");
-		assertThat(config.checkOrigin("https://a2.com/")).isEqualTo("https://a2.com/");
-
 		// specific origin matches Origin header with or without trailing "/"
 		config.setAllowedOrigins(Collections.singletonList("https://domain.com"));
 		assertThat(config.checkOrigin("https://domain.com")).isEqualTo("https://domain.com");
@@ -362,12 +352,6 @@ class CorsConfigurationTests {
 		assertThat(config.checkOrigin("https://example.specific.port.com:8080")).isEqualTo("https://example.specific.port.com:8080");
 		assertThat(config.checkOrigin("https://example.specific.port.com:8081")).isEqualTo("https://example.specific.port.com:8081");
 		assertThat(config.checkOrigin("https://example.specific.port.com:1234")).isNull();
-
-		config.addAllowedOriginPattern("https://*.a1.com:[8080,8081],https://*.a2.com");
-		assertThat(config.checkOrigin("https://example.a1.com:8080")).isEqualTo("https://example.a1.com:8080");
-		assertThat(config.checkOrigin("https://example.a1.com:8081")).isEqualTo("https://example.a1.com:8081");
-		assertThat(config.checkOrigin("https://example.a1.com:8082")).isNull();
-		assertThat(config.checkOrigin("https://example.a2.com")).isEqualTo("https://example.a2.com");
 
 		config.setAllowCredentials(false);
 		assertThat(config.checkOrigin("https://example.domain.com")).isEqualTo("https://example.domain.com");

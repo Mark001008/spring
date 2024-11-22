@@ -79,7 +79,7 @@ public abstract class AbstractVersionStrategy implements VersionStrategy {
 
 	/**
 	 * A prefix-based {@code VersionPathStrategy},
-	 * for example, {@code "{version}/path/foo.js"}.
+	 * e.g. {@code "{version}/path/foo.js"}.
 	 */
 	protected static class PrefixVersionPathStrategy implements VersionPathStrategy {
 
@@ -116,7 +116,7 @@ public abstract class AbstractVersionStrategy implements VersionStrategy {
 
 	/**
 	 * File name-based {@code VersionPathStrategy},
-	 * for example, {@code "path/foo-{version}.css"}.
+	 * e.g. {@code "path/foo-{version}.css"}.
 	 */
 	protected static class FileNameVersionPathStrategy implements VersionPathStrategy {
 

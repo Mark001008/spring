@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -47,7 +47,7 @@ class EventPublicationInterceptorTests {
 
 	@BeforeEach
 	void setup() {
-		ApplicationEventPublisher publisher = mock();
+		ApplicationEventPublisher publisher = mock(ApplicationEventPublisher.class);
 		this.interceptor.setApplicationEventPublisher(publisher);
 	}
 
@@ -112,9 +112,9 @@ class EventPublicationInterceptorTests {
 		testBean.getAge();
 
 		// two events: ContextRefreshedEvent and TestEvent
-		assertThat(listener.getEventCount()).as("Interceptor must have published 2 events").isEqualTo(2);
+		assertThat(listener.getEventCount() == 2).as("Interceptor must have published 2 events").isTrue();
 		TestApplicationListener otherListener = (TestApplicationListener) ctx.getBean("&otherListener");
-		assertThat(otherListener.getEventCount()).as("Interceptor must have published 2 events").isEqualTo(2);
+		assertThat(otherListener.getEventCount() == 2).as("Interceptor must have published 2 events").isTrue();
 		ctx.close();
 	}
 

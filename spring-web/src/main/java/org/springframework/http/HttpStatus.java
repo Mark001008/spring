@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2021 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,7 +31,7 @@ import org.springframework.lang.Nullable;
  * @see <a href="https://www.iana.org/assignments/http-status-codes">HTTP Status Code Registry</a>
  * @see <a href="https://en.wikipedia.org/wiki/List_of_HTTP_status_codes">List of HTTP status codes - Wikipedia</a>
  */
-public enum HttpStatus implements HttpStatusCode {
+public enum HttpStatus {
 
 	// 1xx Informational
 
@@ -51,18 +51,10 @@ public enum HttpStatus implements HttpStatusCode {
 	 */
 	PROCESSING(102, Series.INFORMATIONAL, "Processing"),
 	/**
-	 * {@code 103 Early Hints}.
-	 * @see <a href="https://tools.ietf.org/html/rfc8297">An HTTP Status Code for Indicating Hints</a>
-	 * @since 6.0.5
-	 */
-	EARLY_HINTS(103, Series.INFORMATIONAL, "Early Hints"),
-	/**
 	 * {@code 103 Checkpoint}.
 	 * @see <a href="https://code.google.com/p/gears/wiki/ResumableHttpRequestsProposal">A proposal for supporting
 	 * resumable POST/PUT HTTP requests in HTTP/1.0</a>
-	 * @deprecated in favor of {@link #EARLY_HINTS} which will be returned from {@code HttpStatus.valueOf(103)}
 	 */
-	@Deprecated(since = "6.0.5")
 	CHECKPOINT(103, Series.INFORMATIONAL, "Checkpoint"),
 
 	// 2xx Success
@@ -444,7 +436,9 @@ public enum HttpStatus implements HttpStatusCode {
 	}
 
 
-	@Override
+	/**
+	 * Return the integer value of this status code.
+	 */
 	public int value() {
 		return this.value;
 	}
@@ -464,32 +458,70 @@ public enum HttpStatus implements HttpStatusCode {
 		return this.reasonPhrase;
 	}
 
-	@Override
+	/**
+	 * Whether this status code is in the HTTP series
+	 * {@link org.springframework.http.HttpStatus.Series#INFORMATIONAL}.
+	 * <p>This is a shortcut for checking the value of {@link #series()}.
+	 * @since 4.0
+	 * @see #series()
+	 */
 	public boolean is1xxInformational() {
 		return (series() == Series.INFORMATIONAL);
 	}
 
-	@Override
+	/**
+	 * Whether this status code is in the HTTP series
+	 * {@link org.springframework.http.HttpStatus.Series#SUCCESSFUL}.
+	 * <p>This is a shortcut for checking the value of {@link #series()}.
+	 * @since 4.0
+	 * @see #series()
+	 */
 	public boolean is2xxSuccessful() {
 		return (series() == Series.SUCCESSFUL);
 	}
 
-	@Override
+	/**
+	 * Whether this status code is in the HTTP series
+	 * {@link org.springframework.http.HttpStatus.Series#REDIRECTION}.
+	 * <p>This is a shortcut for checking the value of {@link #series()}.
+	 * @since 4.0
+	 * @see #series()
+	 */
 	public boolean is3xxRedirection() {
 		return (series() == Series.REDIRECTION);
 	}
 
-	@Override
+	/**
+	 * Whether this status code is in the HTTP series
+	 * {@link org.springframework.http.HttpStatus.Series#CLIENT_ERROR}.
+	 * <p>This is a shortcut for checking the value of {@link #series()}.
+	 * @since 4.0
+	 * @see #series()
+	 */
 	public boolean is4xxClientError() {
 		return (series() == Series.CLIENT_ERROR);
 	}
 
-	@Override
+	/**
+	 * Whether this status code is in the HTTP series
+	 * {@link org.springframework.http.HttpStatus.Series#SERVER_ERROR}.
+	 * <p>This is a shortcut for checking the value of {@link #series()}.
+	 * @since 4.0
+	 * @see #series()
+	 */
 	public boolean is5xxServerError() {
 		return (series() == Series.SERVER_ERROR);
 	}
 
-	@Override
+	/**
+	 * Whether this status code is in the HTTP series
+	 * {@link org.springframework.http.HttpStatus.Series#CLIENT_ERROR} or
+	 * {@link org.springframework.http.HttpStatus.Series#SERVER_ERROR}.
+	 * <p>This is a shortcut for checking the value of {@link #series()}.
+	 * @since 5.0
+	 * @see #is4xxClientError()
+	 * @see #is5xxServerError()
+	 */
 	public boolean isError() {
 		return (is4xxClientError() || is5xxServerError());
 	}

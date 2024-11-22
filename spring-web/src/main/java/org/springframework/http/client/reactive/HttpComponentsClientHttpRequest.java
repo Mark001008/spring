@@ -19,9 +19,11 @@ package org.springframework.http.client.reactive;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
-import java.util.List;
+import java.util.Collection;
 import java.util.function.Function;
 
+import org.apache.hc.client5.http.cookie.CookieStore;
+import org.apache.hc.client5.http.impl.cookie.BasicClientCookie;
 import org.apache.hc.client5.http.protocol.HttpClientContext;
 import org.apache.hc.core5.http.ContentType;
 import org.apache.hc.core5.http.HttpRequest;
@@ -35,17 +37,14 @@ import reactor.core.publisher.Mono;
 
 import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.core.io.buffer.DataBufferFactory;
-import org.springframework.http.HttpCookie;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
-import org.springframework.http.support.HttpComponentsHeadersAdapter;
 import org.springframework.lang.Nullable;
-import org.springframework.util.CollectionUtils;
+import org.springframework.util.Assert;
 
 /**
  * {@link ClientHttpRequest} implementation for the Apache HttpComponents HttpClient 5.x.
- *
  * @author Martin Tarjányi
  * @author Arjen Poutsma
  * @since 5.3
@@ -76,7 +75,9 @@ class HttpComponentsClientHttpRequest extends AbstractClientHttpRequest {
 
 	@Override
 	public HttpMethod getMethod() {
-		return HttpMethod.valueOf(this.httpRequest.getMethod());
+		HttpMethod method = HttpMethod.resolve(this.httpRequest.getMethod());
+		Assert.state(method != null, "Method must not be null");
+		return method;
 	}
 
 	@Override
@@ -103,11 +104,7 @@ class HttpComponentsClientHttpRequest extends AbstractClientHttpRequest {
 	@Override
 	public Mono<Void> writeWith(Publisher<? extends DataBuffer> body) {
 		return doCommit(() -> {
-			this.byteBufferFlux = Flux.from(body).map(dataBuffer -> {
-				ByteBuffer byteBuffer = ByteBuffer.allocate(dataBuffer.readableByteCount());
-				dataBuffer.toByteBuffer(byteBuffer);
-				return byteBuffer;
-			});
+			this.byteBufferFlux = Flux.from(body).map(DataBuffer::asByteBuffer);
 			return Mono.empty();
 		});
 	}
@@ -125,7 +122,6 @@ class HttpComponentsClientHttpRequest extends AbstractClientHttpRequest {
 	@Override
 	protected void applyHeaders() {
 		HttpHeaders headers = getHeaders();
-
 		headers.entrySet()
 				.stream()
 				.filter(entry -> !HttpHeaders.CONTENT_LENGTH.equals(entry.getKey()))
@@ -134,7 +130,6 @@ class HttpComponentsClientHttpRequest extends AbstractClientHttpRequest {
 		if (!this.httpRequest.containsHeader(HttpHeaders.ACCEPT)) {
 			this.httpRequest.addHeader(HttpHeaders.ACCEPT, MediaType.ALL_VALUE);
 		}
-
 		this.contentLength = headers.getContentLength();
 	}
 
@@ -143,38 +138,17 @@ class HttpComponentsClientHttpRequest extends AbstractClientHttpRequest {
 		if (getCookies().isEmpty()) {
 			return;
 		}
-		if (!CollectionUtils.isEmpty(getCookies())) {
-			this.httpRequest.setHeader(HttpHeaders.COOKIE, serializeCookies());
-		}
-	}
 
-	private String serializeCookies() {
-		boolean first = true;
-		StringBuilder sb = new StringBuilder();
-		for (List<HttpCookie> cookies : getCookies().values()) {
-			for (HttpCookie cookie : cookies) {
-				if (!first) {
-					sb.append("; ");
-				}
-				else {
-					first = false;
-				}
-				sb.append(cookie.getName()).append("=").append(cookie.getValue());
-			}
-		}
-		return sb.toString();
-	}
-
-	/**
-	 * Applies the attributes to the {@link HttpClientContext}.
-	 */
-	@Override
-	protected void applyAttributes() {
-		getAttributes().forEach((key, value) -> {
-			if (this.context.getAttribute(key) == null) {
-				this.context.setAttribute(key, value);
-			}
-		});
+		CookieStore cookieStore = this.context.getCookieStore();
+		getCookies().values()
+				.stream()
+				.flatMap(Collection::stream)
+				.forEach(cookie -> {
+					BasicClientCookie clientCookie = new BasicClientCookie(cookie.getName(), cookie.getValue());
+					clientCookie.setDomain(getURI().getHost());
+					clientCookie.setPath(getURI().getPath());
+					cookieStore.addCookie(clientCookie);
+				});
 	}
 
 	@Override

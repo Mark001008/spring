@@ -16,8 +16,6 @@
 
 package org.springframework.expression;
 
-import org.springframework.lang.Nullable;
-
 /**
  * This exception wraps (as cause) a checked exception thrown by some method that SpEL
  * invokes. It differs from a SpelEvaluationException because this indicates the
@@ -30,7 +28,7 @@ import org.springframework.lang.Nullable;
 @SuppressWarnings("serial")
 public class ExpressionInvocationTargetException extends EvaluationException {
 
-	public ExpressionInvocationTargetException(int position, String message, @Nullable Throwable cause) {
+	public ExpressionInvocationTargetException(int position, String message, Throwable cause) {
 		super(position, message, cause);
 	}
 
@@ -42,7 +40,7 @@ public class ExpressionInvocationTargetException extends EvaluationException {
 		super(expressionString, message);
 	}
 
-	public ExpressionInvocationTargetException(String message, @Nullable Throwable cause) {
+	public ExpressionInvocationTargetException(String message, Throwable cause) {
 		super(message, cause);
 	}
 

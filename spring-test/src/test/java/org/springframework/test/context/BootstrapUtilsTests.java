@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -40,14 +40,15 @@ import org.springframework.test.context.web.WebTestContextBootstrapper;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
-import static org.junit.jupiter.params.provider.Arguments.argumentSet;
+import static org.junit.jupiter.api.Named.named;
+import static org.junit.jupiter.params.provider.Arguments.arguments;
 import static org.mockito.Mockito.mock;
 import static org.springframework.test.context.BootstrapUtils.resolveTestContextBootstrapper;
 import static org.springframework.test.context.NestedTestConfiguration.EnclosingConfiguration.INHERIT;
 import static org.springframework.test.context.NestedTestConfiguration.EnclosingConfiguration.OVERRIDE;
 
 /**
- * Tests for {@link BootstrapUtils}.
+ * Unit tests for {@link BootstrapUtils}.
  *
  * @author Sam Brannen
  * @author Phillip Webb
@@ -55,7 +56,7 @@ import static org.springframework.test.context.NestedTestConfiguration.Enclosing
  */
 class BootstrapUtilsTests {
 
-	private final CacheAwareContextLoaderDelegate delegate = mock();
+	private final CacheAwareContextLoaderDelegate delegate = mock(CacheAwareContextLoaderDelegate.class);
 
 	@Test
 	void resolveTestContextBootstrapperWithEmptyBootstrapWithAnnotation() {
@@ -104,7 +105,7 @@ class BootstrapUtilsTests {
 	/**
 	 * @since 5.3
 	 */
-	@ParameterizedTest
+	@ParameterizedTest(name = "[{index}] {0}")
 	@MethodSource
 	void resolveTestContextBootstrapperInEnclosingClassHierarchy(Class<?> testClass, Class<?> expectedBootstrapper) {
 		assertBootstrapper(testClass, expectedBootstrapper);
@@ -129,7 +130,7 @@ class BootstrapUtilsTests {
 	}
 
 	private static Arguments args(Class<?> testClass, Class<? extends TestContextBootstrapper> expectedBootstrapper) {
-		return argumentSet(testClass.getSimpleName(), testClass, expectedBootstrapper);
+		return arguments(named(testClass.getSimpleName(), testClass), expectedBootstrapper);
 	}
 
 	/**
@@ -143,8 +144,8 @@ class BootstrapUtilsTests {
 	private void assertBootstrapper(Class<?> testClass, Class<?> expectedBootstrapper) {
 		BootstrapContext bootstrapContext = BootstrapTestUtils.buildBootstrapContext(testClass, delegate);
 		TestContextBootstrapper bootstrapper = resolveTestContextBootstrapper(bootstrapContext);
+		assertThat(bootstrapper).isNotNull();
 		assertThat(bootstrapper.getClass()).isEqualTo(expectedBootstrapper);
-		assertThat(bootstrapper).isExactlyInstanceOf(expectedBootstrapper);
 	}
 
 	// -------------------------------------------------------------------

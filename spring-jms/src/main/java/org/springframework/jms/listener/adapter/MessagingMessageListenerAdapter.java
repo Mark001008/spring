@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2023 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,8 +16,8 @@
 
 package org.springframework.jms.listener.adapter;
 
-import jakarta.jms.JMSException;
-import jakarta.jms.Session;
+import javax.jms.JMSException;
+import javax.jms.Session;
 
 import org.springframework.core.MethodParameter;
 import org.springframework.jms.listener.SubscriptionNameProvider;
@@ -32,18 +32,18 @@ import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.util.Assert;
 
 /**
- * A {@link jakarta.jms.MessageListener} adapter that invokes a configurable
+ * A {@link javax.jms.MessageListener} adapter that invokes a configurable
  * {@link InvocableHandlerMethod}.
  *
- * <p>Wraps the incoming {@link jakarta.jms.Message} in Spring's {@link Message}
+ * <p>Wraps the incoming {@link javax.jms.Message} in Spring's {@link Message}
  * abstraction, copying the JMS standard headers using a configurable
  * {@link JmsHeaderMapper}.
  *
- * <p>The original {@link jakarta.jms.Message} and the {@link jakarta.jms.Session}
+ * <p>The original {@link javax.jms.Message} and the {@link javax.jms.Session}
  * are provided as additional arguments so that these can be injected as
  * method arguments if necessary.
  *
- * <p>Note that {@code MessagingMessageListenerAdapter} implements
+ * <p>As of Spring Framework 5.3.26, {@code MessagingMessageListenerAdapter} implements
  * {@link SubscriptionNameProvider} in order to provide a meaningful default
  * subscription name. See {@link #getSubscriptionName()} for details.
  *
@@ -63,7 +63,7 @@ public class MessagingMessageListenerAdapter extends AbstractAdaptableMessageLis
 
 	/**
 	 * Set the {@link InvocableHandlerMethod} to use to invoke the method
-	 * processing an incoming {@link jakarta.jms.Message}.
+	 * processing an incoming {@link javax.jms.Message}.
 	 */
 	public void setHandlerMethod(InvocableHandlerMethod handlerMethod) {
 		this.handlerMethod = handlerMethod;
@@ -76,7 +76,7 @@ public class MessagingMessageListenerAdapter extends AbstractAdaptableMessageLis
 
 
 	@Override
-	public void onMessage(jakarta.jms.Message jmsMessage, @Nullable Session session) throws JMSException {
+	public void onMessage(javax.jms.Message jmsMessage, @Nullable Session session) throws JMSException {
 		Message<?> message = toMessagingMessage(jmsMessage);
 		if (logger.isDebugEnabled()) {
 			logger.debug("Processing [" + message + "]");
@@ -90,7 +90,7 @@ public class MessagingMessageListenerAdapter extends AbstractAdaptableMessageLis
 		}
 	}
 
-	protected Message<?> toMessagingMessage(jakarta.jms.Message jmsMessage) {
+	protected Message<?> toMessagingMessage(javax.jms.Message jmsMessage) {
 		try {
 			return (Message<?>) getMessagingMessageConverter().fromMessage(jmsMessage);
 		}
@@ -104,7 +104,7 @@ public class MessagingMessageListenerAdapter extends AbstractAdaptableMessageLis
 	 * with a dedicated error message.
 	 */
 	@Nullable
-	private Object invokeHandler(jakarta.jms.Message jmsMessage, @Nullable Session session, Message<?> message) {
+	private Object invokeHandler(javax.jms.Message jmsMessage, @Nullable Session session, Message<?> message) {
 		InvocableHandlerMethod handlerMethod = getHandlerMethod();
 		try {
 			return handlerMethod.invoke(message, jmsMessage, session);
@@ -131,8 +131,8 @@ public class MessagingMessageListenerAdapter extends AbstractAdaptableMessageLis
 	@Override
 	protected Object preProcessResponse(Object result) {
 		MethodParameter returnType = getHandlerMethod().getReturnType();
-		MessageBuilder<?> messageBuilder = (result instanceof Message<?> message ?
-				MessageBuilder.fromMessage(message) :
+		MessageBuilder<?> messageBuilder = (result instanceof Message ?
+				MessageBuilder.fromMessage((Message<?>) result) :
 				MessageBuilder.withPayload(result));
 		return messageBuilder
 				.setHeader(AbstractMessageSendingTemplate.CONVERSION_HINT_HEADER, returnType)

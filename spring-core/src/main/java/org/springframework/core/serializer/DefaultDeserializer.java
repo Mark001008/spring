@@ -65,13 +65,14 @@ public class DefaultDeserializer implements Deserializer<Object> {
 	 * @see ObjectInputStream#readObject()
 	 */
 	@Override
+	@SuppressWarnings("deprecation")
 	public Object deserialize(InputStream inputStream) throws IOException {
 		ObjectInputStream objectInputStream = new ConfigurableObjectInputStream(inputStream, this.classLoader);
 		try {
 			return objectInputStream.readObject();
 		}
 		catch (ClassNotFoundException ex) {
-			throw new IOException("Failed to deserialize object type", ex);
+			throw new org.springframework.core.NestedIOException("Failed to deserialize object type", ex);
 		}
 	}
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,8 +26,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import jakarta.servlet.ServletException;
-import jakarta.servlet.http.HttpServletRequest;
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServletRequest;
 
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -44,7 +44,6 @@ import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.UnsatisfiedServletRequestParameterException;
 import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.filter.ServerHttpObservationFilter;
 import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.HandlerMapping;
 import org.springframework.web.servlet.handler.AbstractHandlerMethodMapping;
@@ -106,7 +105,6 @@ public abstract class RequestMappingInfoHandlerMapping extends AbstractHandlerMe
 	 * @return an info in case of a match; or {@code null} otherwise.
 	 */
 	@Override
-	@Nullable
 	protected RequestMappingInfo getMatchingMapping(RequestMappingInfo info, HttpServletRequest request) {
 		return info.getMatchingCondition(request);
 	}
@@ -142,8 +140,8 @@ public abstract class RequestMappingInfoHandlerMapping extends AbstractHandlerMe
 		super.handleMatch(info, lookupPath, request);
 
 		RequestCondition<?> condition = info.getActivePatternsCondition();
-		if (condition instanceof PathPatternsRequestCondition pprc) {
-			extractMatchDetails(pprc, lookupPath, request);
+		if (condition instanceof PathPatternsRequestCondition) {
+			extractMatchDetails((PathPatternsRequestCondition) condition, lookupPath, request);
 		}
 		else {
 			extractMatchDetails((PatternsRequestCondition) condition, lookupPath, request);
@@ -177,8 +175,6 @@ public abstract class RequestMappingInfoHandlerMapping extends AbstractHandlerMe
 			request.setAttribute(MATRIX_VARIABLES_ATTRIBUTE, result.getMatrixVariables());
 		}
 		request.setAttribute(BEST_MATCHING_PATTERN_ATTRIBUTE, bestPattern.getPatternString());
-		ServerHttpObservationFilter.findObservationContext(request)
-				.ifPresent(context -> context.setPathPattern(bestPattern.getPatternString()));
 		request.setAttribute(URI_TEMPLATE_VARIABLES_ATTRIBUTE, uriVariables);
 	}
 
@@ -200,8 +196,6 @@ public abstract class RequestMappingInfoHandlerMapping extends AbstractHandlerMe
 			uriVariables = getUrlPathHelper().decodePathVariables(request, uriVariables);
 		}
 		request.setAttribute(BEST_MATCHING_PATTERN_ATTRIBUTE, bestPattern);
-		ServerHttpObservationFilter.findObservationContext(request)
-				.ifPresent(context -> context.setPathPattern(bestPattern));
 		request.setAttribute(URI_TEMPLATE_VARIABLES_ATTRIBUTE, uriVariables);
 	}
 
@@ -244,7 +238,6 @@ public abstract class RequestMappingInfoHandlerMapping extends AbstractHandlerMe
 	 * but not by consumable/producible media types
 	 */
 	@Override
-	@Nullable
 	protected HandlerMethod handleNoMatch(
 			Set<RequestMappingInfo> infos, String lookupPath, HttpServletRequest request) throws ServletException {
 
@@ -275,11 +268,10 @@ public abstract class RequestMappingInfoHandlerMapping extends AbstractHandlerMe
 					contentType = MediaType.parseMediaType(request.getContentType());
 				}
 				catch (InvalidMediaTypeException ex) {
-					throw new HttpMediaTypeNotSupportedException(ex.getMessage(), new ArrayList<>(mediaTypes));
+					throw new HttpMediaTypeNotSupportedException(ex.getMessage());
 				}
 			}
-			throw new HttpMediaTypeNotSupportedException(
-					contentType, new ArrayList<>(mediaTypes), HttpMethod.valueOf(request.getMethod()));
+			throw new HttpMediaTypeNotSupportedException(contentType, new ArrayList<>(mediaTypes));
 		}
 
 		if (helper.hasProducesMismatch()) {
@@ -299,7 +291,7 @@ public abstract class RequestMappingInfoHandlerMapping extends AbstractHandlerMe
 	/**
 	 * Aggregate all partial matches and expose methods checking across them.
 	 */
-	private static final class PartialMatchHelper {
+	private static class PartialMatchHelper {
 
 		private final List<PartialMatch> partialMatches = new ArrayList<>();
 
@@ -514,7 +506,7 @@ public abstract class RequestMappingInfoHandlerMapping extends AbstractHandlerMe
 		}
 
 		private static Set<HttpMethod> initAllowedHttpMethods(Set<String> declaredMethods) {
-			Set<HttpMethod> result = CollectionUtils.newLinkedHashSet(declaredMethods.size());
+			Set<HttpMethod> result = new LinkedHashSet<>(declaredMethods.size());
 			if (declaredMethods.isEmpty()) {
 				for (HttpMethod method : HttpMethod.values()) {
 					if (method != HttpMethod.TRACE) {

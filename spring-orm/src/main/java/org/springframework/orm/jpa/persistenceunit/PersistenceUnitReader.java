@@ -22,13 +22,13 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.persistence.SharedCacheMode;
+import javax.persistence.ValidationMode;
+import javax.persistence.spi.PersistenceUnitTransactionType;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 
-import jakarta.persistence.SharedCacheMode;
-import jakarta.persistence.ValidationMode;
-import jakarta.persistence.spi.PersistenceUnitTransactionType;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.w3c.dom.Document;
@@ -157,9 +157,6 @@ final class PersistenceUnitReader {
 	Document buildDocument(ErrorHandler handler, InputStream stream)
 			throws ParserConfigurationException, SAXException, IOException {
 
-		// This document loader is used for loading application configuration files.
-		// As a result, attackers would need complete write access to application configuration
-		// to leverage XXE attacks. This does not qualify as privilege escalation.
 		DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
 		dbf.setNamespaceAware(true);
 		DocumentBuilder parser = dbf.newDocumentBuilder();
@@ -311,7 +308,7 @@ final class PersistenceUnitReader {
 					// relative to the persistence unit root, according to the JPA spec
 					URL rootUrl = unitInfo.getPersistenceUnitRootUrl();
 					if (rootUrl != null) {
-						unitInfo.addJarFileUrl(ResourceUtils.toRelativeURL(rootUrl, value));
+						unitInfo.addJarFileUrl(new URL(rootUrl, value));
 					}
 					else {
 						logger.warn("Cannot resolve jar-file entry [" + value + "] in persistence unit '" +
@@ -362,7 +359,7 @@ final class PersistenceUnitReader {
 		if (persistenceUnitRoot.endsWith("/")) {
 			persistenceUnitRoot = persistenceUnitRoot.substring(0, persistenceUnitRoot.length() - 1);
 		}
-		return ResourceUtils.toURL(persistenceUnitRoot);
+		return new URL(persistenceUnitRoot);
 	}
 
 }

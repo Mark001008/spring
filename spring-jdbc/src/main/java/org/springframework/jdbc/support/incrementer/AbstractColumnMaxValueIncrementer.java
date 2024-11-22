@@ -43,7 +43,6 @@ public abstract class AbstractColumnMaxValueIncrementer extends AbstractDataFiel
 	 * @see #setIncrementerName
 	 * @see #setColumnName
 	 */
-	@SuppressWarnings("NullAway")
 	public AbstractColumnMaxValueIncrementer() {
 	}
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@ package org.springframework.web.servlet;
 
 import java.util.Map;
 
-import org.springframework.http.HttpStatusCode;
+import org.springframework.http.HttpStatus;
 import org.springframework.lang.Nullable;
 import org.springframework.ui.ModelMap;
 import org.springframework.util.CollectionUtils;
@@ -56,7 +56,7 @@ public class ModelAndView {
 
 	/** Optional HTTP status for the response. */
 	@Nullable
-	private HttpStatusCode status;
+	private HttpStatus status;
 
 	/** Indicates whether this instance has been cleared with a call to {@link #clear()}. */
 	private boolean cleared = false;
@@ -132,7 +132,7 @@ public class ModelAndView {
 	 * (to be set just prior to View rendering)
 	 * @since 4.3.8
 	 */
-	public ModelAndView(String viewName, HttpStatusCode status) {
+	public ModelAndView(String viewName, HttpStatus status) {
 		this.view = viewName;
 		this.status = status;
 	}
@@ -148,7 +148,7 @@ public class ModelAndView {
 	 * (to be set just prior to View rendering)
 	 * @since 4.3
 	 */
-	public ModelAndView(@Nullable String viewName, @Nullable Map<String, ?> model, @Nullable HttpStatusCode status) {
+	public ModelAndView(@Nullable String viewName, @Nullable Map<String, ?> model, @Nullable HttpStatus status) {
 		this.view = viewName;
 		if (model != null) {
 			getModelMap().addAllAttributes(model);
@@ -195,7 +195,7 @@ public class ModelAndView {
 	 */
 	@Nullable
 	public String getViewName() {
-		return (this.view instanceof String name ? name : null);
+		return (this.view instanceof String ? (String) this.view : null);
 	}
 
 	/**
@@ -212,7 +212,7 @@ public class ModelAndView {
 	 */
 	@Nullable
 	public View getView() {
-		return (this.view instanceof View v ? v : null);
+		return (this.view instanceof View ? (View) this.view : null);
 	}
 
 	/**
@@ -264,7 +264,7 @@ public class ModelAndView {
 	 * <p>The response status is set just prior to View rendering.
 	 * @since 4.3
 	 */
-	public void setStatus(@Nullable HttpStatusCode status) {
+	public void setStatus(@Nullable HttpStatus status) {
 		this.status = status;
 	}
 
@@ -273,7 +273,7 @@ public class ModelAndView {
 	 * @since 4.3
 	 */
 	@Nullable
-	public HttpStatusCode getStatus() {
+	public HttpStatus getStatus() {
 		return this.status;
 	}
 

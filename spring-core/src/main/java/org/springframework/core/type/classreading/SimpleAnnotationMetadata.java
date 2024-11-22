@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2021 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,7 +25,6 @@ import org.springframework.core.annotation.MergedAnnotations;
 import org.springframework.core.type.AnnotationMetadata;
 import org.springframework.core.type.MethodMetadata;
 import org.springframework.lang.Nullable;
-import org.springframework.util.StringUtils;
 
 /**
  * {@link AnnotationMetadata} created from a
@@ -33,7 +32,6 @@ import org.springframework.util.StringUtils;
  *
  * @author Phillip Webb
  * @author Sam Brannen
- * @author Juergen Hoeller
  * @since 5.2
  */
 final class SimpleAnnotationMetadata implements AnnotationMetadata {
@@ -50,21 +48,21 @@ final class SimpleAnnotationMetadata implements AnnotationMetadata {
 
 	private final boolean independentInnerClass;
 
-	private final Set<String> interfaceNames;
+	private final String[] interfaceNames;
 
-	private final Set<String> memberClassNames;
+	private final String[] memberClassNames;
 
-	private final Set<MethodMetadata> declaredMethods;
+	private final MethodMetadata[] annotatedMethods;
 
-	private final MergedAnnotations mergedAnnotations;
+	private final MergedAnnotations annotations;
 
 	@Nullable
 	private Set<String> annotationTypes;
 
 
 	SimpleAnnotationMetadata(String className, int access, @Nullable String enclosingClassName,
-			@Nullable String superClassName, boolean independentInnerClass, Set<String> interfaceNames,
-			Set<String> memberClassNames, Set<MethodMetadata> declaredMethods, MergedAnnotations mergedAnnotations) {
+			@Nullable String superClassName, boolean independentInnerClass, String[] interfaceNames,
+			String[] memberClassNames, MethodMetadata[] annotatedMethods, MergedAnnotations annotations) {
 
 		this.className = className;
 		this.access = access;
@@ -73,8 +71,8 @@ final class SimpleAnnotationMetadata implements AnnotationMetadata {
 		this.independentInnerClass = independentInnerClass;
 		this.interfaceNames = interfaceNames;
 		this.memberClassNames = memberClassNames;
-		this.declaredMethods = declaredMethods;
-		this.mergedAnnotations = mergedAnnotations;
+		this.annotatedMethods = annotatedMethods;
+		this.annotations = annotations;
 	}
 
 	@Override
@@ -121,17 +119,17 @@ final class SimpleAnnotationMetadata implements AnnotationMetadata {
 
 	@Override
 	public String[] getInterfaceNames() {
-		return StringUtils.toStringArray(this.interfaceNames);
+		return this.interfaceNames.clone();
 	}
 
 	@Override
 	public String[] getMemberClassNames() {
-		return StringUtils.toStringArray(this.memberClassNames);
+		return this.memberClassNames.clone();
 	}
 
 	@Override
 	public MergedAnnotations getAnnotations() {
-		return this.mergedAnnotations;
+		return this.annotations;
 	}
 
 	@Override
@@ -147,24 +145,23 @@ final class SimpleAnnotationMetadata implements AnnotationMetadata {
 
 	@Override
 	public Set<MethodMetadata> getAnnotatedMethods(String annotationName) {
-		Set<MethodMetadata> result = new LinkedHashSet<>(4);
-		for (MethodMetadata annotatedMethod : this.declaredMethods) {
+		Set<MethodMetadata> annotatedMethods = null;
+		for (MethodMetadata annotatedMethod : this.annotatedMethods) {
 			if (annotatedMethod.isAnnotated(annotationName)) {
-				result.add(annotatedMethod);
+				if (annotatedMethods == null) {
+					annotatedMethods = new LinkedHashSet<>(4);
+				}
+				annotatedMethods.add(annotatedMethod);
 			}
 		}
-		return Collections.unmodifiableSet(result);
-	}
-
-	@Override
-	public Set<MethodMetadata> getDeclaredMethods() {
-		return Collections.unmodifiableSet(this.declaredMethods);
+		return (annotatedMethods != null ? annotatedMethods : Collections.emptySet());
 	}
 
 
 	@Override
-	public boolean equals(@Nullable Object other) {
-		return (this == other || (other instanceof SimpleAnnotationMetadata that && this.className.equals(that.className)));
+	public boolean equals(@Nullable Object obj) {
+		return ((this == obj) || ((obj instanceof SimpleAnnotationMetadata) &&
+				this.className.equals(((SimpleAnnotationMetadata) obj).className)));
 	}
 
 	@Override

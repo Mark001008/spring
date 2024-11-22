@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,19 +16,13 @@
 
 package org.springframework.web.servlet.mvc.method.annotation;
 
-import java.util.ArrayList;
-import java.util.Enumeration;
-import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
-import jakarta.servlet.ServletRequest;
-import jakarta.servlet.http.HttpServletRequest;
+import javax.servlet.ServletRequest;
 
 import org.springframework.beans.MutablePropertyValues;
 import org.springframework.lang.Nullable;
 import org.springframework.web.bind.ServletRequestDataBinder;
-import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.servlet.HandlerMapping;
 
 /**
@@ -73,101 +67,25 @@ public class ExtendedServletRequestDataBinder extends ServletRequestDataBinder {
 	}
 
 
-	@Override
-	protected ServletRequestValueResolver createValueResolver(ServletRequest request) {
-		return new ExtendedServletRequestValueResolver(request, this);
-	}
-
 	/**
 	 * Merge URI variables into the property values to use for data binding.
 	 */
 	@Override
 	protected void addBindValues(MutablePropertyValues mpvs, ServletRequest request) {
-		Map<String, String> uriVars = getUriVars(request);
+		String attr = HandlerMapping.URI_TEMPLATE_VARIABLES_ATTRIBUTE;
+		@SuppressWarnings("unchecked")
+		Map<String, String> uriVars = (Map<String, String>) request.getAttribute(attr);
 		if (uriVars != null) {
-			uriVars.forEach((name, value) -> addValueIfNotPresent(mpvs, "URI variable", name, value));
-		}
-		if (request instanceof HttpServletRequest httpRequest) {
-			Enumeration<String> names = httpRequest.getHeaderNames();
-			while (names.hasMoreElements()) {
-				String name = names.nextElement();
-				Object value = getHeaderValue(httpRequest, name);
-				if (value != null) {
-					name = name.replace("-", "");
-					addValueIfNotPresent(mpvs, "Header", name, value);
+			uriVars.forEach((name, value) -> {
+				if (mpvs.contains(name)) {
+					if (logger.isDebugEnabled()) {
+						logger.debug("URI variable '" + name + "' overridden by request bind value.");
+					}
 				}
-			}
-		}
-	}
-
-	@SuppressWarnings("unchecked")
-	@Nullable
-	private static Map<String, String> getUriVars(ServletRequest request) {
-		return (Map<String, String>) request.getAttribute(HandlerMapping.URI_TEMPLATE_VARIABLES_ATTRIBUTE);
-	}
-
-	private static void addValueIfNotPresent(MutablePropertyValues mpvs, String label, String name, Object value) {
-		if (mpvs.contains(name)) {
-			if (logger.isDebugEnabled()) {
-				logger.debug(label + " '" + name + "' overridden by request bind value.");
-			}
-		}
-		else {
-			mpvs.addPropertyValue(name, value);
-		}
-	}
-
-	@Nullable
-	private static Object getHeaderValue(HttpServletRequest request, String name) {
-		Enumeration<String> valuesEnum = request.getHeaders(name);
-		if (!valuesEnum.hasMoreElements()) {
-			return null;
-		}
-
-		String value = valuesEnum.nextElement();
-		if (!valuesEnum.hasMoreElements()) {
-			return value;
-		}
-
-		List<Object> values = new ArrayList<>();
-		values.add(value);
-		while (valuesEnum.hasMoreElements()) {
-			values.add(valuesEnum.nextElement());
-		}
-		return values;
-	}
-
-
-	/**
-	 * Resolver of values that looks up URI path variables.
-	 */
-	private static class ExtendedServletRequestValueResolver extends ServletRequestValueResolver {
-
-		ExtendedServletRequestValueResolver(ServletRequest request, WebDataBinder dataBinder) {
-			super(request, dataBinder);
-		}
-
-		@Override
-		@Nullable
-		protected Object getRequestParameter(String name, Class<?> type) {
-			Object value = super.getRequestParameter(name, type);
-			if (value == null) {
-				Map<String, String> uriVars = getUriVars(getRequest());
-				if (uriVars != null) {
-					value = uriVars.get(name);
+				else {
+					mpvs.addPropertyValue(name, value);
 				}
-			}
-			return value;
-		}
-
-		@Override
-		protected Set<String> initParameterNames(ServletRequest request) {
-			Set<String> set = super.initParameterNames(request);
-			Map<String, String> uriVars = getUriVars(getRequest());
-			if (uriVars != null) {
-				set.addAll(uriVars.keySet());
-			}
-			return set;
+			});
 		}
 	}
 

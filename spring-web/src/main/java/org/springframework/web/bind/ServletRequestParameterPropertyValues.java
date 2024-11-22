@@ -16,7 +16,7 @@
 
 package org.springframework.web.bind;
 
-import jakarta.servlet.ServletRequest;
+import javax.servlet.ServletRequest;
 
 import org.springframework.beans.MutablePropertyValues;
 import org.springframework.lang.Nullable;
@@ -71,7 +71,7 @@ public class ServletRequestParameterPropertyValues extends MutablePropertyValues
 	 * @param request the HTTP request
 	 * @param prefix the prefix for parameters (the full prefix will
 	 * consist of this plus the separator)
-	 * @param prefixSeparator separator delimiting prefix (for example, "spring")
+	 * @param prefixSeparator separator delimiting prefix (e.g. "spring")
 	 * and the rest of the parameter name ("param1", "param2")
 	 */
 	public ServletRequestParameterPropertyValues(

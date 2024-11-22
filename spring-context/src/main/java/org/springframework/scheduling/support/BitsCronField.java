@@ -156,8 +156,8 @@ final class BitsCronField extends CronField {
 				return ValueRange.of(result, result);
 			}
 			else {
-				int min = Integer.parseInt(value, 0, hyphenPos, 10);
-				int max = Integer.parseInt(value, hyphenPos + 1, value.length(), 10);
+				int min = Integer.parseInt(value.substring(0, hyphenPos));
+				int max = Integer.parseInt(value.substring(hyphenPos + 1));
 				min = type.checkValidValue(min);
 				max = type.checkValidValue(max);
 				if (type == Type.DAY_OF_WEEK && min == 7) {
@@ -248,8 +248,14 @@ final class BitsCronField extends CronField {
 
 	@Override
 	public boolean equals(Object other) {
-		return (this == other || (other instanceof BitsCronField that &&
-				type() == that.type() && this.bits == that.bits));
+		if (this == other) {
+			return true;
+		}
+		if (!(other instanceof BitsCronField)) {
+			return false;
+		}
+		BitsCronField otherField = (BitsCronField) other;
+		return (type() == otherField.type() && this.bits == otherField.bits);
 	}
 
 	@Override

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2023 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,13 +22,11 @@ import java.io.InputStream;
 import java.net.URI;
 import java.net.URL;
 import java.nio.channels.ReadableByteChannel;
-import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 
 import reactor.core.publisher.Mono;
@@ -43,7 +41,7 @@ import org.springframework.web.server.ServerWebExchange;
 
 /**
  * Resolver that delegates to the chain, and if a resource is found, it then
- * attempts to find an encoded (for example, gzip, brotli) variant that is acceptable
+ * attempts to find an encoded (e.g. gzip, brotli) variant that is acceptable
  * based on the "Accept-Encoding" request header.
  *
  * <p>The list of supported {@link #setContentCodings(List) contentCodings} can
@@ -170,7 +168,7 @@ public class EncodedResourceResolver extends AbstractResourceResolver {
 	private String getAcceptEncoding(ServerWebExchange exchange) {
 		ServerHttpRequest request = exchange.getRequest();
 		String header = request.getHeaders().getFirst(HttpHeaders.ACCEPT_ENCODING);
-		return (header != null ? header.toLowerCase(Locale.ROOT) : null);
+		return (header != null ? header.toLowerCase() : null);
 	}
 
 	private String getExtension(String coding) {
@@ -252,16 +250,6 @@ public class EncodedResourceResolver extends AbstractResourceResolver {
 		}
 
 		@Override
-		public byte[] getContentAsByteArray() throws IOException {
-			return this.encoded.getContentAsByteArray();
-		}
-
-		@Override
-		public String getContentAsString(Charset charset) throws IOException {
-			return this.encoded.getContentAsString(charset);
-		}
-
-		@Override
 		public long contentLength() throws IOException {
 			return this.encoded.contentLength();
 		}
@@ -290,8 +278,8 @@ public class EncodedResourceResolver extends AbstractResourceResolver {
 		@Override
 		public HttpHeaders getResponseHeaders() {
 			HttpHeaders headers;
-			if (this.original instanceof HttpResource httpResource) {
-				headers = httpResource.getResponseHeaders();
+			if (this.original instanceof HttpResource) {
+				headers = ((HttpResource) this.original).getResponseHeaders();
 			}
 			else {
 				headers = new HttpHeaders();

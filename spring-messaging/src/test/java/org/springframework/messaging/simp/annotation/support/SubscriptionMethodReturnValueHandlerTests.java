@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -86,7 +86,7 @@ public class SubscriptionMethodReturnValueHandlerTests {
 
 
 	@BeforeEach
-	void setup() throws Exception {
+	public void setup() throws Exception {
 		SimpMessagingTemplate messagingTemplate = new SimpMessagingTemplate(this.messageChannel);
 		messagingTemplate.setMessageConverter(new StringMessageConverter());
 		this.handler = new SubscriptionMethodReturnValueHandler(messagingTemplate);
@@ -110,14 +110,14 @@ public class SubscriptionMethodReturnValueHandlerTests {
 
 
 	@Test
-	void supportsReturnType() {
+	public void supportsReturnType() throws Exception {
 		assertThat(this.handler.supportsReturnType(this.subscribeEventReturnType)).isTrue();
 		assertThat(this.handler.supportsReturnType(this.subscribeEventSendToReturnType)).isFalse();
 		assertThat(this.handler.supportsReturnType(this.messageMappingReturnType)).isFalse();
 	}
 
 	@Test
-	void testMessageSentToChannel() throws Exception {
+	public void testMessageSentToChannel() throws Exception {
 		given(this.messageChannel.send(any(Message.class))).willReturn(true);
 
 		String sessionId = "sess1";
@@ -150,7 +150,7 @@ public class SubscriptionMethodReturnValueHandlerTests {
 		String destination = "/dest";
 		Message<?> inputMessage = createInputMessage(sessionId, subscriptionId, destination, null);
 
-		MessageSendingOperations messagingTemplate = mock();
+		MessageSendingOperations messagingTemplate = mock(MessageSendingOperations.class);
 		SubscriptionMethodReturnValueHandler handler = new SubscriptionMethodReturnValueHandler(messagingTemplate);
 
 		handler.handleReturnValue(PAYLOAD, this.subscribeEventReturnType, inputMessage);
@@ -169,7 +169,7 @@ public class SubscriptionMethodReturnValueHandlerTests {
 	}
 
 	@Test
-	void testJsonView() throws Exception {
+	public void testJsonView() throws Exception {
 		given(this.messageChannel.send(any(Message.class))).willReturn(true);
 
 		String sessionId = "sess1";

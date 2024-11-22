@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,7 +35,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.fail;
 
 /**
- * Tests for various {@link LocaleResolver} implementations.
+ * Unit tests for various {@link LocaleResolver} implementations.
  *
  * @author Juergen Hoeller
  * @since 20.03.2003
@@ -85,7 +85,8 @@ class LocaleResolverTests {
 		}
 
 		// check LocaleContext
-		if (localeResolver instanceof LocaleContextResolver localeContextResolver) {
+		if (localeResolver instanceof LocaleContextResolver) {
+			LocaleContextResolver localeContextResolver = (LocaleContextResolver) localeResolver;
 			LocaleContext localeContext = localeContextResolver.resolveLocaleContext(request);
 			if (shouldSet) {
 				assertThat(localeContext.getLocale()).isEqualTo(Locale.GERMANY);
@@ -99,8 +100,6 @@ class LocaleResolverTests {
 
 			if (localeContextResolver instanceof AbstractLocaleContextResolver) {
 				((AbstractLocaleContextResolver) localeContextResolver).setDefaultTimeZone(TimeZone.getTimeZone("GMT+1"));
-				request.removeAttribute(CookieLocaleResolver.LOCALE_REQUEST_ATTRIBUTE_NAME);
-				localeContextResolver.resolveLocaleContext(request);
 				assertThat(TimeZone.getTimeZone("GMT+1")).isEqualTo(((TimeZoneAwareLocaleContext) localeContext).getTimeZone());
 			}
 
@@ -136,8 +135,6 @@ class LocaleResolverTests {
 
 				if (localeContextResolver instanceof AbstractLocaleContextResolver) {
 					((AbstractLocaleContextResolver) localeContextResolver).setDefaultLocale(Locale.GERMANY);
-					request.removeAttribute(CookieLocaleResolver.LOCALE_REQUEST_ATTRIBUTE_NAME);
-					localeContextResolver.resolveLocaleContext(request);
 					assertThat(localeContext.getLocale()).isEqualTo(Locale.GERMANY);
 				}
 			}

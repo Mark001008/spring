@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,8 +24,7 @@ import org.springframework.test.web.servlet.request.RequestPostProcessor
 import org.springframework.util.MultiValueMap
 import java.security.Principal
 import java.util.*
-import jakarta.servlet.http.Cookie
-import org.springframework.test.web.servlet.request.AbstractMockHttpServletRequestBuilder
+import javax.servlet.http.Cookie
 
 /**
  * Provide a [MockHttpServletRequestBuilder] Kotlin DSL in order to be able to write idiomatic Kotlin code.
@@ -41,7 +40,7 @@ import org.springframework.test.web.servlet.request.AbstractMockHttpServletReque
  * @author Sebastien Deleuze
  * @since 5.2
  */
-open class MockHttpServletRequestDsl(private val builder: AbstractMockHttpServletRequestBuilder<*>) {
+open class MockHttpServletRequestDsl internal constructor (private val builder: MockHttpServletRequestBuilder) {
 
 	/**
 	 * @see [MockHttpServletRequestBuilder.contextPath]
@@ -115,19 +114,6 @@ open class MockHttpServletRequestDsl(private val builder: AbstractMockHttpServle
 	 * @see [MockHttpServletRequestBuilder.params]
 	 */
 	var params: MultiValueMap<String, String>? = null
-
-	/**
-	 * @since 6.1.5
-	 * @see [MockHttpServletRequestBuilder.queryParam]
-	 */
-	fun queryParam(name: String, vararg values: String) {
-		builder.queryParam(name, *values)
-	}
-
-	/**
-	 * @see [MockHttpServletRequestBuilder.queryParams]
-	 */
-	var queryParams: MultiValueMap<String, String>? = null
 
 	/**
 	 * @see [MockHttpServletRequestBuilder.cookie]
@@ -214,7 +200,6 @@ open class MockHttpServletRequestDsl(private val builder: AbstractMockHttpServle
 		accept?.also { builder.accept(it) }
 		contentType?.also { builder.contentType(it) }
 		params?.also { builder.params(it) }
-		queryParams?.also { builder.queryParams(it) }
 		sessionAttrs?.also { builder.sessionAttrs(it) }
 		flashAttrs?.also { builder.flashAttrs(it) }
 		session?.also { builder.session(it) }

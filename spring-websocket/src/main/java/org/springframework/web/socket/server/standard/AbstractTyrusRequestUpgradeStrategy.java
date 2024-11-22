@@ -25,14 +25,15 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 
-import jakarta.servlet.ServletException;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-import jakarta.websocket.DeploymentException;
-import jakarta.websocket.Endpoint;
-import jakarta.websocket.EndpointConfig;
-import jakarta.websocket.Extension;
-import jakarta.websocket.WebSocketContainer;
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import javax.websocket.DeploymentException;
+import javax.websocket.Endpoint;
+import javax.websocket.EndpointConfig;
+import javax.websocket.Extension;
+import javax.websocket.WebSocketContainer;
+
 import org.glassfish.tyrus.core.ComponentProviderService;
 import org.glassfish.tyrus.core.RequestContext;
 import org.glassfish.tyrus.core.TyrusEndpointWrapper;
@@ -58,6 +59,8 @@ import static org.glassfish.tyrus.spi.WebSocketEngine.UpgradeStatus.SUCCESS;
  * A base class for {@code RequestUpgradeStrategy} implementations on top of
  * JSR-356 based servers which include Tyrus as their WebSocket engine.
  *
+ * <p>Works with Tyrus 1.11 (WebLogic 12.2.1) and Tyrus 1.12 (GlassFish 4.1.1).
+ *
  * @author Rossen Stoyanchev
  * @author Brian Clozel
  * @author Juergen Hoeller
@@ -65,10 +68,6 @@ import static org.glassfish.tyrus.spi.WebSocketEngine.UpgradeStatus.SUCCESS;
  * @see <a href="https://tyrus.java.net/">Project Tyrus</a>
  */
 public abstract class AbstractTyrusRequestUpgradeStrategy extends AbstractStandardUpgradeStrategy {
-
-	private static final String[] SUPPORTED_VERSIONS =
-			StringUtils.tokenizeToStringArray(Version.getSupportedWireProtocolVersions(), ",");
-
 
 	private static final Random random = new Random();
 
@@ -113,7 +112,7 @@ public abstract class AbstractTyrusRequestUpgradeStrategy extends AbstractStanda
 
 	@Override
 	public String[] getSupportedVersions() {
-		return SUPPORTED_VERSIONS;
+		return StringUtils.tokenizeToStringArray(Version.getSupportedWireProtocolVersions(), ",");
 	}
 
 	@Override

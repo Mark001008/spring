@@ -96,21 +96,20 @@ public class SockJsServiceRegistration {
 	}
 
 	/**
-	 * Transports with no native cross-domain communication (for example, "eventsource",
+	 * Transports with no native cross-domain communication (e.g. "eventsource",
 	 * "htmlfile") must get a simple page from the "foreign" domain in an invisible
-	 * {@code iframe} so that code in the {@code iframe} can run from a domain
-	 * local to the SockJS server. Since the {@code iframe} needs to load the
-	 * SockJS JavaScript client library, this property allows specifying where to
-	 * load it from.
+	 * iframe so that code in the iframe can run from  a domain local to the SockJS
+	 * server. Since the iframe needs to load the SockJS javascript client library,
+	 * this property allows specifying where to load it from.
 	 * <p>By default this is set to point to
-	 * <a href="https://cdn.jsdelivr.net/sockjs/1.0.0/sockjs.min.js">"https://cdn.jsdelivr.net/sockjs/1.0.0/sockjs.min.js"</a>.
-	 * However, it can also be set to point to a URL served by the application.
+	 * "https://cdn.jsdelivr.net/sockjs/0.3.4/sockjs.min.js". However it can
+	 * also be set to point to a URL served by the application.
 	 * <p>Note that it's possible to specify a relative URL in which case the URL
-	 * must be relative to the {@code iframe} URL. For example assuming a SockJS endpoint
-	 * mapped to "/sockjs", and resulting {@code iframe} URL "/sockjs/iframe.html", then
+	 * must be relative to the iframe URL. For example assuming a SockJS endpoint
+	 * mapped to "/sockjs", and resulting iframe URL "/sockjs/iframe.html", then
 	 * the relative URL must start with "../../" to traverse up to the location
 	 * above the SockJS mapping. In case of a prefix-based Servlet mapping one more
-	 * traversals may be needed.
+	 * traversal may be needed.
 	 */
 	public SockJsServiceRegistration setClientLibraryUrl(String clientLibraryUrl) {
 		this.clientLibraryUrl = clientLibraryUrl;
@@ -135,7 +134,7 @@ public class SockJsServiceRegistration {
 	/**
 	 * The SockJS protocol requires a server to respond to the initial "/info" request
 	 * from clients with a "cookie_needed" boolean property that indicates whether the use
-	 * of a JSESSIONID cookie is required for the application to function correctly, for example,
+	 * of a JSESSIONID cookie is required for the application to function correctly, e.g.
 	 * for load balancing or in Java Servlet containers for the use of an HTTP session.
 	 *
 	 * <p>This is especially important for IE 8,9 that support XDomainRequest -- a modified
@@ -256,6 +255,18 @@ public class SockJsServiceRegistration {
 	public SockJsServiceRegistration setSuppressCors(boolean suppressCors) {
 		this.suppressCors = suppressCors;
 		return this;
+	}
+
+	/**
+	 * This option can be used to disable automatic addition of CORS headers for
+	 * SockJS requests.
+	 * <p>The default value is "false".
+	 * @since 4.1.2
+	 * @deprecated as of 5.3.23, in favor of {@link #setSuppressCors(boolean)}
+	 */
+	@Deprecated
+	public SockJsServiceRegistration setSupressCors(boolean suppressCors) {
+		return this.setSuppressCors(suppressCors);
 	}
 
 	/**

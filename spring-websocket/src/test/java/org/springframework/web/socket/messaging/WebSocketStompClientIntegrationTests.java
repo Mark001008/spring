@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -66,8 +66,6 @@ class WebSocketStompClientIntegrationTests {
 
 	private AnnotationConfigWebApplicationContext wac;
 
-	private String url;
-
 
 	@BeforeEach
 	void setUp(TestInfo testInfo) throws Exception {
@@ -85,12 +83,10 @@ class WebSocketStompClientIntegrationTests {
 		WebSocketClient webSocketClient = new StandardWebSocketClient();
 		this.stompClient = new WebSocketStompClient(webSocketClient);
 		this.stompClient.setMessageConverter(new StringMessageConverter());
-
-		this.url = "ws://127.0.0.1:" + this.server.getPort() + "/stomp";
 	}
 
 	@AfterEach
-	void tearDown() {
+	void tearDown() throws Exception {
 		try {
 			this.server.undeployConfig();
 		}
@@ -114,31 +110,18 @@ class WebSocketStompClientIntegrationTests {
 
 	@Test
 	void publishSubscribe() throws Exception {
+
+		String url = "ws://127.0.0.1:" + this.server.getPort() + "/stomp";
+
 		TestHandler testHandler = new TestHandler("/topic/foo", "payload");
-		this.stompClient.connectAsync(this.url, testHandler);
+		this.stompClient.connect(url, testHandler);
 
 		assertThat(testHandler.awaitForMessageCount(1, 5000)).isTrue();
 		assertThat(testHandler.getReceived()).containsExactly("payload");
 	}
 
-	@Test
-	void publishSubscribeWithSlitMessage() throws Exception {
-		StringBuilder sb = new StringBuilder();
-		while (sb.length() < 2000) {
-			sb.append("A message with a long body... ");
-		}
-		String payload = sb.toString();
 
-		TestHandler testHandler = new TestHandler("/topic/foo", payload);
-		this.stompClient.setOutboundMessageSizeLimit(512);
-		this.stompClient.connectAsync(this.url, testHandler);
-
-		assertThat(testHandler.awaitForMessageCount(1, 5000)).isTrue();
-		assertThat(testHandler.getReceived()).containsExactly(payload);
-	}
-
-
-	@Configuration(proxyBeanMethods = false)
+	@Configuration
 	static class TestConfig extends WebSocketMessageBrokerConfigurationSupport {
 
 		@Override

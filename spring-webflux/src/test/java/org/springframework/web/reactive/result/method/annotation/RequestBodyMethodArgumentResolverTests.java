@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -52,13 +52,13 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.web.testfixture.method.MvcAnnotationPredicates.requestBody;
 
 /**
- * Tests for {@link RequestBodyMethodArgumentResolver}. When adding a test also
+ * Unit tests for {@link RequestBodyMethodArgumentResolver}. When adding a test also
  * consider whether the logic under test is in a parent class, then see:
  * {@link MessageReaderArgumentResolverTests}.
  *
  * @author Rossen Stoyanchev
  */
-class RequestBodyMethodArgumentResolverTests {
+public class RequestBodyMethodArgumentResolverTests {
 
 	private RequestBodyMethodArgumentResolver resolver;
 
@@ -66,7 +66,7 @@ class RequestBodyMethodArgumentResolverTests {
 
 
 	@BeforeEach
-	void setup() {
+	public void setup() {
 		List<HttpMessageReader<?>> readers = new ArrayList<>();
 		readers.add(new DecoderHttpMessageReader<>(StringDecoder.allMimeTypes()));
 		this.resolver = new RequestBodyMethodArgumentResolver(readers, ReactiveAdapterRegistry.getSharedInstance());
@@ -74,7 +74,7 @@ class RequestBodyMethodArgumentResolverTests {
 
 
 	@Test
-	void supports() {
+	public void supports() {
 		MethodParameter param;
 
 		param = this.testMethod.annot(requestBody()).arg(Mono.class, String.class);
@@ -85,7 +85,7 @@ class RequestBodyMethodArgumentResolverTests {
 	}
 
 	@Test
-	void stringBody() {
+	public void stringBody() {
 		String body = "line1";
 		MethodParameter param = this.testMethod.annot(requestBody()).arg(String.class);
 		String value = resolveValue(param, body);
@@ -94,14 +94,14 @@ class RequestBodyMethodArgumentResolverTests {
 	}
 
 	@Test
-	void emptyBodyWithString() {
+	public void emptyBodyWithString() {
 		MethodParameter param = this.testMethod.annot(requestBody()).arg(String.class);
 		assertThatExceptionOfType(ServerWebInputException.class).isThrownBy(() ->
 				resolveValueWithEmptyBody(param));
 	}
 
 	@Test
-	void emptyBodyWithStringNotRequired() {
+	public void emptyBodyWithStringNotRequired() {
 		MethodParameter param = this.testMethod.annot(requestBody().notRequired()).arg(String.class);
 		String body = resolveValueWithEmptyBody(param);
 
@@ -149,7 +149,7 @@ class RequestBodyMethodArgumentResolverTests {
 	}
 
 	@Test
-	void emptyBodyWithSingle() {
+	public void emptyBodyWithSingle() {
 		MethodParameter param = this.testMethod.annot(requestBody()).arg(Single.class, String.class);
 		Single<String> single = resolveValueWithEmptyBody(param);
 		StepVerifier.create(single.toFlowable())
@@ -166,7 +166,7 @@ class RequestBodyMethodArgumentResolverTests {
 	}
 
 	@Test
-	void emptyBodyWithMaybe() {
+	public void emptyBodyWithMaybe() {
 		MethodParameter param = this.testMethod.annot(requestBody()).arg(Maybe.class, String.class);
 		Maybe<String> maybe = resolveValueWithEmptyBody(param);
 		StepVerifier.create(maybe.toFlowable())
@@ -183,7 +183,7 @@ class RequestBodyMethodArgumentResolverTests {
 	}
 
 	@Test
-	void emptyBodyWithObservable() {
+	public void emptyBodyWithObservable() {
 		MethodParameter param = this.testMethod.annot(requestBody()).arg(Observable.class, String.class);
 		Observable<String> observable = resolveValueWithEmptyBody(param);
 		StepVerifier.create(observable.toFlowable(BackpressureStrategy.BUFFER))
@@ -200,7 +200,7 @@ class RequestBodyMethodArgumentResolverTests {
 	}
 
 	@Test
-	void emptyBodyWithCompletableFuture() {
+	public void emptyBodyWithCompletableFuture() {
 		MethodParameter param = this.testMethod.annot(requestBody()).arg(CompletableFuture.class, String.class);
 		CompletableFuture<String> future = resolveValueWithEmptyBody(param);
 		future.whenComplete((text, ex) -> {

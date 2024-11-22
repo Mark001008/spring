@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,23 +28,23 @@ import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.core.annotation.AliasFor;
 
 /**
- * {@code @ContextConfiguration} is an annotation that can be applied to a test
- * class to define metadata that is used to determine how to load and configure
- * an {@link org.springframework.context.ApplicationContext ApplicationContext}
- * for integration tests.
+ * {@code @ContextConfiguration} defines class-level metadata that is used to determine
+ * how to load and configure an {@link org.springframework.context.ApplicationContext
+ * ApplicationContext} for integration tests.
  *
  * <h3>Supported Resource Types</h3>
  *
- * <p>{@linkplain #loader Context loaders} may choose to support <em>either</em>
- * path-based resource locations (typically XML configuration files) <em>or</em>
- * class-based resources. Alternatively, context loaders may choose to support
- * path-based <em>and</em> class-based resources simultaneously. Consequently
+ * <p>Prior to Spring 3.1, only path-based resource locations (typically XML configuration
+ * files) were supported. As of Spring 3.1, {@linkplain #loader context loaders} may
+ * choose to support <em>either</em> path-based <em>or</em> class-based resources. As of
+ * Spring 4.0.4, {@linkplain #loader context loaders} may choose to support path-based
+ * <em>and</em> class-based resources simultaneously. Consequently
  * {@code @ContextConfiguration} can be used to declare either path-based resource
  * locations (via the {@link #locations} or {@link #value} attribute) <em>or</em>
  * component classes (via the {@link #classes} attribute). Note, however, that most
- * implementations of {@link SmartContextLoader} only support a single resource type.
- * Path-based resource locations may be either XML configuration files or Groovy
- * scripts (if Groovy is on the classpath). Of course, third-party frameworks may
+ * implementations of {@link SmartContextLoader} only support a single resource type. As
+ * of Spring 4.1, path-based resource locations may be either XML configuration files or
+ * Groovy scripts (if Groovy is on the classpath). Of course, third-party frameworks may
  * choose to support additional types of path-based resources.
  *
  * <h3>Component Classes</h3>
@@ -57,7 +57,7 @@ import org.springframework.core.annotation.AliasFor;
  * {@link org.springframework.stereotype.Component @Component},
  * {@link org.springframework.stereotype.Service @Service},
  * {@link org.springframework.stereotype.Repository @Repository}, etc.)</li>
- * <li>A JSR-330 compliant class that is annotated with {@code jakarta.inject} annotations</li>
+ * <li>A JSR-330 compliant class that is annotated with {@code javax.inject} annotations</li>
  * <li>Any class that contains {@link org.springframework.context.annotation.Bean @Bean}-methods</li>
  * <li>Any other class that is intended to be registered as a Spring component (i.e., a Spring bean
  * in the {@code ApplicationContext}), potentially taking advantage of automatic autowiring of a
@@ -169,7 +169,7 @@ public @interface ContextConfiguration {
 	Class<? extends ApplicationContextInitializer<?>>[] initializers() default {};
 
 	/**
-	 * Whether {@linkplain #locations resource locations} or
+	 * Whether or not {@linkplain #locations resource locations} or
 	 * {@linkplain #classes <em>component classes</em>} from test superclasses
 	 * and enclosing classes should be <em>inherited</em>.
 	 * <p>The default value is {@code true}. This means that an annotated test
@@ -225,7 +225,7 @@ public @interface ContextConfiguration {
 	boolean inheritLocations() default true;
 
 	/**
-	 * Whether {@linkplain #initializers context initializers} from test
+	 * Whether or not {@linkplain #initializers context initializers} from test
 	 * superclasses and enclosing classes should be <em>inherited</em>.
 	 * <p>The default value is {@code true}. This means that an annotated test
 	 * class will <em>inherit</em> the application context initializers defined

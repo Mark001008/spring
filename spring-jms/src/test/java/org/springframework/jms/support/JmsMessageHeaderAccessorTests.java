@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,8 +18,9 @@ package org.springframework.jms.support;
 
 import java.util.Map;
 
-import jakarta.jms.Destination;
-import jakarta.jms.JMSException;
+import javax.jms.Destination;
+import javax.jms.JMSException;
+
 import org.junit.jupiter.api.Test;
 
 import org.springframework.jms.StubTextMessage;
@@ -32,10 +33,10 @@ import static org.assertj.core.api.Assertions.assertThat;
  *
  * @author Stephane Nicoll
  */
-class JmsMessageHeaderAccessorTests {
+public class JmsMessageHeaderAccessorTests {
 
 	@Test
-	void validateJmsHeaders() throws JMSException {
+	public void validateJmsHeaders() throws JMSException {
 		Destination destination = new Destination() {};
 		Destination replyTo = new Destination() {};
 

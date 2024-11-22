@@ -38,7 +38,6 @@ import static org.mockito.Mockito.never;
  * Tests for {@link StreamUtils}.
  *
  * @author Phillip Webb
- * @author Juergen Hoeller
  */
 class StreamUtilsTests {
 
@@ -94,35 +93,16 @@ class StreamUtilsTests {
 	}
 
 	@Test
-	void copyRangeWithinBuffer() throws Exception {
+	void copyRange() throws Exception {
 		ByteArrayOutputStream out = new ByteArrayOutputStream();
-		ByteArrayInputStream in = new ByteArrayInputStream(bytes);
-		StreamUtils.copyRange(in, out, 0, 100);
-		assertThat(in.available()).isEqualTo(bytes.length - 101);
-		assertThat(out.toByteArray()).isEqualTo(Arrays.copyOfRange(bytes, 0, 101));
-	}
-
-	@Test
-	void copyRangeBeyondBuffer() throws Exception {
-		ByteArrayOutputStream out = new ByteArrayOutputStream();
-		ByteArrayInputStream in = new ByteArrayInputStream(bytes);
-		StreamUtils.copyRange(in, out, 0, 8200);
-		assertThat(in.available()).isEqualTo(1);
-		assertThat(out.toByteArray()).isEqualTo(Arrays.copyOfRange(bytes, 0, 8201));
-	}
-
-	@Test
-	void copyRangeBeyondAvailable() throws Exception {
-		ByteArrayOutputStream out = new ByteArrayOutputStream();
-		ByteArrayInputStream in = new ByteArrayInputStream(bytes);
-		StreamUtils.copyRange(in, out, 0, 8300);
-		assertThat(in.available()).isEqualTo(0);
-		assertThat(out.toByteArray()).isEqualTo(Arrays.copyOfRange(bytes, 0, 8202));
+		StreamUtils.copyRange(new ByteArrayInputStream(bytes), out, 0, 100);
+		byte[] range = Arrays.copyOfRange(bytes, 0, 101);
+		assertThat(out.toByteArray()).isEqualTo(range);
 	}
 
 	@Test
 	void nonClosingInputStream() throws Exception {
-		InputStream source = mock();
+		InputStream source = mock(InputStream.class);
 		InputStream nonClosing = StreamUtils.nonClosing(source);
 		nonClosing.read();
 		nonClosing.read(bytes);
@@ -137,7 +117,7 @@ class StreamUtilsTests {
 
 	@Test
 	void nonClosingOutputStream() throws Exception {
-		OutputStream source = mock();
+		OutputStream source = mock(OutputStream.class);
 		OutputStream nonClosing = StreamUtils.nonClosing(source);
 		nonClosing.write(1);
 		nonClosing.write(bytes);

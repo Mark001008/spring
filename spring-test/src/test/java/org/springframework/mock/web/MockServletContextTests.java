@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,9 +21,10 @@ import java.net.URL;
 import java.util.Map;
 import java.util.Set;
 
-import jakarta.servlet.FilterRegistration;
-import jakarta.servlet.RequestDispatcher;
-import jakarta.servlet.ServletRegistration;
+import javax.servlet.FilterRegistration;
+import javax.servlet.RequestDispatcher;
+import javax.servlet.ServletRegistration;
+
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -35,7 +36,7 @@ import org.springframework.http.MediaType;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Tests for {@link MockServletContext}.
+ * Unit tests for {@link MockServletContext}.
  *
  * @author Juergen Hoeller
  * @author Chris Beams
@@ -55,14 +56,14 @@ class MockServletContextTests {
 		void getResourcePaths() {
 			Set<String> paths = servletContext.getResourcePaths("/web");
 			assertThat(paths).isNotNull();
-			assertThat(paths).contains("/web/MockServletContextTests.class");
+			assertThat(paths.contains("/web/MockServletContextTests.class")).isTrue();
 		}
 
 		@Test
 		void getResourcePathsWithSubdirectories() {
 			Set<String> paths = servletContext.getResourcePaths("/");
 			assertThat(paths).isNotNull();
-			assertThat(paths).contains("/web/");
+			assertThat(paths.contains("/web/")).isTrue();
 		}
 
 		@Test
@@ -105,10 +106,10 @@ class MockServletContextTests {
 
 		@Test
 		void servletVersion() {
-			assertThat(servletContext.getMajorVersion()).isEqualTo(6);
-			assertThat(servletContext.getMinorVersion()).isEqualTo(0);
-			assertThat(servletContext.getEffectiveMajorVersion()).isEqualTo(6);
-			assertThat(servletContext.getEffectiveMinorVersion()).isEqualTo(0);
+			assertThat(servletContext.getMajorVersion()).isEqualTo(3);
+			assertThat(servletContext.getMinorVersion()).isEqualTo(1);
+			assertThat(servletContext.getEffectiveMajorVersion()).isEqualTo(3);
+			assertThat(servletContext.getEffectiveMinorVersion()).isEqualTo(1);
 
 			servletContext.setMajorVersion(4);
 			servletContext.setMinorVersion(0);
@@ -180,7 +181,7 @@ class MockServletContextTests {
 		void getServletRegistrations() {
 			Map<String, ? extends ServletRegistration> servletRegistrations = servletContext.getServletRegistrations();
 			assertThat(servletRegistrations).isNotNull();
-			assertThat(servletRegistrations).isEmpty();
+			assertThat(servletRegistrations.size()).isEqualTo(0);
 		}
 
 		/**
@@ -198,7 +199,7 @@ class MockServletContextTests {
 		void getFilterRegistrations() {
 			Map<String, ? extends FilterRegistration> filterRegistrations = servletContext.getFilterRegistrations();
 			assertThat(filterRegistrations).isNotNull();
-			assertThat(filterRegistrations).isEmpty();
+			assertThat(filterRegistrations.size()).isEqualTo(0);
 		}
 
 	}

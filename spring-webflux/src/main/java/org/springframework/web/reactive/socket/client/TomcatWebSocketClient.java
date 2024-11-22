@@ -16,8 +16,9 @@
 
 package org.springframework.web.reactive.socket.client;
 
-import jakarta.websocket.Session;
-import jakarta.websocket.WebSocketContainer;
+import javax.websocket.Session;
+import javax.websocket.WebSocketContainer;
+
 import org.apache.tomcat.websocket.WsWebSocketContainer;
 import reactor.core.publisher.Sinks;
 
@@ -27,7 +28,7 @@ import org.springframework.web.reactive.socket.adapter.TomcatWebSocketSession;
 
 /**
  * {@link WebSocketClient} implementation for use with Tomcat,
- * based on the Jakarta WebSocket API.
+ * based on the Java WebSocket API.
  *
  * @author Violeta Georgieva
  * @since 5.0

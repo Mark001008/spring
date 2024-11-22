@@ -47,8 +47,6 @@ public final class ResponseCookie extends HttpCookie {
 
 	private final boolean httpOnly;
 
-	private final boolean partitioned;
-
 	@Nullable
 	private final String sameSite;
 
@@ -56,8 +54,8 @@ public final class ResponseCookie extends HttpCookie {
 	/**
 	 * Private constructor. See {@link #from(String, String)}.
 	 */
-	private ResponseCookie(String name, @Nullable String value, Duration maxAge, @Nullable String domain,
-			@Nullable String path, boolean secure, boolean httpOnly, boolean partitioned, @Nullable String sameSite) {
+	private ResponseCookie(String name, String value, Duration maxAge, @Nullable String domain,
+			@Nullable String path, boolean secure, boolean httpOnly, @Nullable String sameSite) {
 
 		super(name, value);
 		Assert.notNull(maxAge, "Max age must not be null");
@@ -67,7 +65,6 @@ public final class ResponseCookie extends HttpCookie {
 		this.path = path;
 		this.secure = secure;
 		this.httpOnly = httpOnly;
-		this.partitioned = partitioned;
 		this.sameSite = sameSite;
 
 		Rfc6265Utils.validateCookieName(name);
@@ -120,15 +117,6 @@ public final class ResponseCookie extends HttpCookie {
 	}
 
 	/**
-	 * Return {@code true} if the cookie has the "Partitioned" attribute.
-	 * @since 6.2
-	 * @see <a href="https://datatracker.ietf.org/doc/html/draft-cutler-httpbis-partitioned-cookies#section-2.1">The Partitioned attribute spec</a>
-	 */
-	public boolean isPartitioned() {
-		return this.partitioned;
-	}
-
-	/**
 	 * Return the cookie "SameSite" attribute, or {@code null} if not set.
 	 * <p>This limits the scope of the cookie such that it will only be attached to
 	 * same site requests if {@code "Strict"} or cross-site requests if {@code "Lax"}.
@@ -140,27 +128,19 @@ public final class ResponseCookie extends HttpCookie {
 		return this.sameSite;
 	}
 
-	/**
-	 * Return a builder pre-populated with values from {@code "this"} instance.
-	 * @since 6.0
-	 */
-	public ResponseCookieBuilder mutate() {
-		return new DefaultResponseCookieBuilder(getName(), getValue(), false)
-				.maxAge(this.maxAge)
-				.domain(this.domain)
-				.path(this.path)
-				.secure(this.secure)
-				.httpOnly(this.httpOnly)
-				.partitioned(this.partitioned)
-				.sameSite(this.sameSite);
-	}
 
 	@Override
 	public boolean equals(@Nullable Object other) {
-		return (this == other ||(other instanceof ResponseCookie that &&
-				getName().equalsIgnoreCase(that.getName()) &&
-				ObjectUtils.nullSafeEquals(this.path, that.getPath()) &&
-				ObjectUtils.nullSafeEquals(this.domain, that.getDomain())));
+		if (this == other) {
+			return true;
+		}
+		if (!(other instanceof ResponseCookie)) {
+			return false;
+		}
+		ResponseCookie otherCookie = (ResponseCookie) other;
+		return (getName().equalsIgnoreCase(otherCookie.getName()) &&
+				ObjectUtils.nullSafeEquals(this.path, otherCookie.getPath()) &&
+				ObjectUtils.nullSafeEquals(this.domain, otherCookie.getDomain()));
 	}
 
 	@Override
@@ -184,7 +164,7 @@ public final class ResponseCookie extends HttpCookie {
 		if (!this.maxAge.isNegative()) {
 			sb.append("; Max-Age=").append(this.maxAge.getSeconds());
 			sb.append("; Expires=");
-			long millis = (this.maxAge.getSeconds() > 0 ? System.currentTimeMillis() + this.maxAge.toMillis() : 0);
+			long millis = this.maxAge.getSeconds() > 0 ? System.currentTimeMillis() + this.maxAge.toMillis() : 0;
 			sb.append(HttpHeaders.formatDate(millis));
 		}
 		if (this.secure) {
@@ -192,9 +172,6 @@ public final class ResponseCookie extends HttpCookie {
 		}
 		if (this.httpOnly) {
 			sb.append("; HttpOnly");
-		}
-		if (this.partitioned) {
-			sb.append("; Partitioned");
 		}
 		if (StringUtils.hasText(this.sameSite)) {
 			sb.append("; SameSite=").append(this.sameSite);
@@ -204,18 +181,6 @@ public final class ResponseCookie extends HttpCookie {
 
 
 	/**
-	 * Factory method to obtain a builder for a server-defined cookie, given its
-	 * name only, and where the value as well as other attributes can be set
-	 * later via builder methods.
-	 * @param name the cookie name
-	 * @return a builder to create the cookie with
-	 * @since 6.0
-	 */
-	public static ResponseCookieBuilder from(final String name) {
-		return new DefaultResponseCookieBuilder(name, null, false);
-	}
-
-	/**
 	 * Factory method to obtain a builder for a server-defined cookie that starts
 	 * with a name-value pair and may also include attributes.
 	 * @param name the cookie name
@@ -223,13 +188,13 @@ public final class ResponseCookie extends HttpCookie {
 	 * @return a builder to create the cookie with
 	 */
 	public static ResponseCookieBuilder from(final String name, final String value) {
-		return new DefaultResponseCookieBuilder(name, value, false);
+		return from(name, value, false);
 	}
 
 	/**
 	 * Factory method to obtain a builder for a server-defined cookie. Unlike
 	 * {@link #from(String, String)} this option assumes input from a remote
-	 * server, which can be handled more leniently, for example, ignoring an empty domain
+	 * server, which can be handled more leniently, e.g. ignoring an empty domain
 	 * name with double quotes.
 	 * @param name the cookie name
 	 * @param value the cookie value
@@ -237,7 +202,90 @@ public final class ResponseCookie extends HttpCookie {
 	 * @since 5.2.5
 	 */
 	public static ResponseCookieBuilder fromClientResponse(final String name, final String value) {
-		return new DefaultResponseCookieBuilder(name, value, true);
+		return from(name, value, true);
+	}
+
+
+	private static ResponseCookieBuilder from(final String name, final String value, boolean lenient) {
+
+		return new ResponseCookieBuilder() {
+
+			private Duration maxAge = Duration.ofSeconds(-1);
+
+			@Nullable
+			private String domain;
+
+			@Nullable
+			private String path;
+
+			private boolean secure;
+
+			private boolean httpOnly;
+
+			@Nullable
+			private String sameSite;
+
+			@Override
+			public ResponseCookieBuilder maxAge(Duration maxAge) {
+				this.maxAge = maxAge;
+				return this;
+			}
+
+			@Override
+			public ResponseCookieBuilder maxAge(long maxAgeSeconds) {
+				this.maxAge = maxAgeSeconds >= 0 ? Duration.ofSeconds(maxAgeSeconds) : Duration.ofSeconds(-1);
+				return this;
+			}
+
+			@Override
+			public ResponseCookieBuilder domain(@Nullable String domain) {
+				this.domain = initDomain(domain);
+				return this;
+			}
+
+			@Nullable
+			private String initDomain(@Nullable String domain) {
+				if (lenient && StringUtils.hasLength(domain)) {
+					String str = domain.trim();
+					if (str.startsWith("\"") && str.endsWith("\"")) {
+						if (str.substring(1, str.length() - 1).trim().isEmpty()) {
+							return null;
+						}
+					}
+				}
+				return domain;
+			}
+
+			@Override
+			public ResponseCookieBuilder path(@Nullable String path) {
+				this.path = path;
+				return this;
+			}
+
+			@Override
+			public ResponseCookieBuilder secure(boolean secure) {
+				this.secure = secure;
+				return this;
+			}
+
+			@Override
+			public ResponseCookieBuilder httpOnly(boolean httpOnly) {
+				this.httpOnly = httpOnly;
+				return this;
+			}
+
+			@Override
+			public ResponseCookieBuilder sameSite(@Nullable String sameSite) {
+				this.sameSite = sameSite;
+				return this;
+			}
+
+			@Override
+			public ResponseCookie build() {
+				return new ResponseCookie(name, value, this.maxAge, this.domain, this.path,
+						this.secure, this.httpOnly, this.sameSite);
+			}
+		};
 	}
 
 
@@ -245,12 +293,6 @@ public final class ResponseCookie extends HttpCookie {
 	 * A builder for a server-defined HttpCookie with attributes.
 	 */
 	public interface ResponseCookieBuilder {
-
-		/**
-		 * Set the cookie value.
-		 * @since 6.0
-		 */
-		ResponseCookieBuilder value(@Nullable String value);
 
 		/**
 		 * Set the cookie "Max-Age" attribute.
@@ -287,13 +329,6 @@ public final class ResponseCookie extends HttpCookie {
 		 * @see <a href="https://owasp.org/www-community/HttpOnly">https://owasp.org/www-community/HttpOnly</a>
 		 */
 		ResponseCookieBuilder httpOnly(boolean httpOnly);
-
-		/**
-		 * Add the "Partitioned" attribute to the cookie.
-		 * @since 6.2
-		 * @see <a href="https://datatracker.ietf.org/doc/html/draft-cutler-httpbis-partitioned-cookies#section-2.1">The Partitioned attribute spec</a>
-		 */
-		ResponseCookieBuilder partitioned(boolean partitioned);
 
 		/**
 		 * Add the "SameSite" attribute to the cookie.
@@ -392,116 +427,6 @@ public final class ResponseCookie extends HttpCookie {
 					throw new IllegalArgumentException(path + ": Invalid cookie path char '" + c + "'");
 				}
 			}
-		}
-	}
-
-
-	/**
-	 * Default implementation of {@link ResponseCookieBuilder}.
-	 */
-	private static class DefaultResponseCookieBuilder implements ResponseCookieBuilder {
-
-		private final String name;
-
-		@Nullable
-		private String value;
-
-		private final boolean lenient;
-
-		private Duration maxAge = Duration.ofSeconds(-1);
-
-		@Nullable
-		private String domain;
-
-		@Nullable
-		private String path;
-
-		private boolean secure;
-
-		private boolean httpOnly;
-
-		private boolean partitioned;
-
-		@Nullable
-		private String sameSite;
-
-		public DefaultResponseCookieBuilder(String name, @Nullable String value, boolean lenient) {
-			this.name = name;
-			this.value = value;
-			this.lenient = lenient;
-		}
-
-		@Override
-		public ResponseCookieBuilder value(@Nullable String value) {
-			this.value = value;
-			return this;
-		}
-
-		@Override
-		public ResponseCookieBuilder maxAge(Duration maxAge) {
-			this.maxAge = maxAge;
-			return this;
-		}
-
-		@Override
-		public ResponseCookieBuilder maxAge(long maxAgeSeconds) {
-			this.maxAge = (maxAgeSeconds >= 0 ? Duration.ofSeconds(maxAgeSeconds) : Duration.ofSeconds(-1));
-			return this;
-		}
-
-		@Override
-		public ResponseCookieBuilder domain(@Nullable String domain) {
-			this.domain = initDomain(domain);
-			return this;
-		}
-
-		@Nullable
-		private String initDomain(@Nullable String domain) {
-			if (this.lenient && StringUtils.hasLength(domain)) {
-				String str = domain.trim();
-				if (str.startsWith("\"") && str.endsWith("\"")) {
-					if (str.substring(1, str.length() - 1).trim().isEmpty()) {
-						return null;
-					}
-				}
-			}
-			return domain;
-		}
-
-		@Override
-		public ResponseCookieBuilder path(@Nullable String path) {
-			this.path = path;
-			return this;
-		}
-
-		@Override
-		public ResponseCookieBuilder secure(boolean secure) {
-			this.secure = secure;
-			return this;
-		}
-
-		@Override
-		public ResponseCookieBuilder httpOnly(boolean httpOnly) {
-			this.httpOnly = httpOnly;
-			return this;
-		}
-
-		@Override
-		public ResponseCookieBuilder partitioned(boolean partitioned) {
-			this.partitioned = partitioned;
-			return this;
-		}
-
-		@Override
-		public ResponseCookieBuilder sameSite(@Nullable String sameSite) {
-			this.sameSite = sameSite;
-			return this;
-		}
-
-		@Override
-		public ResponseCookie build() {
-			return new ResponseCookie(this.name, this.value, this.maxAge,
-					this.domain, this.path, this.secure, this.httpOnly, this.partitioned, this.sameSite);
 		}
 	}
 

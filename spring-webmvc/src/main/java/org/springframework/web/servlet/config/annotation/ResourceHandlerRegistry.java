@@ -22,7 +22,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import jakarta.servlet.ServletContext;
+import javax.servlet.ServletContext;
 
 import org.springframework.beans.factory.BeanInitializationException;
 import org.springframework.context.ApplicationContext;
@@ -48,11 +48,11 @@ import org.springframework.web.util.pattern.PathPattern;
  *
  * <p>To create a resource handler, use {@link #addResourceHandler(String...)}
  * providing the URL path patterns for which the handler should be invoked to
- * serve static resources (for example, {@code "/resources/**"}).
+ * serve static resources (e.g. {@code "/resources/**"}).
  *
  * <p>Then use additional methods on the returned
  * {@link ResourceHandlerRegistration} to add one or more locations from which
- * to serve static content from (for example, {{@code "/"},
+ * to serve static content from (e.g. {{@code "/"},
  * {@code "classpath:/META-INF/public-web-resources/"}}) or to specify a cache
  * period for served resources.
  *

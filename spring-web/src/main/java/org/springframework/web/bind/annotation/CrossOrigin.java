@@ -38,7 +38,7 @@ import org.springframework.web.cors.CorsConfiguration;
  * {@link CorsConfiguration#applyPermitDefaultValues()}.
  *
  * <p>The rules for combining global and local configuration are generally
- * additive -- for example, all global and all local origins. For those attributes
+ * additive -- e.g. all global and all local origins. For those attributes
  * where only a single value can be accepted such as {@code allowCredentials}
  * and {@code maxAge}, the local overrides the global value.
  * See {@link CorsConfiguration#combine(CorsConfiguration)} for more details.
@@ -53,6 +53,23 @@ import org.springframework.web.cors.CorsConfiguration;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 public @interface CrossOrigin {
+
+	/** @deprecated as of Spring 5.0, in favor of {@link CorsConfiguration#applyPermitDefaultValues} */
+	@Deprecated
+	String[] DEFAULT_ORIGINS = {"*"};
+
+	/** @deprecated as of Spring 5.0, in favor of {@link CorsConfiguration#applyPermitDefaultValues} */
+	@Deprecated
+	String[] DEFAULT_ALLOWED_HEADERS = {"*"};
+
+	/** @deprecated as of Spring 5.0, in favor of {@link CorsConfiguration#applyPermitDefaultValues} */
+	@Deprecated
+	boolean DEFAULT_ALLOW_CREDENTIALS = false;
+
+	/** @deprecated as of Spring 5.0, in favor of {@link CorsConfiguration#applyPermitDefaultValues} */
+	@Deprecated
+	long DEFAULT_MAX_AGE = 1800;
+
 
 	/**
 	 * Alias for {@link #origins}.

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,11 +34,11 @@ import org.springframework.messaging.support.GenericMessage;
 import static org.springframework.messaging.handler.invocation.ResolvableMethod.on;
 
 /**
- * Tests for {@link AbstractEncoderMethodReturnValueHandler}.
+ * Unit tests for {@link AbstractEncoderMethodReturnValueHandler}.
  *
  * @author Rossen Stoyanchev
  */
-class EncoderMethodReturnValueHandlerTests {
+public class EncoderMethodReturnValueHandlerTests {
 
 	private final TestEncoderMethodReturnValueHandler handler = new TestEncoderMethodReturnValueHandler(
 			Collections.singletonList(CharSequenceEncoder.textPlainOnly()),
@@ -48,7 +48,7 @@ class EncoderMethodReturnValueHandlerTests {
 
 
 	@Test
-	void stringReturnValue() {
+	public void stringReturnValue() {
 		MethodParameter parameter = on(TestController.class).resolveReturnType(String.class);
 		this.handler.handleReturnValue("foo", parameter, this.message).block();
 		Flux<String> result = this.handler.getContentAsStrings();
@@ -57,7 +57,7 @@ class EncoderMethodReturnValueHandlerTests {
 	}
 
 	@Test
-	void objectReturnValue() {
+	public void objectReturnValue() {
 		MethodParameter parameter = on(TestController.class).resolveReturnType(Object.class);
 		this.handler.handleReturnValue("foo", parameter, this.message).block();
 		Flux<String> result = this.handler.getContentAsStrings();
@@ -66,7 +66,7 @@ class EncoderMethodReturnValueHandlerTests {
 	}
 
 	@Test
-	void fluxStringReturnValue() {
+	public void fluxStringReturnValue() {
 		MethodParameter parameter = on(TestController.class).resolveReturnType(Flux.class, String.class);
 		this.handler.handleReturnValue(Flux.just("foo", "bar"), parameter, this.message).block();
 		Flux<String> result = this.handler.getContentAsStrings();
@@ -75,7 +75,7 @@ class EncoderMethodReturnValueHandlerTests {
 	}
 
 	@Test
-	void fluxObjectReturnValue() {
+	public void fluxObjectReturnValue() {
 		MethodParameter parameter = on(TestController.class).resolveReturnType(Flux.class, Object.class);
 		this.handler.handleReturnValue(Flux.just("foo", "bar"), parameter, this.message).block();
 		Flux<String> result = this.handler.getContentAsStrings();
@@ -84,7 +84,7 @@ class EncoderMethodReturnValueHandlerTests {
 	}
 
 	@Test
-	void voidReturnValue() {
+	public void voidReturnValue() {
 		testVoidReturnType(null, on(TestController.class).resolveReturnType(void.class));
 		testVoidReturnType(Mono.empty(), on(TestController.class).resolveReturnType(Mono.class, Void.class));
 		testVoidReturnType(Completable.complete(), on(TestController.class).resolveReturnType(Completable.class));
@@ -97,7 +97,7 @@ class EncoderMethodReturnValueHandlerTests {
 	}
 
 	@Test
-	void noEncoder() {
+	public void noEncoder() {
 		MethodParameter parameter = on(TestController.class).resolveReturnType(Object.class);
 		StepVerifier.create(this.handler.handleReturnValue(new Object(), parameter, this.message))
 				.expectErrorMessage("No encoder for java.lang.Object, current value type is class java.lang.Object")

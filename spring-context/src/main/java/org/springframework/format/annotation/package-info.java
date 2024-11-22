@@ -1,5 +1,5 @@
 /**
- * Annotations for declaratively configuring field and parameter formatting rules.
+ * Annotations for declaratively configuring field formatting rules.
  */
 @NonNullApi
 @NonNullFields

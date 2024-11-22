@@ -81,7 +81,10 @@ public class OpMultiply extends Operator {
 		Object leftOperand = getLeftOperand().getValueInternal(state).getValue();
 		Object rightOperand = getRightOperand().getValueInternal(state).getValue();
 
-		if (leftOperand instanceof Number leftNumber && rightOperand instanceof Number rightNumber) {
+		if (leftOperand instanceof Number && rightOperand instanceof Number) {
+			Number leftNumber = (Number) leftOperand;
+			Number rightNumber = (Number) rightOperand;
+
 			if (leftNumber instanceof BigDecimal || rightNumber instanceof BigDecimal) {
 				BigDecimal leftBigDecimal = NumberUtils.convertNumberToTargetClass(leftNumber, BigDecimal.class);
 				BigDecimal rightBigDecimal = NumberUtils.convertNumberToTargetClass(rightNumber, BigDecimal.class);
@@ -114,21 +117,23 @@ public class OpMultiply extends Operator {
 			}
 		}
 
-		if (leftOperand instanceof String text && rightOperand instanceof Integer count) {
-			checkRepeatedTextSize(text, count);
-			return new TypedValue(text.repeat(count));
+		if (leftOperand instanceof String && rightOperand instanceof Integer) {
+			String text = (String) leftOperand;
+			int count = (Integer) rightOperand;
+			int requestedSize = text.length() * count;
+			checkRepeatedTextSize(requestedSize);
+			StringBuilder result = new StringBuilder(requestedSize);
+			for (int i = 0; i < count; i++) {
+				result.append(text);
+			}
+			return new TypedValue(result.toString());
 		}
 
 		return state.operate(Operation.MULTIPLY, leftOperand, rightOperand);
 	}
 
-	private void checkRepeatedTextSize(String text, int count) {
-		if (count < 0) {
-			throw new SpelEvaluationException(getStartPosition(),
-					SpelMessage.NEGATIVE_REPEATED_TEXT_COUNT, count);
-		}
-		int result = text.length() * count;
-		if (result < 0 || result > MAX_REPEATED_TEXT_SIZE) {
+	private void checkRepeatedTextSize(int requestedSize) {
+		if (requestedSize > MAX_REPEATED_TEXT_SIZE) {
 			throw new SpelEvaluationException(getStartPosition(),
 					SpelMessage.MAX_REPEATED_TEXT_SIZE_EXCEEDED, MAX_REPEATED_TEXT_SIZE);
 		}
@@ -162,12 +167,21 @@ public class OpMultiply extends Operator {
 			cf.exitCompilationScope();
 			CodeFlow.insertNumericUnboxOrPrimitiveTypeCoercion(mv, rightDesc, targetDesc);
 			switch (targetDesc) {
-				case 'I' -> mv.visitInsn(IMUL);
-				case 'J' -> mv.visitInsn(LMUL);
-				case 'F' -> mv.visitInsn(FMUL);
-				case 'D' -> mv.visitInsn(DMUL);
-				default -> throw new IllegalStateException(
-						"Unrecognized exit type descriptor: '" + this.exitTypeDescriptor + "'");
+				case 'I':
+					mv.visitInsn(IMUL);
+					break;
+				case 'J':
+					mv.visitInsn(LMUL);
+					break;
+				case 'F':
+					mv.visitInsn(FMUL);
+					break;
+				case 'D':
+					mv.visitInsn(DMUL);
+					break;
+				default:
+					throw new IllegalStateException(
+							"Unrecognized exit type descriptor: '" + this.exitTypeDescriptor + "'");
 			}
 		}
 		cf.pushDescriptor(this.exitTypeDescriptor);

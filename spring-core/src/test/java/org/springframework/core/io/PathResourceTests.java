@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -41,7 +41,7 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
 
 /**
- * Tests for {@link PathResource}.
+ * Unit tests for the {@link PathResource} class.
  *
  * @author Philippe Marschall
  * @author Phillip Webb
@@ -50,6 +50,7 @@ import static org.mockito.Mockito.mock;
  * @author Juergen Hoeller
  * @author Arjen Poutsma
  */
+@Deprecated
 class PathResourceTests {
 
 	private static final String TEST_DIR =
@@ -69,20 +70,23 @@ class PathResourceTests {
 
 	@Test
 	void nullPath() {
-		assertThatIllegalArgumentException().isThrownBy(() -> new PathResource((Path) null))
-				.withMessageContaining("Path must not be null");
+		assertThatIllegalArgumentException().isThrownBy(() ->
+				new PathResource((Path) null))
+			.withMessageContaining("Path must not be null");
 	}
 
 	@Test
 	void nullPathString() {
-		assertThatIllegalArgumentException().isThrownBy(() -> new PathResource((String) null))
-				.withMessageContaining("Path must not be null");
+		assertThatIllegalArgumentException().isThrownBy(() ->
+				new PathResource((String) null))
+			.withMessageContaining("Path must not be null");
 	}
 
 	@Test
 	void nullUri() {
-		assertThatIllegalArgumentException().isThrownBy(() -> new PathResource((URI) null))
-				.withMessageContaining("URI must not be null");
+		assertThatIllegalArgumentException().isThrownBy(() ->
+				new PathResource((URI) null))
+			.withMessageContaining("URI must not be null");
 	}
 
 	@Test
@@ -142,7 +146,7 @@ class PathResourceTests {
 	}
 
 	@Test
-	void nonExistingFileIsNotReadable() {
+	void doesNotExistIsNotReadable() {
 		PathResource resource = new PathResource(NON_EXISTING_FILE);
 		assertThat(resource.isReadable()).isFalse();
 	}
@@ -157,19 +161,21 @@ class PathResourceTests {
 	void getInputStream() throws IOException {
 		PathResource resource = new PathResource(TEST_FILE);
 		byte[] bytes = FileCopyUtils.copyToByteArray(resource.getInputStream());
-		assertThat(bytes).hasSizeGreaterThan(0);
+		assertThat(bytes.length).isGreaterThan(0);
 	}
 
 	@Test
-	void getInputStreamForDir() {
+	void getInputStreamForDir() throws IOException {
 		PathResource resource = new PathResource(TEST_DIR);
-		assertThatExceptionOfType(FileNotFoundException.class).isThrownBy(resource::getInputStream);
+		assertThatExceptionOfType(FileNotFoundException.class).isThrownBy(
+				resource::getInputStream);
 	}
 
 	@Test
-	void getInputStreamForNonExistingFile() {
+	void getInputStreamDoesNotExist() throws IOException {
 		PathResource resource = new PathResource(NON_EXISTING_FILE);
-		assertThatExceptionOfType(FileNotFoundException.class).isThrownBy(resource::getInputStream);
+		assertThatExceptionOfType(FileNotFoundException.class).isThrownBy(
+				resource::getInputStream);
 	}
 
 	@Test
@@ -192,12 +198,13 @@ class PathResourceTests {
 	}
 
 	@Test
-	void getFileUnsupported() {
-		Path path = mock();
+	void getFileUnsupported() throws IOException {
+		Path path = mock(Path.class);
 		given(path.normalize()).willReturn(path);
 		given(path.toFile()).willThrow(new UnsupportedOperationException());
 		PathResource resource = new PathResource(path);
-		assertThatExceptionOfType(FileNotFoundException.class).isThrownBy(resource::getFile);
+		assertThatExceptionOfType(FileNotFoundException.class).isThrownBy(
+				resource::getFile);
 	}
 
 	@Test
@@ -222,13 +229,13 @@ class PathResourceTests {
 	}
 
 	@Test
-	void createRelativeFromDir() {
+	void createRelativeFromDir() throws IOException {
 		Resource resource = new PathResource(TEST_DIR).createRelative("example.properties");
 		assertThat(resource).isEqualTo(new PathResource(TEST_FILE));
 	}
 
 	@Test
-	void createRelativeFromFile() {
+	void createRelativeFromFile() throws IOException {
 		Resource resource = new PathResource(TEST_FILE).createRelative("../example.properties");
 		assertThat(resource).isEqualTo(new PathResource(TEST_FILE));
 	}
@@ -259,27 +266,14 @@ class PathResourceTests {
 	}
 
 	@Test
-	void equalsAndHashCode() {
-		Resource resource1 = new PathResource(TEST_FILE);
-		Resource resource2 = new PathResource(TEST_FILE);
-		Resource resource3 = new PathResource(TEST_DIR);
-		assertThat(resource1).isEqualTo(resource1);
-		assertThat(resource1).isEqualTo(resource2);
-		assertThat(resource2).isEqualTo(resource1);
-		assertThat(resource1).isNotEqualTo(resource3);
-		assertThat(resource1).hasSameHashCodeAs(resource2);
-		assertThat(resource1).doesNotHaveSameHashCodeAs(resource3);
-	}
-
-	@Test
-	void getOutputStreamForExistingFile(@TempDir Path temporaryFolder) throws IOException {
+	void outputStream(@TempDir Path temporaryFolder) throws IOException {
 		PathResource resource = new PathResource(temporaryFolder.resolve("test"));
 		FileCopyUtils.copy("test".getBytes(StandardCharsets.UTF_8), resource.getOutputStream());
 		assertThat(resource.contentLength()).isEqualTo(4L);
 	}
 
 	@Test
-	void getOutputStreamForNonExistingFile(@TempDir Path temporaryFolder) throws IOException {
+	void doesNotExistOutputStream(@TempDir Path temporaryFolder) throws IOException {
 		File file = temporaryFolder.resolve("test").toFile();
 		file.delete();
 		PathResource resource = new PathResource(file.toPath());
@@ -288,9 +282,10 @@ class PathResourceTests {
 	}
 
 	@Test
-	void getOutputStreamForDirectory() {
+	void directoryOutputStream() throws IOException {
 		PathResource resource = new PathResource(TEST_DIR);
-		assertThatExceptionOfType(FileNotFoundException.class).isThrownBy(resource::getOutputStream);
+		assertThatExceptionOfType(FileNotFoundException.class).isThrownBy(
+				resource::getOutputStream);
 	}
 
 	@Test
@@ -316,9 +311,10 @@ class PathResourceTests {
 	}
 
 	@Test
-	void getReadableByteChannelForNonExistingFile() {
+	void getReadableByteChannelDoesNotExist() throws IOException {
 		PathResource resource = new PathResource(NON_EXISTING_FILE);
-		assertThatExceptionOfType(FileNotFoundException.class).isThrownBy(resource::readableChannel);
+		assertThatExceptionOfType(FileNotFoundException.class).isThrownBy(
+				resource::readableChannel);
 	}
 
 	@Test

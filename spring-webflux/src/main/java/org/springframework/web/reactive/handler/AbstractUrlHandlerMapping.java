@@ -27,7 +27,6 @@ import reactor.core.publisher.Mono;
 
 import org.springframework.beans.BeansException;
 import org.springframework.http.server.PathContainer;
-import org.springframework.http.server.reactive.observation.ServerRequestObservationContext;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.web.server.ServerWebExchange;
@@ -38,8 +37,8 @@ import org.springframework.web.util.pattern.PathPatternParser;
  * Abstract base class for URL-mapped
  * {@link org.springframework.web.reactive.HandlerMapping} implementations.
  *
- * <p>Supports direct matches, for example, a registered "/test" matches "/test", and
- * various path pattern matches, for example, a registered "/t*" pattern matches
+ * <p>Supports direct matches, e.g. a registered "/test" matches "/test", and
+ * various path pattern matches, e.g. a registered "/t*" pattern matches
  * both "/test" and "/team", "/test/*" matches all paths under "/test",
  * "/test/**" matches all paths below "/test". For details, see the
  * {@link org.springframework.web.util.pattern.PathPattern} javadoc.
@@ -119,8 +118,8 @@ public abstract class AbstractUrlHandlerMapping extends AbstractHandlerMapping {
 
 	/**
 	 * Look up a handler instance for the given URL lookup path.
-	 * <p>Supports direct matches, for example, a registered "/test" matches "/test",
-	 * and various path pattern matches, for example, a registered "/t*" matches
+	 * <p>Supports direct matches, e.g. a registered "/test" matches "/test",
+	 * and various path pattern matches, e.g. a registered "/t*" matches
 	 * both "/test" and "/team". For details, see the PathPattern class.
 	 * @param lookupPath the URL the handler is mapped to
 	 * @param exchange the current exchange
@@ -128,7 +127,6 @@ public abstract class AbstractUrlHandlerMapping extends AbstractHandlerMapping {
 	 * @see org.springframework.web.util.pattern.PathPattern
 	 */
 	@Nullable
-	@SuppressWarnings("removal")
 	protected Object lookupHandler(PathContainer lookupPath, ServerWebExchange exchange) throws Exception {
 		List<PathPattern> matches = null;
 		for (PathPattern pattern : this.handlerMap.keySet()) {
@@ -155,7 +153,8 @@ public abstract class AbstractUrlHandlerMapping extends AbstractHandlerMapping {
 		Object handler = this.handlerMap.get(pattern);
 
 		// Bean name or resolved handler?
-		if (handler instanceof String handlerName) {
+		if (handler instanceof String) {
+			String handlerName = (String) handler;
 			handler = obtainApplicationContext().getBean(handlerName);
 		}
 
@@ -167,11 +166,6 @@ public abstract class AbstractUrlHandlerMapping extends AbstractHandlerMapping {
 
 		exchange.getAttributes().put(BEST_MATCHING_HANDLER_ATTRIBUTE, handler);
 		exchange.getAttributes().put(BEST_MATCHING_PATTERN_ATTRIBUTE, pattern);
-		org.springframework.web.filter.reactive.ServerHttpObservationFilter
-				.findObservationContext(exchange)
-				.ifPresent(context -> context.setPathPattern(pattern.toString()));
-		ServerRequestObservationContext.findCurrent(exchange.getAttributes())
-				.ifPresent(context -> context.setPathPattern(pattern.toString()));
 		exchange.getAttributes().put(PATH_WITHIN_HANDLER_MAPPING_ATTRIBUTE, pathWithinMapping);
 		exchange.getAttributes().put(URI_TEMPLATE_VARIABLES_ATTRIBUTE, matchInfo.getUriVariables());
 
@@ -186,7 +180,7 @@ public abstract class AbstractUrlHandlerMapping extends AbstractHandlerMapping {
 	 * @param exchange current exchange
 	 */
 	@SuppressWarnings("UnusedParameters")
-	protected void validateHandler(@Nullable Object handler, ServerWebExchange exchange) {
+	protected void validateHandler(Object handler, ServerWebExchange exchange) {
 	}
 
 	/**
@@ -230,7 +224,8 @@ public abstract class AbstractUrlHandlerMapping extends AbstractHandlerMapping {
 		}
 
 		// Eagerly resolve handler if referencing singleton via name.
-		if (!this.lazyInitHandlers && handler instanceof String handlerName) {
+		if (!this.lazyInitHandlers && handler instanceof String) {
+			String handlerName = (String) handler;
 			if (obtainApplicationContext().isSingleton(handlerName)) {
 				resolvedHandler = obtainApplicationContext().getBean(handlerName);
 			}

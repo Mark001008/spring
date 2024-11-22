@@ -8,7 +8,7 @@
               "@build.name": "${buildName}",
               "@build.number": "${buildNumber}",
               "path": {
-                "$nmatch": "org/springframework/framework-api/*"
+                "$nmatch": "org/springframework/spring-*.zip"
               }
             }
           ]

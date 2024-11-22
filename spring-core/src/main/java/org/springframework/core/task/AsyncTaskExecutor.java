@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,11 +17,7 @@
 package org.springframework.core.task;
 
 import java.util.concurrent.Callable;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
-import java.util.concurrent.FutureTask;
-
-import org.springframework.util.concurrent.FutureUtils;
 
 /**
  * Extended interface for asynchronous {@link TaskExecutor} implementations,
@@ -61,8 +57,6 @@ public interface AsyncTaskExecutor extends TaskExecutor {
 
 	/**
 	 * Execute the given {@code task}.
-	 * <p>As of 6.1, this method comes with a default implementation that simply
-	 * delegates to {@link #execute(Runnable)}, ignoring the timeout completely.
 	 * @param task the {@code Runnable} to execute (never {@code null})
 	 * @param startTimeout the time duration (milliseconds) within which the task is
 	 * supposed to start. This is intended as a hint to the executor, allowing for
@@ -75,65 +69,26 @@ public interface AsyncTaskExecutor extends TaskExecutor {
 	 * @deprecated as of 5.3.16 since the common executors do not support start timeouts
 	 */
 	@Deprecated
-	default void execute(Runnable task, long startTimeout) {
-		execute(task);
-	}
+	void execute(Runnable task, long startTimeout);
 
 	/**
 	 * Submit a Runnable task for execution, receiving a Future representing that task.
 	 * The Future will return a {@code null} result upon completion.
-	 * <p>As of 6.1, this method comes with a default implementation that delegates
-	 * to {@link #execute(Runnable)}.
 	 * @param task the {@code Runnable} to execute (never {@code null})
 	 * @return a Future representing pending completion of the task
 	 * @throws TaskRejectedException if the given task was not accepted
 	 * @since 3.0
 	 */
-	default Future<?> submit(Runnable task) {
-		FutureTask<Object> future = new FutureTask<>(task, null);
-		execute(future);
-		return future;
-	}
+	Future<?> submit(Runnable task);
 
 	/**
 	 * Submit a Callable task for execution, receiving a Future representing that task.
 	 * The Future will return the Callable's result upon completion.
-	 * <p>As of 6.1, this method comes with a default implementation that delegates
-	 * to {@link #execute(Runnable)}.
 	 * @param task the {@code Callable} to execute (never {@code null})
 	 * @return a Future representing pending completion of the task
 	 * @throws TaskRejectedException if the given task was not accepted
 	 * @since 3.0
 	 */
-	default <T> Future<T> submit(Callable<T> task) {
-		FutureTask<T> future = new FutureTask<>(task);
-		execute(future, TIMEOUT_INDEFINITE);
-		return future;
-	}
-
-	/**
-	 * Submit a {@code Runnable} task for execution, receiving a {@code CompletableFuture}
-	 * representing that task. The Future will return a {@code null} result upon completion.
-	 * @param task the {@code Runnable} to execute (never {@code null})
-	 * @return a {@code CompletableFuture} representing pending completion of the task
-	 * @throws TaskRejectedException if the given task was not accepted
-	 * @since 6.0
-	 */
-	default CompletableFuture<Void> submitCompletable(Runnable task) {
-		return CompletableFuture.runAsync(task, this);
-	}
-
-	/**
-	 * Submit a {@code Callable} task for execution, receiving a {@code CompletableFuture}
-	 * representing that task. The Future will return the Callable's result upon
-	 * completion.
-	 * @param task the {@code Callable} to execute (never {@code null})
-	 * @return a {@code CompletableFuture} representing pending completion of the task
-	 * @throws TaskRejectedException if the given task was not accepted
-	 * @since 6.0
-	 */
-	default <T> CompletableFuture<T> submitCompletable(Callable<T> task) {
-		return FutureUtils.callAsync(task, this);
-	}
+	<T> Future<T> submit(Callable<T> task);
 
 }

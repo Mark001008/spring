@@ -16,7 +16,6 @@
 
 package org.springframework.expression.spel;
 
-import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -44,14 +43,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 /**
- * Tests for property access.
+ * Unit tests for property access.
  *
  * @author Andy Clement
  * @author Juergen Hoeller
  * @author Joyce Zhan
  * @author Sam Brannen
  */
-class PropertyAccessTests extends AbstractExpressionTests {
+public class PropertyAccessTests extends AbstractExpressionTests {
 
 	@Test
 	void simpleAccess01() {
@@ -60,7 +59,7 @@ class PropertyAccessTests extends AbstractExpressionTests {
 
 	@Test
 	void simpleAccess02() {
-		evaluate("placeOfBirth.city", "Smiljan", String.class);
+		evaluate("placeOfBirth.city", "SmilJan", String.class);
 	}
 
 	@Test
@@ -146,25 +145,10 @@ class PropertyAccessTests extends AbstractExpressionTests {
 	}
 
 	@Test
-	void accessingPropertyOfJavaLangClass() {
+	void accessingPropertyOfClass() {
 		Expression expression = parser.parseExpression("name");
 		Object value = expression.getValue(new StandardEvaluationContext(String.class));
 		assertThat(value).isEqualTo("java.lang.String");
-	}
-
-	@Test  // gh-33216
-	void accessingPropertyOfJavaTimeZoneIdDeclaredInNonPublicSubclass() throws Exception {
-		String ID = "CET";
-		ZoneId zoneId = ZoneId.of(ID);
-
-		// Prerequisites for this use case:
-		assertThat(zoneId.getClass()).isPackagePrivate();
-		assertThat(zoneId.getId()).isEqualTo(ID);
-
-		Expression expression = parser.parseExpression("id");
-
-		String result = expression.getValue(new StandardEvaluationContext(zoneId), String.class);
-		assertThat(result).isEqualTo(ID);
 	}
 
 	@Test
@@ -317,7 +301,7 @@ class PropertyAccessTests extends AbstractExpressionTests {
 		}
 
 		@Override
-		public boolean canRead(EvaluationContext context, Object target, String name) {
+		public boolean canRead(EvaluationContext context, Object target, String name) throws AccessException {
 			if (!(target instanceof String)) {
 				throw new RuntimeException("Assertion Failed! target should be String");
 			}
@@ -325,7 +309,7 @@ class PropertyAccessTests extends AbstractExpressionTests {
 		}
 
 		@Override
-		public boolean canWrite(EvaluationContext context, Object target, String name) {
+		public boolean canWrite(EvaluationContext context, Object target, String name) throws AccessException {
 			if (!(target instanceof String)) {
 				throw new RuntimeException("Assertion Failed! target should be String");
 			}
@@ -333,7 +317,7 @@ class PropertyAccessTests extends AbstractExpressionTests {
 		}
 
 		@Override
-		public TypedValue read(EvaluationContext context, Object target, String name) {
+		public TypedValue read(EvaluationContext context, Object target, String name) throws AccessException {
 			if (!name.equals("flibbles")) {
 				throw new RuntimeException("Assertion Failed! name should be flibbles");
 			}

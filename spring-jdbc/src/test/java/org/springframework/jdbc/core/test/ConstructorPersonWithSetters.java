@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,19 +33,20 @@ public class ConstructorPersonWithSetters {
 	private BigDecimal balance;
 
 
-	public ConstructorPersonWithSetters(String name, long age, BigDecimal balance) {
+	public ConstructorPersonWithSetters(String name, long age, Date birthDate, BigDecimal balance) {
 		this.name = name.toUpperCase();
 		this.age = age;
+		this.birthDate = birthDate;
 		this.balance = balance;
 	}
 
 
 	public void setName(String name) {
-		throw new UnsupportedOperationException();
+		this.name = name;
 	}
 
 	public void setAge(long age) {
-		throw new UnsupportedOperationException();
+		this.age = age;
 	}
 
 	public void setBirthDate(Date birthDate) {
@@ -53,7 +54,7 @@ public class ConstructorPersonWithSetters {
 	}
 
 	public void setBalance(BigDecimal balance) {
-		throw new UnsupportedOperationException();
+		this.balance = balance;
 	}
 
 	public String name() {

@@ -19,7 +19,6 @@ package org.springframework.format.datetime.standard;
 import java.text.ParseException;
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
-import java.time.temporal.ChronoUnit;
 import java.util.Locale;
 import java.util.Random;
 import java.util.stream.Stream;
@@ -39,7 +38,7 @@ import static java.time.ZoneId.systemDefault;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Tests for {@link InstantFormatter}.
+ * Unit tests for {@link InstantFormatter}.
  *
  * @author Andrei Nevedomskii
  * @author Sam Brannen
@@ -74,13 +73,6 @@ class InstantFormatterTests {
 		String expected = DateTimeFormatter.ISO_INSTANT.format(input);
 		String actual = instantFormatter.print(input, Locale.US);
 		assertThat(actual).isEqualTo(expected);
-	}
-
-	@ParameterizedTest
-	@ArgumentsSource(RandomEpochMillisProvider.class)
-	void should_parse_into_an_Instant_from_epoch_milli(Instant input) throws ParseException {
-		Instant actual = instantFormatter.parse(Long.toString(input.toEpochMilli()), Locale.US);
-		assertThat(actual).isEqualTo(input);
 	}
 
 
@@ -126,22 +118,6 @@ class InstantFormatterTests {
 		Stream<?> provideArguments() {
 			return randomInstantStream(min, max)
 					.map(DateTimeFormatter.RFC_1123_DATE_TIME.withZone(systemDefault())::format);
-		}
-	}
-
-
-	private static final class RandomEpochMillisProvider implements ArgumentsProvider {
-
-		private static final long DATA_SET_SIZE = 10;
-
-		private static final Random random = new Random();
-
-		@Override
-		public Stream<Arguments> provideArguments(ExtensionContext context) {
-			return random.longs(DATA_SET_SIZE, Long.MIN_VALUE, Long.MAX_VALUE)
-					.mapToObj(Instant::ofEpochMilli)
-					.map(instant -> instant.truncatedTo(ChronoUnit.MILLIS))
-					.map(Arguments::of);
 		}
 	}
 

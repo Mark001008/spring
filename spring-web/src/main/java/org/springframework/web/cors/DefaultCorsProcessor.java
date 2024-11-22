@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,8 +22,9 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -41,9 +42,9 @@ import org.springframework.util.CollectionUtils;
  * The default implementation of {@link CorsProcessor}, as defined by the
  * <a href="https://www.w3.org/TR/cors/">CORS W3C recommendation</a>.
  *
- * <p>Note that when the supplied {@link CorsConfiguration} is {@code null}, this
+ * <p>Note that when input {@link CorsConfiguration} is {@code null}, this
  * implementation does not reject simple or actual requests outright but simply
- * avoids adding CORS headers to the response. CORS processing is also skipped
+ * avoid adding CORS headers to the response. CORS processing is also skipped
  * if the response already contains CORS headers.
  *
  * @author Sebastien Deleuze
@@ -83,15 +84,8 @@ public class DefaultCorsProcessor implements CorsProcessor {
 			response.addHeader(HttpHeaders.VARY, HttpHeaders.ACCESS_CONTROL_REQUEST_HEADERS);
 		}
 
-		try {
-			if (!CorsUtils.isCorsRequest(request)) {
-				return true;
-			}
-		}
-		catch (IllegalArgumentException ex) {
-			logger.debug("Reject: origin is malformed");
-			rejectRequest(new ServletServerHttpResponse(response));
-			return false;
+		if (!CorsUtils.isCorsRequest(request)) {
+			return true;
 		}
 
 		if (response.getHeader(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN) != null) {
@@ -162,7 +156,7 @@ public class DefaultCorsProcessor implements CorsProcessor {
 			responseHeaders.setAccessControlAllowMethods(allowMethods);
 		}
 
-		if (preFlightRequest && !CollectionUtils.isEmpty(allowHeaders)) {
+		if (preFlightRequest && !allowHeaders.isEmpty()) {
 			responseHeaders.setAccessControlAllowHeaders(allowHeaders);
 		}
 

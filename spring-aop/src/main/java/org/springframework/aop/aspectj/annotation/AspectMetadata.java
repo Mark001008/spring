@@ -101,22 +101,24 @@ public class AspectMetadata implements Serializable {
 		this.ajType = ajType;
 
 		switch (this.ajType.getPerClause().getKind()) {
-			case SINGLETON -> {
+			case SINGLETON:
 				this.perClausePointcut = Pointcut.TRUE;
-			}
-			case PERTARGET, PERTHIS -> {
+				return;
+			case PERTARGET:
+			case PERTHIS:
 				AspectJExpressionPointcut ajexp = new AspectJExpressionPointcut();
 				ajexp.setLocation(aspectClass.getName());
 				ajexp.setExpression(findPerClause(aspectClass));
 				ajexp.setPointcutDeclarationScope(aspectClass);
 				this.perClausePointcut = ajexp;
-			}
-			case PERTYPEWITHIN -> {
+				return;
+			case PERTYPEWITHIN:
 				// Works with a type pattern
 				this.perClausePointcut = new ComposablePointcut(new TypePatternClassFilter(findPerClause(aspectClass)));
-			}
-			default -> throw new AopConfigException(
-					"PerClause " + ajType.getPerClause().getKind() + " not supported by Spring AOP for " + aspectClass);
+				return;
+			default:
+				throw new AopConfigException(
+						"PerClause " + ajType.getPerClause().getKind() + " not supported by Spring AOP for " + aspectClass);
 		}
 	}
 
@@ -160,7 +162,7 @@ public class AspectMetadata implements Serializable {
 
 	/**
 	 * Return a Spring pointcut expression for a singleton aspect.
-	 * (for example, {@code Pointcut.TRUE} if it's a singleton).
+	 * (e.g. {@code Pointcut.TRUE} if it's a singleton).
 	 */
 	public Pointcut getPerClausePointcut() {
 		return this.perClausePointcut;

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,12 +42,12 @@ class MBeanServerFactoryBeanTests {
 
 	@BeforeEach
 	@AfterEach
-	void resetMBeanServers() {
+	void resetMBeanServers() throws Exception {
 		MBeanTestUtils.resetMBeanServers();
 	}
 
 	@Test
-	void defaultValues() {
+	void defaultValues() throws Exception {
 		MBeanServerFactoryBean bean = new MBeanServerFactoryBean();
 		bean.afterPropertiesSet();
 		try {
@@ -60,7 +60,7 @@ class MBeanServerFactoryBeanTests {
 	}
 
 	@Test
-	void defaultDomain() {
+	void defaultDomain() throws Exception {
 		MBeanServerFactoryBean bean = new MBeanServerFactoryBean();
 		bean.setDefaultDomain("foo");
 		bean.afterPropertiesSet();
@@ -120,17 +120,16 @@ class MBeanServerFactoryBeanTests {
 	}
 
 	@Test
-	void createMBeanServer() {
+	void createMBeanServer() throws Exception {
 		assertCreation(true, "The server should be available in the list");
 	}
 
 	@Test
-	void newMBeanServer() {
+	void newMBeanServer() throws Exception {
 		assertCreation(false, "The server should not be available in the list");
 	}
 
-
-	private void assertCreation(boolean referenceShouldExist, String failMsg) {
+	private void assertCreation(boolean referenceShouldExist, String failMsg) throws Exception {
 		MBeanServerFactoryBean bean = new MBeanServerFactoryBean();
 		bean.setRegisterWithFactory(referenceShouldExist);
 		bean.afterPropertiesSet();

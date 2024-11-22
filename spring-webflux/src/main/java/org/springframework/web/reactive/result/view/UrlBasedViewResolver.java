@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -49,7 +49,7 @@ import org.springframework.util.PatternMatchUtils;
  * "templates/test.ftl"
  *
  * <p>As a special feature, redirect URLs can be specified via the "redirect:"
- * prefix. For example: "redirect:myAction" will trigger a redirect to the given
+ * prefix. E.g.: "redirect:myAction" will trigger a redirect to the given
  * URL, rather than resolution as standard view name. This is typically used
  * for redirecting to a controller URL after finishing a form workflow.
  *
@@ -238,8 +238,12 @@ public class UrlBasedViewResolver extends ViewResolverSupport
 		}
 
 		View view = applyLifecycleMethods(viewName, urlBasedView);
-		return urlBasedView.resourceExists(locale)
-				.flatMap(exists -> exists ? Mono.just(view) : Mono.empty());
+		try {
+			return (urlBasedView.checkResourceExists(locale) ? Mono.just(view) : Mono.empty());
+		}
+		catch (Exception ex) {
+			return Mono.error(ex);
+		}
 	}
 
 	/**
@@ -320,8 +324,8 @@ public class UrlBasedViewResolver extends ViewResolverSupport
 		ApplicationContext context = getApplicationContext();
 		if (context != null) {
 			Object initialized = context.getAutowireCapableBeanFactory().initializeBean(view, viewName);
-			if (initialized instanceof View initializedView) {
-				return initializedView;
+			if (initialized instanceof View) {
+				return (View) initialized;
 			}
 		}
 		return view;

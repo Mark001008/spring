@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,15 +17,16 @@
 package org.springframework.web.filter;
 
 import java.io.IOException;
-import java.util.List;
+import java.util.Arrays;
 
-import jakarta.servlet.Filter;
-import jakarta.servlet.FilterChain;
-import jakarta.servlet.FilterConfig;
-import jakarta.servlet.ServletContext;
-import jakarta.servlet.ServletException;
-import jakarta.servlet.ServletRequest;
-import jakarta.servlet.ServletResponse;
+import javax.servlet.Filter;
+import javax.servlet.FilterChain;
+import javax.servlet.FilterConfig;
+import javax.servlet.ServletContext;
+import javax.servlet.ServletException;
+import javax.servlet.ServletRequest;
+import javax.servlet.ServletResponse;
+
 import org.junit.jupiter.api.Test;
 
 import org.springframework.web.testfixture.servlet.MockFilterConfig;
@@ -38,16 +39,16 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * @author Dave Syer
  */
-class CompositeFilterTests {
+public class CompositeFilterTests {
 
 	@Test
-	void testCompositeFilter() throws ServletException, IOException {
+	public void testCompositeFilter() throws ServletException, IOException {
 		ServletContext sc = new MockServletContext();
 		MockFilter targetFilter = new MockFilter();
 		MockFilterConfig proxyConfig = new MockFilterConfig(sc);
 
 		CompositeFilter filterProxy = new CompositeFilter();
-		filterProxy.setFilters(List.of(targetFilter));
+		filterProxy.setFilters(Arrays.asList(targetFilter));
 		filterProxy.init(proxyConfig);
 
 		MockHttpServletRequest request = new MockHttpServletRequest();
@@ -67,7 +68,7 @@ class CompositeFilterTests {
 		public FilterConfig filterConfig;
 
 		@Override
-		public void init(FilterConfig filterConfig) {
+		public void init(FilterConfig filterConfig) throws ServletException {
 			this.filterConfig = filterConfig;
 		}
 

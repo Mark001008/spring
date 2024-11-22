@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2021 the original author or authors.
+ * Copyright 2002-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,9 @@ import java.io.InputStreamReader;
 import java.io.Reader;
 import java.net.URL;
 import java.net.URLConnection;
+import java.security.AccessController;
+import java.security.PrivilegedActionException;
+import java.security.PrivilegedExceptionAction;
 import java.text.MessageFormat;
 import java.util.Locale;
 import java.util.Map;
@@ -145,7 +148,6 @@ public class ResourceBundleMessageSource extends AbstractResourceBasedMessageSou
 	 * returning the value found in the bundle as-is (without MessageFormat parsing).
 	 */
 	@Override
-	@Nullable
 	protected String resolveCodeWithoutArguments(String code, Locale locale) {
 		Set<String> basenames = getBasenameSet();
 		for (String basename : basenames) {
@@ -243,12 +245,12 @@ public class ResourceBundleMessageSource extends AbstractResourceBasedMessageSou
 				return ResourceBundle.getBundle(basename, locale, classLoader, control);
 			}
 			catch (UnsupportedOperationException ex) {
-				// Probably in a Java Module System environment on JDK 9+
+				// Probably in a Jigsaw environment on JDK 9+
 				this.control = null;
 				String encoding = getDefaultEncoding();
 				if (encoding != null && logger.isInfoEnabled()) {
 					logger.info("ResourceBundleMessageSource is configured to read resources with encoding '" +
-							encoding + "' but ResourceBundle.Control is not supported in current system environment: " +
+							encoding + "' but ResourceBundle.Control not supported in current system environment: " +
 							ex.getMessage() + " - falling back to plain ResourceBundle.getBundle retrieval with the " +
 							"platform default encoding. Consider setting the 'defaultEncoding' property to 'null' " +
 							"for participating in the platform default and therefore avoiding this log message.");
@@ -398,19 +400,28 @@ public class ResourceBundleMessageSource extends AbstractResourceBasedMessageSou
 				final String resourceName = toResourceName(bundleName, "properties");
 				final ClassLoader classLoader = loader;
 				final boolean reloadFlag = reload;
-				InputStream inputStream = null;
-				if (reloadFlag) {
-					URL url = classLoader.getResource(resourceName);
-					if (url != null) {
-						URLConnection connection = url.openConnection();
-						if (connection != null) {
-							connection.setUseCaches(false);
-							inputStream = connection.getInputStream();
+				InputStream inputStream;
+				try {
+					inputStream = AccessController.doPrivileged((PrivilegedExceptionAction<InputStream>) () -> {
+						InputStream is = null;
+						if (reloadFlag) {
+							URL url = classLoader.getResource(resourceName);
+							if (url != null) {
+								URLConnection connection = url.openConnection();
+								if (connection != null) {
+									connection.setUseCaches(false);
+									is = connection.getInputStream();
+								}
+							}
 						}
-					}
+						else {
+							is = classLoader.getResourceAsStream(resourceName);
+						}
+						return is;
+					});
 				}
-				else {
-					inputStream = classLoader.getResourceAsStream(resourceName);
+				catch (PrivilegedActionException ex) {
+					throw (IOException) ex.getException();
 				}
 				if (inputStream != null) {
 					String encoding = getDefaultEncoding();

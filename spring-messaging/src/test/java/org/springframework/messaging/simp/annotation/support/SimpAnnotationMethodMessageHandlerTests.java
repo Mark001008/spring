@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -61,6 +61,7 @@ import org.springframework.messaging.simp.annotation.SubscribeMapping;
 import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.stereotype.Controller;
 import org.springframework.util.AntPathMatcher;
+import org.springframework.util.concurrent.ListenableFutureTask;
 import org.springframework.validation.Errors;
 import org.springframework.validation.Validator;
 import org.springframework.validation.annotation.Validated;
@@ -99,7 +100,7 @@ public class SimpAnnotationMethodMessageHandlerTests {
 
 
 	@BeforeEach
-	void setup() {
+	public void setup() {
 		SimpMessagingTemplate brokerTemplate = new SimpMessagingTemplate(this.channel);
 		brokerTemplate.setMessageConverter(this.converter);
 
@@ -124,7 +125,7 @@ public class SimpAnnotationMethodMessageHandlerTests {
 	}
 
 	@Test
-	void optionalHeaderArgumentResolutionWhenPresent() {
+	public void optionalHeaderArgumentResolutionWhenPresent() {
 		Map<String, Object> headers = Collections.singletonMap("foo", "bar");
 		Message<?> message = createMessage("/pre/optionalHeaders", headers);
 		this.messageHandler.registerHandler(this.testController);
@@ -136,7 +137,7 @@ public class SimpAnnotationMethodMessageHandlerTests {
 	}
 
 	@Test
-	void optionalHeaderArgumentResolutionWhenNotPresent() {
+	public void optionalHeaderArgumentResolutionWhenNotPresent() {
 		Message<?> message = createMessage("/pre/optionalHeaders");
 		this.messageHandler.registerHandler(this.testController);
 		this.messageHandler.handleMessage(message);
@@ -147,7 +148,7 @@ public class SimpAnnotationMethodMessageHandlerTests {
 	}
 
 	@Test
-	void messageMappingDestinationVariableResolution() {
+	public void messageMappingDestinationVariableResolution() {
 		Message<?> message = createMessage("/pre/message/bar/value");
 		this.messageHandler.registerHandler(this.testController);
 		this.messageHandler.handleMessage(message);
@@ -158,7 +159,7 @@ public class SimpAnnotationMethodMessageHandlerTests {
 	}
 
 	@Test
-	void subscribeEventDestinationVariableResolution() {
+	public void subscribeEventDestinationVariableResolution() {
 		Message<?> message = createMessage(SimpMessageType.SUBSCRIBE, "/pre/sub/bar/value", null);
 		this.messageHandler.registerHandler(this.testController);
 		this.messageHandler.handleMessage(message);
@@ -169,18 +170,18 @@ public class SimpAnnotationMethodMessageHandlerTests {
 	}
 
 	@Test
-	void simpleBinding() {
+	public void simpleBinding() {
 		Message<?> message = createMessage("/pre/binding/id/12");
 		this.messageHandler.registerHandler(this.testController);
 		this.messageHandler.handleMessage(message);
 
 		assertThat(this.testController.method).isEqualTo("simpleBinding");
-		assertThat(this.testController.arguments.get("id")).as("should be bound to type long").isInstanceOf(Long.class);
+		assertThat(this.testController.arguments.get("id") instanceof Long).as("should be bound to type long").isTrue();
 		assertThat(this.testController.arguments.get("id")).isEqualTo(12L);
 	}
 
 	@Test
-	void validationError() {
+	public void validationError() {
 		Message<?> message = createMessage("/pre/validation/payload");
 		this.messageHandler.registerHandler(this.testController);
 		this.messageHandler.handleMessage(message);
@@ -189,7 +190,7 @@ public class SimpAnnotationMethodMessageHandlerTests {
 	}
 
 	@Test
-	void exceptionWithHandlerMethodArg() {
+	public void exceptionWithHandlerMethodArg() {
 		Message<?> message = createMessage("/pre/illegalState");
 		this.messageHandler.registerHandler(this.testController);
 		this.messageHandler.handleMessage(message);
@@ -201,7 +202,7 @@ public class SimpAnnotationMethodMessageHandlerTests {
 	}
 
 	@Test
-	void exceptionAsCause() {
+	public void exceptionAsCause() {
 		Message<?> message = createMessage("/pre/illegalStateCause");
 		this.messageHandler.registerHandler(this.testController);
 		this.messageHandler.handleMessage(message);
@@ -213,7 +214,7 @@ public class SimpAnnotationMethodMessageHandlerTests {
 	}
 
 	@Test
-	void errorAsMessageHandlingException() {
+	public void errorAsMessageHandlingException() {
 		Message<?> message = createMessage("/pre/error");
 		this.messageHandler.registerHandler(this.testController);
 		this.messageHandler.handleMessage(message);
@@ -225,7 +226,7 @@ public class SimpAnnotationMethodMessageHandlerTests {
 	}
 
 	@Test
-	void simpScope() {
+	public void simpScope() {
 		Map<String, Object> sessionAttributes = new ConcurrentHashMap<>();
 		sessionAttributes.put("name", "value");
 
@@ -241,20 +242,7 @@ public class SimpAnnotationMethodMessageHandlerTests {
 	}
 
 	@Test
-	void interfaceBasedController() {
-		InterfaceBasedController controller = new InterfaceBasedController();
-
-		Message<?> message = createMessage("/pre/binding/id/12");
-		this.messageHandler.registerHandler(controller);
-		this.messageHandler.handleMessage(message);
-
-		assertThat(controller.method).isEqualTo("simpleBinding");
-		assertThat(controller.arguments.get("id")).as("should be bound to type long").isInstanceOf(Long.class);
-		assertThat(controller.arguments.get("id")).isEqualTo(12L);
-	}
-
-	@Test
-	void dotPathSeparator() {
+	public void dotPathSeparator() {
 		DotPathSeparatorController controller = new DotPathSeparatorController();
 
 		this.messageHandler.setPathMatcher(new AntPathMatcher("."));
@@ -294,7 +282,7 @@ public class SimpAnnotationMethodMessageHandlerTests {
 	}
 
 	@Test
-	void listenableFutureFailure() {
+	public void listenableFutureFailure() {
 		ListenableFutureController controller = new ListenableFutureController();
 		this.messageHandler.registerHandler(controller);
 		this.messageHandler.setDestinationPrefixes(Arrays.asList("/app1", "/app2/"));
@@ -327,7 +315,7 @@ public class SimpAnnotationMethodMessageHandlerTests {
 	}
 
 	@Test
-	void completableFutureFailure() {
+	public void completableFutureFailure() {
 		CompletableFutureController controller = new CompletableFutureController();
 		this.messageHandler.registerHandler(controller);
 		this.messageHandler.setDestinationPrefixes(Arrays.asList("/app1", "/app2/"));
@@ -360,7 +348,7 @@ public class SimpAnnotationMethodMessageHandlerTests {
 	}
 
 	@Test
-	void monoFailure() {
+	public void monoFailure() {
 		ReactiveController controller = new ReactiveController();
 		this.messageHandler.registerHandler(controller);
 		this.messageHandler.setDestinationPrefixes(Arrays.asList("/app1", "/app2/"));
@@ -373,7 +361,7 @@ public class SimpAnnotationMethodMessageHandlerTests {
 	}
 
 	@Test
-	void fluxNotHandled() {
+	public void fluxNotHandled() {
 		ReactiveController controller = new ReactiveController();
 		this.messageHandler.registerHandler(controller);
 		this.messageHandler.setDestinationPrefixes(Arrays.asList("/app1", "/app2/"));
@@ -388,7 +376,7 @@ public class SimpAnnotationMethodMessageHandlerTests {
 	}
 
 	@Test
-	void placeholder() {
+	public void placeholder() {
 		Message<?> message = createMessage("/pre/myValue");
 		this.messageHandler.setEmbeddedValueResolver(value -> ("/${myProperty}".equals(value) ? "/myValue" : value));
 		this.messageHandler.registerHandler(this.testController);
@@ -438,9 +426,9 @@ public class SimpAnnotationMethodMessageHandlerTests {
 	@MessageMapping("/pre")
 	private static class TestController {
 
-		String method;
+		private String method;
 
-		Map<String, Object> arguments = new LinkedHashMap<>();
+		private Map<String, Object> arguments = new LinkedHashMap<>();
 
 		@MessageMapping("/headers")
 		public void headers(@Header String foo, @Headers Map<String, Object> headers) {
@@ -453,7 +441,7 @@ public class SimpAnnotationMethodMessageHandlerTests {
 		public void optionalHeaders(@Header(name="foo", required=false) String foo1, @Header("foo") Optional<String> foo2) {
 			this.method = "optionalHeaders";
 			this.arguments.put("foo1", foo1);
-			this.arguments.put("foo2", (foo2.orElse(null)));
+			this.arguments.put("foo2", (foo2.isPresent() ? foo2.get() : null));
 		}
 
 		@MessageMapping("/message/{foo}/{name}")
@@ -532,35 +520,11 @@ public class SimpAnnotationMethodMessageHandlerTests {
 	}
 
 
-	private interface ControllerInterface {
-
-		void simpleBinding(@DestinationVariable("id") Long id);
-	}
-
-
-	@Controller
-	@MessageMapping("pre")
-	private static class InterfaceBasedController implements ControllerInterface {
-
-		String method;
-
-		Map<String, Object> arguments = new LinkedHashMap<>();
-
-		@Override
-		@MessageMapping("/binding/id/{id}")
-		public void simpleBinding(Long id) {
-			this.method = "simpleBinding";
-			this.arguments.put("id", id);
-		}
-
-	}
-
-
 	@Controller
 	@MessageMapping("pre")
 	private static class DotPathSeparatorController {
 
-		String method;
+		private String method;
 
 		@MessageMapping("foo")
 		public void handleFoo() {
@@ -571,22 +535,21 @@ public class SimpAnnotationMethodMessageHandlerTests {
 
 	@Controller
 	@MessageMapping("listenable-future")
-	@SuppressWarnings({"deprecation", "removal"})
 	private static class ListenableFutureController {
 
-		org.springframework.util.concurrent.ListenableFutureTask<String> future;
+		private ListenableFutureTask<String> future;
 
-		boolean exceptionCaught = false;
+		private boolean exceptionCaught = false;
 
 		@MessageMapping("success")
-		public org.springframework.util.concurrent.ListenableFutureTask<String> handleListenableFuture() {
-			this.future = new org.springframework.util.concurrent.ListenableFutureTask<>(() -> "foo");
+		public ListenableFutureTask<String> handleListenableFuture() {
+			this.future = new ListenableFutureTask<>(() -> "foo");
 			return this.future;
 		}
 
 		@MessageMapping("failure")
-		public org.springframework.util.concurrent.ListenableFutureTask<String> handleListenableFutureException() {
-			this.future = new org.springframework.util.concurrent.ListenableFutureTask<>(() -> {
+		public ListenableFutureTask<String> handleListenableFutureException() {
+			this.future = new ListenableFutureTask<>(() -> {
 				throw new IllegalStateException();
 			});
 			return this.future;
@@ -602,9 +565,9 @@ public class SimpAnnotationMethodMessageHandlerTests {
 	@Controller
 	private static class CompletableFutureController {
 
-		CompletableFuture<String> future;
+		private CompletableFuture<String> future;
 
-		boolean exceptionCaught = false;
+		private boolean exceptionCaught = false;
 
 		@MessageMapping("completable-future")
 		public CompletableFuture<String> handleCompletableFuture() {
@@ -618,15 +581,14 @@ public class SimpAnnotationMethodMessageHandlerTests {
 		}
 	}
 
-
 	@Controller
 	private static class ReactiveController {
 
-		Sinks.One<String> sinkOne;
+		private Sinks.One<String> sinkOne;
 
-		Sinks.Many<String> sinkMany;
+		private Sinks.Many<String> sinkMany;
 
-		boolean exceptionCaught = false;
+		private boolean exceptionCaught = false;
 
 		@MessageMapping("mono")
 		public Mono<String> handleMono() {
@@ -649,7 +611,7 @@ public class SimpAnnotationMethodMessageHandlerTests {
 
 	private static class StringTestValidator implements Validator {
 
-		final String invalidValue;
+		private final String invalidValue;
 
 		public StringTestValidator(String invalidValue) {
 			this.invalidValue = invalidValue;

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -199,7 +199,6 @@ public class MethodInvokingJobDetailFactoryBean extends ArgumentConvertingMethod
 	 * Overridden to support the {@link #setTargetBeanName "targetBeanName"} feature.
 	 */
 	@Override
-	@Nullable
 	public Class<?> getTargetClass() {
 		Class<?> targetClass = super.getTargetClass();
 		if (targetClass == null && this.targetBeanName != null) {
@@ -213,7 +212,6 @@ public class MethodInvokingJobDetailFactoryBean extends ArgumentConvertingMethod
 	 * Overridden to support the {@link #setTargetBeanName "targetBeanName"} feature.
 	 */
 	@Override
-	@Nullable
 	public Object getTargetObject() {
 		Object targetObject = super.getTargetObject();
 		if (targetObject == null && this.targetBeanName != null) {
@@ -269,9 +267,9 @@ public class MethodInvokingJobDetailFactoryBean extends ArgumentConvertingMethod
 				context.setResult(this.methodInvoker.invoke());
 			}
 			catch (InvocationTargetException ex) {
-				if (ex.getTargetException() instanceof JobExecutionException jobExecutionException) {
+				if (ex.getTargetException() instanceof JobExecutionException) {
 					// -> JobExecutionException, to be logged at info level by Quartz
-					throw jobExecutionException;
+					throw (JobExecutionException) ex.getTargetException();
 				}
 				else {
 					// -> "unhandled exception", to be logged at error level by Quartz

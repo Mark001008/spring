@@ -23,6 +23,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 import org.springframework.http.MediaType;
 import org.springframework.lang.Nullable;
@@ -30,7 +31,7 @@ import org.springframework.lang.Nullable;
 /**
  * Builder for a composite {@link RequestedContentTypeResolver} that delegates
  * to other resolvers each implementing a different strategy to determine the
- * requested content type -- for example, Accept header, query parameter, or other.
+ * requested content type -- e.g. Accept header, query parameter, or other.
  *
  * <p>Use builder methods to add resolvers in the desired order. For a given
  * request he first resolver to return a list that is not empty and does not
@@ -87,7 +88,7 @@ public class RequestedContentTypeResolverBuilder {
 	 */
 	public RequestedContentTypeResolver build() {
 		List<RequestedContentTypeResolver> resolvers = (!this.candidates.isEmpty() ?
-				this.candidates.stream().map(Supplier::get).toList() :
+				this.candidates.stream().map(Supplier::get).collect(Collectors.toList()) :
 				Collections.singletonList(new HeaderContentTypeResolver()));
 
 		return exchange -> {

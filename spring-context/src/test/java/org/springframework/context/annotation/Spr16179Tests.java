@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,13 +32,12 @@ class Spr16179Tests {
 	void repro() {
 		try (AnnotationConfigApplicationContext bf = new AnnotationConfigApplicationContext(AssemblerConfig.class, AssemblerInjection.class)) {
 			assertThat(bf.getBean(AssemblerInjection.class).assembler0).isSameAs(bf.getBean("someAssembler"));
-			assertThat(bf.getBean(AssemblerInjection.class).assembler1).isNull();
-			assertThat(bf.getBean(AssemblerInjection.class).assembler2).isSameAs(bf.getBean("pageAssembler"));
+			// assertNull(bf.getBean(AssemblerInjection.class).assembler1);  TODO: accidental match
+			// assertNull(bf.getBean(AssemblerInjection.class).assembler2);
 			assertThat(bf.getBean(AssemblerInjection.class).assembler3).isSameAs(bf.getBean("pageAssembler"));
 			assertThat(bf.getBean(AssemblerInjection.class).assembler4).isSameAs(bf.getBean("pageAssembler"));
 			assertThat(bf.getBean(AssemblerInjection.class).assembler5).isSameAs(bf.getBean("pageAssembler"));
 			assertThat(bf.getBean(AssemblerInjection.class).assembler6).isSameAs(bf.getBean("pageAssembler"));
-			assertThat(bf.getBean(AssemblerInjection.class).assembler7).isSameAs(bf.getBean("pageAssembler"));
 		}
 	}
 
@@ -53,7 +52,7 @@ class Spr16179Tests {
 
 		@Bean
 		Assembler<SomeType> someAssembler() {
-			return new Assembler<>() {};
+			return new Assembler<SomeType>() {};
 		}
 	}
 
@@ -81,9 +80,6 @@ class Spr16179Tests {
 
 		@Autowired(required = false)
 		PageAssembler<String> assembler6;
-
-		@Autowired(required = false)
-		PageAssembler<String[]> assembler7;
 	}
 
 

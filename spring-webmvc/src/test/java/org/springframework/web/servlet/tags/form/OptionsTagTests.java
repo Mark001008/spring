@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2021 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,9 +24,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.jsp.tagext.BodyTag;
-import jakarta.servlet.jsp.tagext.Tag;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.jsp.tagext.BodyTag;
+import javax.servlet.jsp.tagext.Tag;
+
 import org.dom4j.Document;
 import org.dom4j.Element;
 import org.dom4j.Node;
@@ -60,6 +61,7 @@ class OptionsTagTests extends AbstractHtmlElementTagTests {
 	private OptionsTag tag;
 
 	@Override
+	@SuppressWarnings("serial")
 	protected void onSetUp() {
 		this.tag = new OptionsTag() {
 			@Override
@@ -260,7 +262,7 @@ class OptionsTagTests extends AbstractHtmlElementTagTests {
 		Document document = reader.read(new StringReader(output));
 		Element rootElement = document.getRootElement();
 
-		assertThat(rootElement.elements()).hasSize(2);
+		assertThat(rootElement.elements().size()).isEqualTo(2);
 		Node value1 = rootElement.selectSingleNode("option[@value = 'VALUE_1']");
 		Node value2 = rootElement.selectSingleNode("option[@value = 'VALUE_2']");
 		assertThat(value1.getText()).isEqualTo("TestEnum: VALUE_1");
@@ -290,7 +292,7 @@ class OptionsTagTests extends AbstractHtmlElementTagTests {
 		Document document = reader.read(new StringReader(output));
 		Element rootElement = document.getRootElement();
 
-		assertThat(rootElement.elements()).hasSize(2);
+		assertThat(rootElement.elements().size()).isEqualTo(2);
 		Node value1 = rootElement.selectSingleNode("option[@value = 'Value: VALUE_1']");
 		Node value2 = rootElement.selectSingleNode("option[@value = 'Value: VALUE_2']");
 		assertThat(value1.getText()).isEqualTo("Label: VALUE_1");

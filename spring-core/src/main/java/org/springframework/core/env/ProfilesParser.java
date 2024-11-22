@@ -24,10 +24,10 @@ import java.util.List;
 import java.util.Set;
 import java.util.StringTokenizer;
 import java.util.function.Predicate;
-import java.util.stream.Collectors;
 
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
+import org.springframework.util.StringUtils;
 
 /**
  * Internal parser used by {@link Profiles#of}.
@@ -70,23 +70,25 @@ final class ProfilesParser {
 				continue;
 			}
 			switch (token) {
-				case "(" -> {
+				case "(":
 					Profiles contents = parseTokens(expression, tokens, Context.PARENTHESIS);
 					if (context == Context.NEGATE) {
 						return contents;
 					}
 					elements.add(contents);
-				}
-				case "&" -> {
+					break;
+				case "&":
 					assertWellFormed(expression, operator == null || operator == Operator.AND);
 					operator = Operator.AND;
-				}
-				case "|" -> {
+					break;
+				case "|":
 					assertWellFormed(expression, operator == null || operator == Operator.OR);
 					operator = Operator.OR;
-				}
-				case "!" -> elements.add(not(parseTokens(expression, tokens, Context.NEGATE)));
-				case ")" -> {
+					break;
+				case "!":
+					elements.add(not(parseTokens(expression, tokens, Context.NEGATE)));
+					break;
+				case ")":
 					Profiles merged = merge(expression, elements, operator);
 					if (context == Context.PARENTHESIS) {
 						return merged;
@@ -94,14 +96,13 @@ final class ProfilesParser {
 					elements.clear();
 					elements.add(merged);
 					operator = null;
-				}
-				default -> {
+					break;
+				default:
 					Profiles value = equals(token);
 					if (context == Context.NEGATE) {
 						return value;
 					}
 					elements.add(value);
-				}
 			}
 		}
 		return merge(expression, elements, operator);
@@ -168,9 +169,15 @@ final class ProfilesParser {
 		}
 
 		@Override
-		public boolean equals(@Nullable Object other) {
-			return (this == other || (other instanceof ParsedProfiles that &&
-					this.expressions.equals(that.expressions)));
+		public boolean equals(Object obj) {
+			if (this == obj) {
+				return true;
+			}
+			if (obj == null || getClass() != obj.getClass()) {
+				return false;
+			}
+			ParsedProfiles that = (ParsedProfiles) obj;
+			return this.expressions.equals(that.expressions);
 		}
 
 		@Override
@@ -180,14 +187,7 @@ final class ProfilesParser {
 
 		@Override
 		public String toString() {
-			if (this.expressions.size() == 1) {
-				return this.expressions.iterator().next();
-			}
-			return this.expressions.stream().map(this::wrap).collect(Collectors.joining(" | "));
-		}
-
-		private String wrap(String str) {
-			return "(" + str + ")";
+			return StringUtils.collectionToDelimitedString(this.expressions, " or ");
 		}
 	}
 

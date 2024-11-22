@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2021 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -86,22 +86,34 @@ public abstract class AbstractBeanDefinitionReader implements BeanDefinitionRead
 		this.registry = registry;
 
 		// Determine ResourceLoader to use.
-		if (this.registry instanceof ResourceLoader _resourceLoader) {
-			this.resourceLoader = _resourceLoader;
+		if (this.registry instanceof ResourceLoader) {
+			this.resourceLoader = (ResourceLoader) this.registry;
 		}
 		else {
 			this.resourceLoader = new PathMatchingResourcePatternResolver();
 		}
 
 		// Inherit Environment if possible
-		if (this.registry instanceof EnvironmentCapable environmentCapable) {
-			this.environment = environmentCapable.getEnvironment();
+		if (this.registry instanceof EnvironmentCapable) {
+			this.environment = ((EnvironmentCapable) this.registry).getEnvironment();
 		}
 		else {
 			this.environment = new StandardEnvironment();
 		}
 	}
 
+
+	/**
+	 * Return the bean factory to register the bean definitions with.
+	 * <p>The factory is exposed through the BeanDefinitionRegistry interface,
+	 * encapsulating the methods that are relevant for bean definition handling.
+	 * @deprecated as of Spring Framework 5.3.15 in favor of {@link #getRegistry()},
+	 * to be removed in Spring Framework 6.0
+	 */
+	@Deprecated
+	public final BeanDefinitionRegistry getBeanFactory() {
+		return this.registry;
+	}
 
 	@Override
 	public final BeanDefinitionRegistry getRegistry() {
@@ -213,10 +225,10 @@ public abstract class AbstractBeanDefinitionReader implements BeanDefinitionRead
 					"Cannot load bean definitions from location [" + location + "]: no ResourceLoader available");
 		}
 
-		if (resourceLoader instanceof ResourcePatternResolver resourcePatternResolver) {
+		if (resourceLoader instanceof ResourcePatternResolver) {
 			// Resource pattern matching available.
 			try {
-				Resource[] resources = resourcePatternResolver.getResources(location);
+				Resource[] resources = ((ResourcePatternResolver) resourceLoader).getResources(location);
 				int count = loadBeanDefinitions(resources);
 				if (actualResources != null) {
 					Collections.addAll(actualResources, resources);

@@ -1,5 +1,5 @@
 /**
- * Server-side support for the Jetty WebSocket API.
+ * Server-side support for the Jetty 9+ WebSocket API.
  */
 @NonNullApi
 @NonNullFields

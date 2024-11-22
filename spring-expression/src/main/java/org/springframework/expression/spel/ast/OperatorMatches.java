@@ -58,7 +58,7 @@ public class OperatorMatches extends Operator {
 	 * {@link #OperatorMatches(ConcurrentMap, int, int, SpelNodeImpl...)}
 	 * with a shared pattern cache instead
 	 */
-	@Deprecated(since = "5.2.23")
+	@Deprecated
 	public OperatorMatches(int startPos, int endPos, SpelNodeImpl... operands) {
 		this(new ConcurrentHashMap<>(), startPos, endPos, operands);
 	}
@@ -78,7 +78,7 @@ public class OperatorMatches extends Operator {
 	 * @return {@code true} if the first operand matches the regex specified as the
 	 * second operand, otherwise {@code false}
 	 * @throws EvaluationException if there is a problem evaluating the expression
-	 * (for example, the regex is invalid)
+	 * (e.g. the regex is invalid)
 	 */
 	@Override
 	public BooleanTypedValue getValueInternal(ExpressionState state) throws EvaluationException {
@@ -92,10 +92,11 @@ public class OperatorMatches extends Operator {
 		}
 
 		Object right = rightOp.getValue(state);
-		if (!(right instanceof String regex)) {
+		if (!(right instanceof String)) {
 			throw new SpelEvaluationException(rightOp.getStartPosition(),
 					SpelMessage.INVALID_SECOND_OPERAND_FOR_MATCHES_OPERATOR, right);
 		}
+		String regex = (String) right;
 
 		try {
 			Pattern pattern = this.patternCache.get(regex);

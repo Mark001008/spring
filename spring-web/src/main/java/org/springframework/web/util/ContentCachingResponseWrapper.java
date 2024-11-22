@@ -26,21 +26,22 @@ import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
-import jakarta.servlet.ServletOutputStream;
-import jakarta.servlet.WriteListener;
-import jakarta.servlet.http.HttpServletResponse;
-import jakarta.servlet.http.HttpServletResponseWrapper;
+import javax.servlet.ServletOutputStream;
+import javax.servlet.WriteListener;
+import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpServletResponseWrapper;
 
 import org.springframework.http.HttpHeaders;
 import org.springframework.lang.Nullable;
 import org.springframework.util.FastByteArrayOutputStream;
 
 /**
- * {@link jakarta.servlet.http.HttpServletResponse} wrapper that caches all content written to
+ * {@link javax.servlet.http.HttpServletResponse} wrapper that caches all content written to
  * the {@linkplain #getOutputStream() output stream} and {@linkplain #getWriter() writer},
  * and allows this content to be retrieved via a {@linkplain #getContentAsByteArray() byte array}.
  *
- * <p>Used, for example, by {@link org.springframework.web.filter.ShallowEtagHeaderFilter}.
+ * <p>Used e.g. by {@link org.springframework.web.filter.ShallowEtagHeaderFilter}.
+ * Note: As of Spring Framework 5.0, this wrapper is built on the Servlet 3.1 API.
  *
  * @author Juergen Hoeller
  * @author Sam Brannen
@@ -83,6 +84,7 @@ public class ContentCachingResponseWrapper extends HttpServletResponseWrapper {
 	}
 
 	@Override
+	@SuppressWarnings("deprecation")
 	public void sendError(int sc, String msg) throws IOException {
 		copyBodyToResponse(false);
 		try {
@@ -90,7 +92,7 @@ public class ContentCachingResponseWrapper extends HttpServletResponseWrapper {
 		}
 		catch (IllegalStateException ex) {
 			// Possibly on Tomcat when called too late: fall back to silent setStatus
-			super.setStatus(sc);
+			super.setStatus(sc, msg);
 		}
 	}
 
@@ -123,7 +125,7 @@ public class ContentCachingResponseWrapper extends HttpServletResponseWrapper {
 	 * response, since the content has not yet been copied to the response.
 	 * <p>Invoke {@link #copyBodyToResponse()} to copy the cached body content to
 	 * the wrapped response object and flush its buffer.
-	 * @see jakarta.servlet.ServletResponseWrapper#flushBuffer()
+	 * @see javax.servlet.ServletResponseWrapper#flushBuffer()
 	 */
 	@Override
 	public void flushBuffer() throws IOException {
@@ -138,17 +140,14 @@ public class ContentCachingResponseWrapper extends HttpServletResponseWrapper {
 		this.contentLength = len;
 	}
 
+	// Overrides Servlet 3.1 setContentLengthLong(long) at runtime
 	@Override
 	public void setContentLengthLong(long len) {
-		setContentLength(toContentLengthInt(len));
-	}
-
-	private int toContentLengthInt(long contentLength) {
-		if (contentLength > Integer.MAX_VALUE) {
+		if (len > Integer.MAX_VALUE) {
 			throw new IllegalArgumentException("Content-Length exceeds ContentCachingResponseWrapper's maximum (" +
-					Integer.MAX_VALUE + "): " + contentLength);
+					Integer.MAX_VALUE + "): " + len);
 		}
-		return (int) contentLength;
+		setContentLength((int) len);
 	}
 
 	@Override
@@ -164,7 +163,7 @@ public class ContentCachingResponseWrapper extends HttpServletResponseWrapper {
 	@Override
 	public void setHeader(String name, String value) {
 		if (HttpHeaders.CONTENT_LENGTH.equalsIgnoreCase(name)) {
-			this.contentLength = toContentLengthInt(Long.parseLong(value));
+			this.contentLength = Integer.valueOf(value);
 		}
 		else {
 			super.setHeader(name, value);
@@ -174,7 +173,7 @@ public class ContentCachingResponseWrapper extends HttpServletResponseWrapper {
 	@Override
 	public void addHeader(String name, String value) {
 		if (HttpHeaders.CONTENT_LENGTH.equalsIgnoreCase(name)) {
-			this.contentLength = toContentLengthInt(Long.parseLong(value));
+			this.contentLength = Integer.valueOf(value);
 		}
 		else {
 			super.addHeader(name, value);
@@ -184,7 +183,7 @@ public class ContentCachingResponseWrapper extends HttpServletResponseWrapper {
 	@Override
 	public void setIntHeader(String name, int value) {
 		if (HttpHeaders.CONTENT_LENGTH.equalsIgnoreCase(name)) {
-			this.contentLength = value;
+			this.contentLength = Integer.valueOf(value);
 		}
 		else {
 			super.setIntHeader(name, value);
@@ -194,7 +193,7 @@ public class ContentCachingResponseWrapper extends HttpServletResponseWrapper {
 	@Override
 	public void addIntHeader(String name, int value) {
 		if (HttpHeaders.CONTENT_LENGTH.equalsIgnoreCase(name)) {
-			this.contentLength = value;
+			this.contentLength = Integer.valueOf(value);
 		}
 		else {
 			super.addIntHeader(name, value);
@@ -251,6 +250,15 @@ public class ContentCachingResponseWrapper extends HttpServletResponseWrapper {
 	public void reset() {
 		super.reset();
 		this.content.reset();
+	}
+
+	/**
+	 * Return the status code as specified on the response.
+	 * @deprecated as of 5.2 in favor of {@link HttpServletResponse#getStatus()}
+	 */
+	@Deprecated
+	public int getStatusCode() {
+		return getStatus();
 	}
 
 	/**

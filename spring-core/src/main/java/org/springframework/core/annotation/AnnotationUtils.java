@@ -48,9 +48,9 @@ import org.springframework.util.StringUtils;
  * <p>Note that most of the features of this class are not provided by the
  * JDK's introspection facilities themselves.
  *
- * <p>As a general rule for runtime-retained application annotations (for example, for
+ * <p>As a general rule for runtime-retained application annotations (e.g. for
  * transaction control, authorization, or service exposure), always use the
- * lookup methods on this class (for example, {@link #findAnnotation(Method, Class)} or
+ * lookup methods on this class (e.g. {@link #findAnnotation(Method, Class)} or
  * {@link #getAnnotation(Method, Class)}) instead of the plain annotation lookup
  * methods in the JDK. You can still explicitly choose between a <em>get</em>
  * lookup on the given class level only ({@link #getAnnotation(Method, Class)})
@@ -259,7 +259,7 @@ public abstract class AnnotationUtils {
 	 * <p>Meta-annotations will <em>not</em> be searched.
 	 * @param annotatedElement the Method, Constructor or Field to retrieve annotations from
 	 * @return the annotations found, an empty array, or {@code null} if not
-	 * resolvable (for example, because nested Class values in annotation attributes
+	 * resolvable (e.g. because nested Class values in annotation attributes
 	 * failed to resolve at runtime)
 	 * @since 4.0.8
 	 * @see AnnotatedElement#getAnnotations()
@@ -284,7 +284,7 @@ public abstract class AnnotationUtils {
 	 * <p>Meta-annotations will <em>not</em> be searched.
 	 * @param method the Method to retrieve annotations from
 	 * @return the annotations found, an empty array, or {@code null} if not
-	 * resolvable (for example, because nested Class values in annotation attributes
+	 * resolvable (e.g. because nested Class values in annotation attributes
 	 * failed to resolve at runtime)
 	 * @see org.springframework.core.BridgeMethodResolver#findBridgedMethod(Method)
 	 * @see AnnotatedElement#getAnnotations()
@@ -569,7 +569,7 @@ public abstract class AnnotationUtils {
 				return annotation;
 			}
 			// For backwards compatibility, perform a superclass search with plain annotations
-			// even if not marked as @Inherited: for example, a findAnnotation search for @Deprecated
+			// even if not marked as @Inherited: e.g. a findAnnotation search for @Deprecated
 			Class<?> superclass = clazz.getSuperclass();
 			if (superclass == null || superclass == Object.class) {
 				return null;
@@ -650,10 +650,11 @@ public abstract class AnnotationUtils {
 			return null;
 		}
 
-		MergedAnnotation<?> merged = MergedAnnotations.from(clazz, SearchStrategy.SUPERCLASS).stream()
+		return (Class<?>) MergedAnnotations.from(clazz, SearchStrategy.SUPERCLASS)
+				.stream()
 				.filter(MergedAnnotationPredicates.typeIn(annotationTypes).and(MergedAnnotation::isDirectlyPresent))
+				.map(MergedAnnotation::getSource)
 				.findFirst().orElse(null);
-		return (merged != null && merged.getSource() instanceof Class<?> sourceClass ? sourceClass : null);
 	}
 
 	/**
@@ -976,21 +977,17 @@ public abstract class AnnotationUtils {
 		for (Map.Entry<String, Object> attributeEntry : attributes.entrySet()) {
 			String attributeName = attributeEntry.getKey();
 			Object value = attributeEntry.getValue();
-			if (value instanceof DefaultValueHolder defaultValueHolder) {
-				value = defaultValueHolder.defaultValue;
+			if (value instanceof DefaultValueHolder) {
+				value = ((DefaultValueHolder) value).defaultValue;
 				attributes.put(attributeName,
 						adaptValue(annotatedElement, value, classValuesAsString));
 			}
 		}
 	}
 
-	@Nullable
-	private static Object getAttributeValueForMirrorResolution(Method attribute, @Nullable Object attributes) {
-		if (!(attributes instanceof AnnotationAttributes annotationAttributes)) {
-			return null;
-		}
-		Object result = annotationAttributes.get(attribute.getName());
-		return (result instanceof DefaultValueHolder defaultValueHolder ? defaultValueHolder.defaultValue : result);
+	private static Object getAttributeValueForMirrorResolution(Method attribute, Object attributes) {
+		Object result = ((AnnotationAttributes) attributes).get(attribute.getName());
+		return (result instanceof DefaultValueHolder ? ((DefaultValueHolder) result).defaultValue : result);
 	}
 
 	@Nullable
@@ -998,10 +995,11 @@ public abstract class AnnotationUtils {
 			@Nullable Object annotatedElement, @Nullable Object value, boolean classValuesAsString) {
 
 		if (classValuesAsString) {
-			if (value instanceof Class<?> clazz) {
-				return clazz.getName();
+			if (value instanceof Class) {
+				return ((Class<?>) value).getName();
 			}
-			if (value instanceof Class<?>[] classes) {
+			if (value instanceof Class[]) {
+				Class<?>[] classes = (Class<?>[]) value;
 				String[] names = new String[classes.length];
 				for (int i = 0; i < classes.length; i++) {
 					names[i] = classes[i].getName();
@@ -1009,12 +1007,14 @@ public abstract class AnnotationUtils {
 				return names;
 			}
 		}
-		if (value instanceof Annotation annotation) {
+		if (value instanceof Annotation) {
+			Annotation annotation = (Annotation) value;
 			return MergedAnnotation.from(annotatedElement, annotation).synthesize();
 		}
-		if (value instanceof Annotation[] annotations) {
+		if (value instanceof Annotation[]) {
+			Annotation[] annotations = (Annotation[]) value;
 			Annotation[] synthesized = (Annotation[]) Array.newInstance(
-					annotations.getClass().componentType(), annotations.length);
+					annotations.getClass().getComponentType(), annotations.length);
 			for (int i = 0; i < annotations.length; i++) {
 				synthesized[i] = MergedAnnotation.from(annotatedElement, annotations[i]).synthesize();
 			}
@@ -1100,8 +1100,8 @@ public abstract class AnnotationUtils {
 	 * @param ex the throwable to inspect
 	 */
 	static void rethrowAnnotationConfigurationException(Throwable ex) {
-		if (ex instanceof AnnotationConfigurationException exception) {
-			throw exception;
+		if (ex instanceof AnnotationConfigurationException) {
+			throw (AnnotationConfigurationException) ex;
 		}
 	}
 
@@ -1124,7 +1124,7 @@ public abstract class AnnotationUtils {
 		rethrowAnnotationConfigurationException(ex);
 		IntrospectionFailureLogger logger = IntrospectionFailureLogger.INFO;
 		boolean meta = false;
-		if (element instanceof Class<?> clazz && Annotation.class.isAssignableFrom(clazz)) {
+		if (element instanceof Class && Annotation.class.isAssignableFrom((Class<?>) element)) {
 			// Meta-annotation introspection failure
 			logger = IntrospectionFailureLogger.DEBUG;
 			meta = true;
@@ -1310,7 +1310,7 @@ public abstract class AnnotationUtils {
 			return annotations;
 		}
 		Annotation[] synthesized = (Annotation[]) Array.newInstance(
-				annotations.getClass().componentType(), annotations.length);
+				annotations.getClass().getComponentType(), annotations.length);
 		for (int i = 0; i < annotations.length; i++) {
 			synthesized[i] = synthesizeAnnotation(annotations[i], annotatedElement);
 		}
@@ -1326,15 +1326,7 @@ public abstract class AnnotationUtils {
 	 * @since 5.3.23
 	 */
 	public static boolean isSynthesizedAnnotation(@Nullable Annotation annotation) {
-		try {
-			return (annotation != null && Proxy.isProxyClass(annotation.getClass()) &&
-					Proxy.getInvocationHandler(annotation) instanceof SynthesizedMergedAnnotationInvocationHandler);
-		}
-		catch (SecurityException ex) {
-			// Security settings disallow reflective access to the InvocationHandler:
-			// assume the annotation has not been synthesized by Spring.
-			return false;
-		}
+		return (annotation instanceof SynthesizedAnnotation);
 	}
 
 	/**

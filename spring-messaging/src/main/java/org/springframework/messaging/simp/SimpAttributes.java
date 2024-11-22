@@ -28,7 +28,7 @@ import org.springframework.util.StringUtils;
 
 /**
  * A wrapper class for access to attributes associated with a SiMP session
- * (for example, WebSocket session).
+ * (e.g. WebSocket session).
  *
  * @author Rossen Stoyanchev
  * @since 4.1

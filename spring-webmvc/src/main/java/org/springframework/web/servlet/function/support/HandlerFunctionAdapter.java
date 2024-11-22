@@ -18,9 +18,10 @@ package org.springframework.web.servlet.function.support;
 
 import java.util.List;
 
-import jakarta.servlet.ServletException;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -75,8 +76,6 @@ public class HandlerFunctionAdapter implements HandlerAdapter, Ordered {
 	 * for further processing of the concurrently produced result.
 	 * <p>If this value is not set, the default timeout of the underlying
 	 * implementation is used.
-	 * <p>A value of 0 or less indicates that the asynchronous operation will never
-	 * time out.
 	 * @param timeout the timeout value in milliseconds
 	 */
 	public void setAsyncRequestTimeout(long timeout) {
@@ -157,14 +156,14 @@ public class HandlerFunctionAdapter implements HandlerAdapter, Ordered {
 			String formatted = LogFormatUtils.formatValue(result, !traceOn);
 			return "Resume with async result [" + formatted + "]";
 		});
-		if (result instanceof ServerResponse response) {
-			return response;
+		if (result instanceof ServerResponse) {
+			return (ServerResponse) result;
 		}
-		else if (result instanceof Exception exception) {
-			throw exception;
+		else if (result instanceof Exception) {
+			throw (Exception) result;
 		}
-		else if (result instanceof Throwable throwable) {
-			throw new ServletException("Async processing failed", throwable);
+		else if (result instanceof Throwable) {
+			throw new ServletException("Async processing failed", (Throwable) result);
 		}
 		else if (result == null) {
 			return null;

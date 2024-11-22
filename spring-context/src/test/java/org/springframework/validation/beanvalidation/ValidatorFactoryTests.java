@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,16 +28,17 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
-import jakarta.validation.Constraint;
-import jakarta.validation.ConstraintValidator;
-import jakarta.validation.ConstraintValidatorContext;
-import jakarta.validation.ConstraintValidatorFactory;
-import jakarta.validation.ConstraintViolation;
-import jakarta.validation.Payload;
-import jakarta.validation.Valid;
-import jakarta.validation.Validator;
-import jakarta.validation.ValidatorFactory;
-import jakarta.validation.constraints.NotNull;
+import javax.validation.Constraint;
+import javax.validation.ConstraintValidator;
+import javax.validation.ConstraintValidatorContext;
+import javax.validation.ConstraintValidatorFactory;
+import javax.validation.ConstraintViolation;
+import javax.validation.Payload;
+import javax.validation.Valid;
+import javax.validation.Validator;
+import javax.validation.ValidatorFactory;
+import javax.validation.constraints.NotNull;
+
 import org.hibernate.validator.HibernateValidator;
 import org.hibernate.validator.HibernateValidatorFactory;
 import org.junit.jupiter.api.Test;
@@ -68,7 +69,7 @@ class ValidatorFactoryTests {
 
 		ValidPerson person = new ValidPerson();
 		Set<ConstraintViolation<ValidPerson>> result = validator.validate(person);
-		assertThat(result).hasSize(2);
+		assertThat(result.size()).isEqualTo(2);
 		for (ConstraintViolation<ValidPerson> cv : result) {
 			String path = cv.getPropertyPath().toString();
 			assertThat(path).matches(actual -> "name".equals(actual) || "address.street".equals(actual));
@@ -76,7 +77,7 @@ class ValidatorFactoryTests {
 		}
 
 		Validator nativeValidator = validator.unwrap(Validator.class);
-		assertThat(nativeValidator.getClass().getName()).startsWith("org.hibernate");
+		assertThat(nativeValidator.getClass().getName().startsWith("org.hibernate")).isTrue();
 		assertThat(validator.unwrap(ValidatorFactory.class)).isInstanceOf(HibernateValidatorFactory.class);
 		assertThat(validator.unwrap(HibernateValidatorFactory.class)).isInstanceOf(HibernateValidatorFactory.class);
 
@@ -92,7 +93,7 @@ class ValidatorFactoryTests {
 
 		ValidPerson person = new ValidPerson();
 		Set<ConstraintViolation<ValidPerson>> result = validator.validate(person);
-		assertThat(result).hasSize(2);
+		assertThat(result.size()).isEqualTo(2);
 		for (ConstraintViolation<ValidPerson> cv : result) {
 			String path = cv.getPropertyPath().toString();
 			assertThat(path).matches(actual -> "name".equals(actual) || "address.street".equals(actual));
@@ -100,7 +101,7 @@ class ValidatorFactoryTests {
 		}
 
 		Validator nativeValidator = validator.unwrap(Validator.class);
-		assertThat(nativeValidator.getClass().getName()).startsWith("org.hibernate");
+		assertThat(nativeValidator.getClass().getName().startsWith("org.hibernate")).isTrue();
 		assertThat(validator.unwrap(ValidatorFactory.class)).isInstanceOf(HibernateValidatorFactory.class);
 		assertThat(validator.unwrap(HibernateValidatorFactory.class)).isInstanceOf(HibernateValidatorFactory.class);
 
@@ -117,11 +118,11 @@ class ValidatorFactoryTests {
 		person.setName("Juergen");
 		person.getAddress().setStreet("Juergen's Street");
 		Set<ConstraintViolation<ValidPerson>> result = validator.validate(person);
-		assertThat(result).hasSize(1);
+		assertThat(result.size()).isEqualTo(1);
 		Iterator<ConstraintViolation<ValidPerson>> iterator = result.iterator();
 		ConstraintViolation<?> cv = iterator.next();
-		assertThat(cv.getPropertyPath().toString()).isEmpty();
-		assertThat(cv.getConstraintDescriptor().getAnnotation()).isInstanceOf(NameAddressValid.class);
+		assertThat(cv.getPropertyPath().toString()).isEqualTo("");
+		assertThat(cv.getConstraintDescriptor().getAnnotation() instanceof NameAddressValid).isTrue();
 
 		validator.destroy();
 	}
@@ -158,20 +159,20 @@ class ValidatorFactoryTests {
 		FieldError fieldError = result.getFieldError("name");
 		assertThat(fieldError.getField()).isEqualTo("name");
 		List<String> errorCodes = Arrays.asList(fieldError.getCodes());
-		assertThat(errorCodes).hasSize(4);
-		assertThat(errorCodes).contains("NotNull.person.name");
-		assertThat(errorCodes).contains("NotNull.name");
-		assertThat(errorCodes).contains("NotNull.java.lang.String");
-		assertThat(errorCodes).contains("NotNull");
+		assertThat(errorCodes.size()).isEqualTo(4);
+		assertThat(errorCodes.contains("NotNull.person.name")).isTrue();
+		assertThat(errorCodes.contains("NotNull.name")).isTrue();
+		assertThat(errorCodes.contains("NotNull.java.lang.String")).isTrue();
+		assertThat(errorCodes.contains("NotNull")).isTrue();
 		fieldError = result.getFieldError("address.street");
 		assertThat(fieldError.getField()).isEqualTo("address.street");
 		errorCodes = Arrays.asList(fieldError.getCodes());
-		assertThat(errorCodes).hasSize(5);
-		assertThat(errorCodes).contains("NotNull.person.address.street");
-		assertThat(errorCodes).contains("NotNull.address.street");
-		assertThat(errorCodes).contains("NotNull.street");
-		assertThat(errorCodes).contains("NotNull.java.lang.String");
-		assertThat(errorCodes).contains("NotNull");
+		assertThat(errorCodes.size()).isEqualTo(5);
+		assertThat(errorCodes.contains("NotNull.person.address.street")).isTrue();
+		assertThat(errorCodes.contains("NotNull.address.street")).isTrue();
+		assertThat(errorCodes.contains("NotNull.street")).isTrue();
+		assertThat(errorCodes.contains("NotNull.java.lang.String")).isTrue();
+		assertThat(errorCodes.contains("NotNull")).isTrue();
 
 		validator.destroy();
 	}
@@ -190,9 +191,9 @@ class ValidatorFactoryTests {
 		assertThat(result.getErrorCount()).isEqualTo(1);
 		ObjectError globalError = result.getGlobalError();
 		List<String> errorCodes = Arrays.asList(globalError.getCodes());
-		assertThat(errorCodes).hasSize(2);
-		assertThat(errorCodes).contains("NameAddressValid.person");
-		assertThat(errorCodes).contains("NameAddressValid");
+		assertThat(errorCodes.size()).isEqualTo(2);
+		assertThat(errorCodes.contains("NameAddressValid.person")).isTrue();
+		assertThat(errorCodes.contains("NameAddressValid")).isTrue();
 
 		validator.destroy();
 	}
@@ -212,9 +213,9 @@ class ValidatorFactoryTests {
 		assertThat(result.getErrorCount()).isEqualTo(1);
 		ObjectError globalError = result.getGlobalError();
 		List<String> errorCodes = Arrays.asList(globalError.getCodes());
-		assertThat(errorCodes).hasSize(2);
-		assertThat(errorCodes).contains("NameAddressValid.person");
-		assertThat(errorCodes).contains("NameAddressValid");
+		assertThat(errorCodes.size()).isEqualTo(2);
+		assertThat(errorCodes.contains("NameAddressValid.person")).isTrue();
+		assertThat(errorCodes.contains("NameAddressValid")).isTrue();
 
 		validator.destroy();
 		ctx.close();

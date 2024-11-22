@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,103 +18,154 @@ package org.springframework.core.annotation
 
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import org.springframework.core.annotation.MergedAnnotations
+import org.springframework.core.annotation.MergedAnnotation
 
 /**
  * Tests for {@link MergedAnnotations} and {@link MergedAnnotation} in Kotlin.
  *
  * @author Sam Brannen
- * @author Juergen Hoeller
- * @author Lorenz Simon
  * @since 5.3.16
  */
 class KotlinMergedAnnotationsTests {
 
 	@Test  // gh-28012
-	fun recursiveAnnotationWithAlias() {
-		val method = javaClass.getMethod("personWithAliasMethod")
+	fun recursiveAnnotation() {
+		val method = javaClass.getMethod("personMethod")
 
 		// MergedAnnotations
 		val mergedAnnotations = MergedAnnotations.from(method)
-		assertThat(mergedAnnotations.isPresent(PersonWithAlias::class.java)).isTrue();
+		assertThat(mergedAnnotations.isPresent(Person::class.java)).isTrue();
 
 		// MergedAnnotation
-		val mergedAnnotation = MergedAnnotation.from(method.getAnnotation(PersonWithAlias::class.java))
+		val mergedAnnotation = MergedAnnotation.from(method.getAnnotation(Person::class.java))
+		assertThat(mergedAnnotation).isNotNull();
+
+		// NON-Synthesized Annotations
+		val jane = mergedAnnotation.synthesize()
+		assertThat(jane).isNotInstanceOf(SynthesizedAnnotation::class.java)
+		assertThat(jane.name).isEqualTo("jane")
+		val synthesizedFriends = jane.friends
+		assertThat(synthesizedFriends).hasSize(2)
+
+		val john = synthesizedFriends[0]
+		assertThat(john).isNotInstanceOf(SynthesizedAnnotation::class.java)
+		assertThat(john.name).isEqualTo("john")
+
+		val sally = synthesizedFriends[1]
+		assertThat(sally).isNotInstanceOf(SynthesizedAnnotation::class.java)
+		assertThat(sally.name).isEqualTo("sally")
+	}
+
+	@Test  // gh-28012
+	fun recursiveAnnotationWithAttributeAliases() {
+		val method = javaClass.getMethod("synthesizablePersonMethod")
+
+		// MergedAnnotations
+		val mergedAnnotations = MergedAnnotations.from(method)
+		assertThat(mergedAnnotations.isPresent(SynthesizablePerson::class.java)).isTrue();
+
+		// MergedAnnotation
+		val mergedAnnotation = MergedAnnotation.from(method.getAnnotation(SynthesizablePerson::class.java))
 		assertThat(mergedAnnotation).isNotNull();
 
 		// Synthesized Annotations
 		val jane = mergedAnnotation.synthesize()
+		assertThat(jane).isInstanceOf(SynthesizedAnnotation::class.java)
 		assertThat(jane.value).isEqualTo("jane")
 		assertThat(jane.name).isEqualTo("jane")
 		val synthesizedFriends = jane.friends
 		assertThat(synthesizedFriends).hasSize(2)
 
 		val john = synthesizedFriends[0]
+		assertThat(john).isInstanceOf(SynthesizedAnnotation::class.java)
 		assertThat(john.value).isEqualTo("john")
 		assertThat(john.name).isEqualTo("john")
 
 		val sally = synthesizedFriends[1]
+		assertThat(sally).isInstanceOf(SynthesizedAnnotation::class.java)
 		assertThat(sally.value).isEqualTo("sally")
 		assertThat(sally.name).isEqualTo("sally")
 	}
 
-	@Test  // gh-31400
-	fun recursiveAnnotationWithoutAlias() {
-		val method = javaClass.getMethod("personWithoutAliasMethod")
+	@Test  // gh-28012
+	fun recursiveNestedAnnotation() {
+		val method = javaClass.getMethod("filterMethod")
 
 		// MergedAnnotations
 		val mergedAnnotations = MergedAnnotations.from(method)
-		assertThat(mergedAnnotations.isPresent(PersonWithoutAlias::class.java)).isTrue();
+		assertThat(mergedAnnotations.isPresent(Filter::class.java)).isTrue();
 
 		// MergedAnnotation
-		val mergedAnnotation = MergedAnnotation.from(method.getAnnotation(PersonWithoutAlias::class.java))
+		val mergedAnnotation = MergedAnnotation.from(method.getAnnotation(Filter::class.java))
 		assertThat(mergedAnnotation).isNotNull();
 
-		// Synthesized Annotations
-		val jane = mergedAnnotation.synthesize()
-		val synthesizedFriends = jane.friends
-		assertThat(synthesizedFriends).hasSize(2)
+		// NON-Synthesized Annotations
+		val fooFilter = mergedAnnotation.synthesize()
+		assertThat(fooFilter).isNotInstanceOf(SynthesizedAnnotation::class.java)
+		assertThat(fooFilter.value).isEqualTo("foo")
+		val filters = fooFilter.and
+		assertThat(filters.value).hasSize(2)
+
+		val barFilter = filters.value[0]
+		assertThat(barFilter).isNotInstanceOf(SynthesizedAnnotation::class.java)
+		assertThat(barFilter.value).isEqualTo("bar")
+		assertThat(barFilter.and.value).isEmpty()
+
+		val bazFilter = filters.value[1]
+		assertThat(bazFilter).isNotInstanceOf(SynthesizedAnnotation::class.java)
+		assertThat(bazFilter.value).isEqualTo("baz")
+		assertThat(bazFilter.and.value).isEmpty()
 	}
 
 	@Test  // gh-28012
-	fun recursiveNestedAnnotationWithAlias() {
-		val method = javaClass.getMethod("filterWithAliasMethod")
+	fun recursiveNestedAnnotationWithAttributeAliases() {
+		val method = javaClass.getMethod("synthesizableFilterMethod")
 
 		// MergedAnnotations
 		val mergedAnnotations = MergedAnnotations.from(method)
-		assertThat(mergedAnnotations.isPresent(FilterWithAlias::class.java)).isTrue();
+		assertThat(mergedAnnotations.isPresent(SynthesizableFilter::class.java)).isTrue();
 
 		// MergedAnnotation
-		val mergedAnnotation = MergedAnnotation.from(method.getAnnotation(FilterWithAlias::class.java))
+		val mergedAnnotation = MergedAnnotation.from(method.getAnnotation(SynthesizableFilter::class.java))
 		assertThat(mergedAnnotation).isNotNull();
 
 		// Synthesized Annotations
 		val fooFilter = mergedAnnotation.synthesize()
+		assertThat(fooFilter).isInstanceOf(SynthesizedAnnotation::class.java)
 		assertThat(fooFilter.value).isEqualTo("foo")
 		assertThat(fooFilter.name).isEqualTo("foo")
 		val filters = fooFilter.and
 		assertThat(filters.value).hasSize(2)
 
 		val barFilter = filters.value[0]
+		assertThat(barFilter).isInstanceOf(SynthesizedAnnotation::class.java)
 		assertThat(barFilter.value).isEqualTo("bar")
 		assertThat(barFilter.name).isEqualTo("bar")
 		assertThat(barFilter.and.value).isEmpty()
 
 		val bazFilter = filters.value[1]
+		assertThat(bazFilter).isInstanceOf(SynthesizedAnnotation::class.java)
 		assertThat(bazFilter.value).isEqualTo("baz")
 		assertThat(bazFilter.name).isEqualTo("baz")
 		assertThat(bazFilter.and.value).isEmpty()
 	}
 
-	@PersonWithAlias("jane", friends = [PersonWithAlias("john"), PersonWithAlias("sally")])
-	fun personWithAliasMethod() {
+
+	@Person(name = "jane", friends = [Person(name = "john"), Person(name = "sally")])
+	fun personMethod() {
 	}
 
-	@PersonWithoutAlias("jane", friends = [PersonWithoutAlias("john"), PersonWithoutAlias("sally")])
-	fun personWithoutAliasMethod() {
+	@SynthesizablePerson(name = "jane", friends = [SynthesizablePerson(name = "john"), SynthesizablePerson(name = "sally")])
+	fun synthesizablePersonMethod() {
 	}
 
-	@FilterWithAlias("foo", and = FiltersWithoutAlias(FilterWithAlias("bar"), FilterWithAlias("baz")))
-	fun filterWithAliasMethod() {
+	@Filter("foo", and = Filters(Filter("bar"), Filter("baz")))
+	fun filterMethod() {
+	}
+
+	@SynthesizableFilter("foo", and = SynthesizableFilters(SynthesizableFilter("bar"), SynthesizableFilter("baz")))
+	fun synthesizableFilterMethod() {
 	}
 
 }

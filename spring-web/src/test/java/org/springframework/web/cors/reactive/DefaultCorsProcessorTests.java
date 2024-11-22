@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2021 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,7 +42,7 @@ import static org.springframework.http.HttpHeaders.VARY;
  *
  * @author Sebastien Deleuze
  */
-class DefaultCorsProcessorTests {
+public class DefaultCorsProcessorTests {
 
 	private DefaultCorsProcessor processor;
 
@@ -50,14 +50,14 @@ class DefaultCorsProcessorTests {
 
 
 	@BeforeEach
-	void setup() {
+	public void setup() {
 		this.conf = new CorsConfiguration();
 		this.processor = new DefaultCorsProcessor();
 	}
 
 
 	@Test
-	void requestWithoutOriginHeader() {
+	public void requestWithoutOriginHeader() {
 		MockServerHttpRequest request = MockServerHttpRequest
 				.method(HttpMethod.GET, "http://domain1.example/test.html")
 				.build();
@@ -68,11 +68,11 @@ class DefaultCorsProcessorTests {
 		assertThat(response.getHeaders().containsKey(ACCESS_CONTROL_ALLOW_ORIGIN)).isFalse();
 		assertThat(response.getHeaders().get(VARY)).contains(ORIGIN,
 				ACCESS_CONTROL_REQUEST_METHOD, ACCESS_CONTROL_REQUEST_HEADERS);
-		assertThat(response.getStatusCode()).isNull();
+		assertThat((Object) response.getStatusCode()).isNull();
 	}
 
 	@Test
-	void sameOriginRequest() {
+	public void sameOriginRequest() {
 		MockServerHttpRequest request = MockServerHttpRequest
 				.method(HttpMethod.GET, "http://domain1.example/test.html")
 				.header(HttpHeaders.ORIGIN, "http://domain1.example")
@@ -84,11 +84,11 @@ class DefaultCorsProcessorTests {
 		assertThat(response.getHeaders().containsKey(ACCESS_CONTROL_ALLOW_ORIGIN)).isFalse();
 		assertThat(response.getHeaders().get(VARY)).contains(ORIGIN,
 				ACCESS_CONTROL_REQUEST_METHOD, ACCESS_CONTROL_REQUEST_HEADERS);
-		assertThat(response.getStatusCode()).isNull();
+		assertThat((Object) response.getStatusCode()).isNull();
 	}
 
 	@Test
-	void actualRequestWithOriginHeader() {
+	public void actualRequestWithOriginHeader() {
 		ServerWebExchange exchange = actualRequest();
 		this.processor.process(this.conf, exchange);
 
@@ -100,17 +100,17 @@ class DefaultCorsProcessorTests {
 	}
 
 	@Test
-	void actualRequestWithOriginHeaderAndNullConfig() {
+	public void actualRequestWithOriginHeaderAndNullConfig() {
 		ServerWebExchange exchange = actualRequest();
 		this.processor.process(null, exchange);
 
 		ServerHttpResponse response = exchange.getResponse();
 		assertThat(response.getHeaders().containsKey(ACCESS_CONTROL_ALLOW_ORIGIN)).isFalse();
-		assertThat(response.getStatusCode()).isNull();
+		assertThat((Object) response.getStatusCode()).isNull();
 	}
 
 	@Test
-	void actualRequestWithOriginHeaderAndAllowedOrigin() {
+	public void actualRequestWithOriginHeaderAndAllowedOrigin() {
 		ServerWebExchange exchange = actualRequest();
 		this.conf.addAllowedOrigin("*");
 		this.processor.process(this.conf, exchange);
@@ -122,11 +122,11 @@ class DefaultCorsProcessorTests {
 		assertThat(response.getHeaders().containsKey(HttpHeaders.ACCESS_CONTROL_EXPOSE_HEADERS)).isFalse();
 		assertThat(response.getHeaders().get(VARY)).contains(ORIGIN,
 				ACCESS_CONTROL_REQUEST_METHOD, ACCESS_CONTROL_REQUEST_HEADERS);
-		assertThat(response.getStatusCode()).isNull();
+		assertThat((Object) response.getStatusCode()).isNull();
 	}
 
 	@Test
-	void actualRequestCredentials() {
+	public void actualRequestCredentials() {
 		ServerWebExchange exchange = actualRequest();
 		this.conf.addAllowedOrigin("https://domain1.com");
 		this.conf.addAllowedOrigin("https://domain2.com");
@@ -141,11 +141,11 @@ class DefaultCorsProcessorTests {
 		assertThat(response.getHeaders().getFirst(HttpHeaders.ACCESS_CONTROL_ALLOW_CREDENTIALS)).isEqualTo("true");
 		assertThat(response.getHeaders().get(VARY)).contains(ORIGIN,
 				ACCESS_CONTROL_REQUEST_METHOD, ACCESS_CONTROL_REQUEST_HEADERS);
-		assertThat(response.getStatusCode()).isNull();
+		assertThat((Object) response.getStatusCode()).isNull();
 	}
 
 	@Test
-	void actualRequestCredentialsWithWildcardOrigin() {
+	public void actualRequestCredentialsWithWildcardOrigin() {
 		ServerWebExchange exchange = actualRequest();
 		this.conf.addAllowedOrigin("*");
 		this.conf.setAllowCredentials(true);
@@ -162,17 +162,17 @@ class DefaultCorsProcessorTests {
 		assertThat(response.getHeaders().getFirst(HttpHeaders.ACCESS_CONTROL_ALLOW_CREDENTIALS)).isEqualTo("true");
 		assertThat(response.getHeaders().get(VARY)).contains(ORIGIN,
 				ACCESS_CONTROL_REQUEST_METHOD, ACCESS_CONTROL_REQUEST_HEADERS);
-		assertThat(response.getStatusCode()).isNull();
+		assertThat((Object) response.getStatusCode()).isNull();
 	}
 
 	@Test
-	void actualRequestCaseInsensitiveOriginMatch() {
+	public void actualRequestCaseInsensitiveOriginMatch() {
 		ServerWebExchange exchange = actualRequest();
 		this.conf.addAllowedOrigin("https://DOMAIN2.com");
 		this.processor.process(this.conf, exchange);
 
 		ServerHttpResponse response = exchange.getResponse();
-		assertThat(response.getStatusCode()).isNull();
+		assertThat((Object) response.getStatusCode()).isNull();
 		assertThat(response.getHeaders().containsKey(ACCESS_CONTROL_ALLOW_ORIGIN)).isTrue();
 	}
 
@@ -186,27 +186,12 @@ class DefaultCorsProcessorTests {
 		this.processor.process(this.conf, exchange);
 
 		ServerHttpResponse response = exchange.getResponse();
-		assertThat(response.getStatusCode()).isNull();
+		assertThat((Object) response.getStatusCode()).isNull();
 		assertThat(response.getHeaders().containsKey(ACCESS_CONTROL_ALLOW_ORIGIN)).isTrue();
 	}
 
-	@Test // gh-33682
-	public void actualRequestMalformedOriginRejected() {
-		ServerWebExchange exchange = MockServerWebExchange.from(MockServerHttpRequest
-				.method(HttpMethod.GET, "http://localhost/test.html")
-				.header(HttpHeaders.ORIGIN, "http://*@:;"));
-
-		this.conf.addAllowedOrigin("https://domain2.com");
-		boolean result = this.processor.process(this.conf, exchange);
-		ServerHttpResponse response = exchange.getResponse();
-
-		assertThat(result).isFalse();
-		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
-		assertThat(response.getHeaders().containsKey(ACCESS_CONTROL_ALLOW_ORIGIN)).isFalse();
-	}
-
 	@Test
-	void actualRequestExposedHeaders() {
+	public void actualRequestExposedHeaders() {
 		ServerWebExchange exchange = actualRequest();
 		this.conf.addExposedHeader("header1");
 		this.conf.addExposedHeader("header2");
@@ -217,15 +202,15 @@ class DefaultCorsProcessorTests {
 		assertThat(response.getHeaders().containsKey(ACCESS_CONTROL_ALLOW_ORIGIN)).isTrue();
 		assertThat(response.getHeaders().getFirst(ACCESS_CONTROL_ALLOW_ORIGIN)).isEqualTo("https://domain2.com");
 		assertThat(response.getHeaders().containsKey(HttpHeaders.ACCESS_CONTROL_EXPOSE_HEADERS)).isTrue();
-		assertThat(response.getHeaders().getFirst(HttpHeaders.ACCESS_CONTROL_EXPOSE_HEADERS)).contains("header1");
-		assertThat(response.getHeaders().getFirst(HttpHeaders.ACCESS_CONTROL_EXPOSE_HEADERS)).contains("header2");
+		assertThat(response.getHeaders().getFirst(HttpHeaders.ACCESS_CONTROL_EXPOSE_HEADERS).contains("header1")).isTrue();
+		assertThat(response.getHeaders().getFirst(HttpHeaders.ACCESS_CONTROL_EXPOSE_HEADERS).contains("header2")).isTrue();
 		assertThat(response.getHeaders().get(VARY)).contains(ORIGIN,
 				ACCESS_CONTROL_REQUEST_METHOD, ACCESS_CONTROL_REQUEST_HEADERS);
-		assertThat(response.getStatusCode()).isNull();
+		assertThat((Object) response.getStatusCode()).isNull();
 	}
 
 	@Test
-	void preflightRequestAllOriginsAllowed() {
+	public void preflightRequestAllOriginsAllowed() {
 		ServerWebExchange exchange = MockServerWebExchange.from(
 				preFlightRequest().header(ACCESS_CONTROL_REQUEST_METHOD, "GET"));
 		this.conf.addAllowedOrigin("*");
@@ -234,12 +219,12 @@ class DefaultCorsProcessorTests {
 		ServerHttpResponse response = exchange.getResponse();
 		assertThat(response.getHeaders().get(VARY)).contains(ORIGIN,
 				ACCESS_CONTROL_REQUEST_METHOD, ACCESS_CONTROL_REQUEST_HEADERS);
-		assertThat(response.getStatusCode()).isNull();
+		assertThat((Object) response.getStatusCode()).isNull();
 	}
 
 
 	@Test
-	void preflightRequestWrongAllowedMethod() {
+	public void preflightRequestWrongAllowedMethod() {
 		ServerWebExchange exchange = MockServerWebExchange.from(
 				preFlightRequest().header(ACCESS_CONTROL_REQUEST_METHOD, "DELETE"));
 		this.conf.addAllowedOrigin("*");
@@ -252,21 +237,21 @@ class DefaultCorsProcessorTests {
 	}
 
 	@Test
-	void preflightRequestMatchedAllowedMethod() {
+	public void preflightRequestMatchedAllowedMethod() {
 		ServerWebExchange exchange = MockServerWebExchange.from(
 				preFlightRequest().header(ACCESS_CONTROL_REQUEST_METHOD, "GET"));
 		this.conf.addAllowedOrigin("*");
 		this.processor.process(this.conf, exchange);
 
 		ServerHttpResponse response = exchange.getResponse();
-		assertThat(response.getStatusCode()).isNull();
+		assertThat((Object) response.getStatusCode()).isNull();
 		assertThat(response.getHeaders().get(VARY)).contains(ORIGIN,
 				ACCESS_CONTROL_REQUEST_METHOD, ACCESS_CONTROL_REQUEST_HEADERS);
 		assertThat(response.getHeaders().getFirst(HttpHeaders.ACCESS_CONTROL_ALLOW_METHODS)).isEqualTo("GET,HEAD");
 	}
 
 	@Test
-	void preflightRequestTestWithOriginButWithoutOtherHeaders() {
+	public void preflightRequestTestWithOriginButWithoutOtherHeaders() {
 		ServerWebExchange exchange = MockServerWebExchange.from(preFlightRequest());
 		this.processor.process(this.conf, exchange);
 
@@ -278,7 +263,7 @@ class DefaultCorsProcessorTests {
 	}
 
 	@Test
-	void preflightRequestWithoutRequestMethod() {
+	public void preflightRequestWithoutRequestMethod() {
 		ServerWebExchange exchange = MockServerWebExchange.from(
 				preFlightRequest().header(ACCESS_CONTROL_REQUEST_HEADERS, "Header1"));
 		this.processor.process(this.conf, exchange);
@@ -291,7 +276,7 @@ class DefaultCorsProcessorTests {
 	}
 
 	@Test
-	void preflightRequestWithRequestAndMethodHeaderButNoConfig() {
+	public void preflightRequestWithRequestAndMethodHeaderButNoConfig() {
 		ServerWebExchange exchange = MockServerWebExchange.from(preFlightRequest()
 				.header(ACCESS_CONTROL_REQUEST_METHOD, "GET")
 				.header(ACCESS_CONTROL_REQUEST_HEADERS, "Header1"));
@@ -306,7 +291,7 @@ class DefaultCorsProcessorTests {
 	}
 
 	@Test
-	void preflightRequestValidRequestAndConfig() {
+	public void preflightRequestValidRequestAndConfig() {
 		ServerWebExchange exchange = MockServerWebExchange.from(preFlightRequest()
 				.header(ACCESS_CONTROL_REQUEST_METHOD, "GET")
 				.header(ACCESS_CONTROL_REQUEST_HEADERS, "Header1"));
@@ -327,11 +312,11 @@ class DefaultCorsProcessorTests {
 		assertThat(response.getHeaders().containsKey(HttpHeaders.ACCESS_CONTROL_MAX_AGE)).isFalse();
 		assertThat(response.getHeaders().get(VARY)).contains(ORIGIN,
 				ACCESS_CONTROL_REQUEST_METHOD, ACCESS_CONTROL_REQUEST_HEADERS);
-		assertThat(response.getStatusCode()).isNull();
+		assertThat((Object) response.getStatusCode()).isNull();
 	}
 
 	@Test
-	void preflightRequestCredentials() {
+	public void preflightRequestCredentials() {
 		ServerWebExchange exchange = MockServerWebExchange.from(preFlightRequest()
 				.header(ACCESS_CONTROL_REQUEST_METHOD, "GET")
 				.header(ACCESS_CONTROL_REQUEST_HEADERS, "Header1"));
@@ -351,11 +336,11 @@ class DefaultCorsProcessorTests {
 		assertThat(response.getHeaders().getFirst(HttpHeaders.ACCESS_CONTROL_ALLOW_CREDENTIALS)).isEqualTo("true");
 		assertThat(response.getHeaders().get(VARY)).contains(ORIGIN,
 				ACCESS_CONTROL_REQUEST_METHOD, ACCESS_CONTROL_REQUEST_HEADERS);
-		assertThat(response.getStatusCode()).isNull();
+		assertThat((Object) response.getStatusCode()).isNull();
 	}
 
 	@Test
-	void preflightRequestCredentialsWithWildcardOrigin() {
+	public void preflightRequestCredentialsWithWildcardOrigin() {
 		ServerWebExchange exchange = MockServerWebExchange.from(preFlightRequest()
 				.header(ACCESS_CONTROL_REQUEST_METHOD, "GET")
 				.header(ACCESS_CONTROL_REQUEST_HEADERS, "Header1"));
@@ -376,11 +361,11 @@ class DefaultCorsProcessorTests {
 		assertThat(response.getHeaders().getFirst(ACCESS_CONTROL_ALLOW_ORIGIN)).isEqualTo("https://domain2.com");
 		assertThat(response.getHeaders().get(VARY)).contains(ORIGIN,
 				ACCESS_CONTROL_REQUEST_METHOD, ACCESS_CONTROL_REQUEST_HEADERS);
-		assertThat(response.getStatusCode()).isNull();
+		assertThat((Object) response.getStatusCode()).isNull();
 	}
 
 	@Test
-	void preflightRequestPrivateNetworkWithWildcardOrigin() {
+	public void preflightRequestPrivateNetworkWithWildcardOrigin() {
 		ServerWebExchange exchange = MockServerWebExchange.from(preFlightRequest()
 				.header(ACCESS_CONTROL_REQUEST_METHOD, "GET")
 				.header(ACCESS_CONTROL_REQUEST_HEADERS, "Header1")
@@ -407,7 +392,7 @@ class DefaultCorsProcessorTests {
 	}
 
 	@Test
-	void preflightRequestAllowedHeaders() {
+	public void preflightRequestAllowedHeaders() {
 		ServerWebExchange exchange = MockServerWebExchange.from(preFlightRequest()
 				.header(ACCESS_CONTROL_REQUEST_METHOD, "GET")
 				.header(ACCESS_CONTROL_REQUEST_HEADERS, "Header1, Header2"));
@@ -422,16 +407,16 @@ class DefaultCorsProcessorTests {
 		ServerHttpResponse response = exchange.getResponse();
 		assertThat(response.getHeaders().containsKey(ACCESS_CONTROL_ALLOW_ORIGIN)).isTrue();
 		assertThat(response.getHeaders().containsKey(ACCESS_CONTROL_ALLOW_HEADERS)).isTrue();
-		assertThat(response.getHeaders().getFirst(ACCESS_CONTROL_ALLOW_HEADERS)).contains("Header1");
-		assertThat(response.getHeaders().getFirst(ACCESS_CONTROL_ALLOW_HEADERS)).contains("Header2");
-		assertThat(response.getHeaders().getFirst(ACCESS_CONTROL_ALLOW_HEADERS)).doesNotContain("Header3");
+		assertThat(response.getHeaders().getFirst(ACCESS_CONTROL_ALLOW_HEADERS).contains("Header1")).isTrue();
+		assertThat(response.getHeaders().getFirst(ACCESS_CONTROL_ALLOW_HEADERS).contains("Header2")).isTrue();
+		assertThat(response.getHeaders().getFirst(ACCESS_CONTROL_ALLOW_HEADERS).contains("Header3")).isFalse();
 		assertThat(response.getHeaders().get(VARY)).contains(ORIGIN,
 				ACCESS_CONTROL_REQUEST_METHOD, ACCESS_CONTROL_REQUEST_HEADERS);
-		assertThat(response.getStatusCode()).isNull();
+		assertThat((Object) response.getStatusCode()).isNull();
 	}
 
 	@Test
-	void preflightRequestAllowsAllHeaders() {
+	public void preflightRequestAllowsAllHeaders() {
 		ServerWebExchange exchange = MockServerWebExchange.from(preFlightRequest()
 				.header(ACCESS_CONTROL_REQUEST_METHOD, "GET")
 				.header(ACCESS_CONTROL_REQUEST_HEADERS, "Header1, Header2"));
@@ -444,16 +429,16 @@ class DefaultCorsProcessorTests {
 		ServerHttpResponse response = exchange.getResponse();
 		assertThat(response.getHeaders().containsKey(ACCESS_CONTROL_ALLOW_ORIGIN)).isTrue();
 		assertThat(response.getHeaders().containsKey(ACCESS_CONTROL_ALLOW_HEADERS)).isTrue();
-		assertThat(response.getHeaders().getFirst(ACCESS_CONTROL_ALLOW_HEADERS)).contains("Header1");
-		assertThat(response.getHeaders().getFirst(ACCESS_CONTROL_ALLOW_HEADERS)).contains("Header2");
-		assertThat(response.getHeaders().getFirst(ACCESS_CONTROL_ALLOW_HEADERS)).doesNotContain("*");
+		assertThat(response.getHeaders().getFirst(ACCESS_CONTROL_ALLOW_HEADERS).contains("Header1")).isTrue();
+		assertThat(response.getHeaders().getFirst(ACCESS_CONTROL_ALLOW_HEADERS).contains("Header2")).isTrue();
+		assertThat(response.getHeaders().getFirst(ACCESS_CONTROL_ALLOW_HEADERS).contains("*")).isFalse();
 		assertThat(response.getHeaders().get(VARY)).contains(ORIGIN,
 				ACCESS_CONTROL_REQUEST_METHOD, ACCESS_CONTROL_REQUEST_HEADERS);
-		assertThat(response.getStatusCode()).isNull();
+		assertThat((Object) response.getStatusCode()).isNull();
 	}
 
 	@Test
-	void preflightRequestWithEmptyHeaders() {
+	public void preflightRequestWithEmptyHeaders() {
 		ServerWebExchange exchange = MockServerWebExchange.from(preFlightRequest()
 				.header(ACCESS_CONTROL_REQUEST_METHOD, "GET")
 				.header(ACCESS_CONTROL_REQUEST_HEADERS, ""));
@@ -468,11 +453,11 @@ class DefaultCorsProcessorTests {
 		assertThat(response.getHeaders().containsKey(ACCESS_CONTROL_ALLOW_HEADERS)).isFalse();
 		assertThat(response.getHeaders().get(VARY)).contains(ORIGIN,
 				ACCESS_CONTROL_REQUEST_METHOD, ACCESS_CONTROL_REQUEST_HEADERS);
-		assertThat(response.getStatusCode()).isNull();
+		assertThat((Object) response.getStatusCode()).isNull();
 	}
 
 	@Test
-	void preflightRequestWithNullConfig() {
+	public void preflightRequestWithNullConfig() throws Exception {
 		ServerWebExchange exchange = MockServerWebExchange.from(
 				preFlightRequest().header(ACCESS_CONTROL_REQUEST_METHOD, "GET"));
 		this.conf.addAllowedOrigin("*");
@@ -484,7 +469,7 @@ class DefaultCorsProcessorTests {
 	}
 
 	@Test
-	void preventDuplicatedVaryHeaders() {
+	public void preventDuplicatedVaryHeaders() {
 		MockServerHttpRequest request = MockServerHttpRequest
 				.method(HttpMethod.GET, "http://domain1.example/test.html")
 				.header(HttpHeaders.ORIGIN, "http://domain1.example")
@@ -503,7 +488,7 @@ class DefaultCorsProcessorTests {
 	}
 
 	@Test
-	void preflightRequestWithoutAccessControlRequestPrivateNetwork() {
+	public void preflightRequestWithoutAccessControlRequestPrivateNetwork() {
 		ServerWebExchange exchange = MockServerWebExchange.from(preFlightRequest()
 				.header(ACCESS_CONTROL_REQUEST_METHOD, "GET"));
 
@@ -519,7 +504,7 @@ class DefaultCorsProcessorTests {
 	}
 
 	@Test
-	void preflightRequestWithAccessControlRequestPrivateNetworkNotAllowed() {
+	public void preflightRequestWithAccessControlRequestPrivateNetworkNotAllowed() {
 		ServerWebExchange exchange = MockServerWebExchange.from(preFlightRequest()
 				.header(ACCESS_CONTROL_REQUEST_METHOD, "GET")
 				.header(DefaultCorsProcessor.ACCESS_CONTROL_REQUEST_PRIVATE_NETWORK, "true"));
@@ -536,7 +521,7 @@ class DefaultCorsProcessorTests {
 	}
 
 	@Test
-	void preflightRequestWithAccessControlRequestPrivateNetworkAllowed() {
+	public void preflightRequestWithAccessControlRequestPrivateNetworkAllowed() {
 		ServerWebExchange exchange = MockServerWebExchange.from(preFlightRequest()
 				.header(ACCESS_CONTROL_REQUEST_METHOD, "GET")
 				.header(DefaultCorsProcessor.ACCESS_CONTROL_REQUEST_PRIVATE_NETWORK, "true"));

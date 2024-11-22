@@ -27,9 +27,7 @@ import org.springframework.util.ObjectUtils;
  * @author Mark Paluch
  * @author Juergen Hoeller
  * @since 5.3
- * @deprecated since 6.0, use {@code io.r2dbc.spi.Parameter} instead.
  */
-@Deprecated(since = "6.0")
 public final class Parameter {
 
 	@Nullable
@@ -109,15 +107,21 @@ public final class Parameter {
 
 
 	@Override
-	public boolean equals(@Nullable Object other) {
-		return (this == other || (other instanceof Parameter that &&
-				ObjectUtils.nullSafeEquals(this.value, that.value) &&
-				ObjectUtils.nullSafeEquals(this.type, that.type)));
+	public boolean equals(Object other) {
+		if (this == other) {
+			return true;
+		}
+		if (!(other instanceof Parameter)) {
+			return false;
+		}
+		Parameter that = (Parameter) other;
+		return (ObjectUtils.nullSafeEquals(this.value, that.value) &&
+				ObjectUtils.nullSafeEquals(this.type, that.type));
 	}
 
 	@Override
 	public int hashCode() {
-		return ObjectUtils.nullSafeHash(this.value, this.type);
+		return ObjectUtils.nullSafeHashCode(this.value) + ObjectUtils.nullSafeHashCode(this.type);
 	}
 
 	@Override

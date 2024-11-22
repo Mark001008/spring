@@ -106,11 +106,11 @@ public abstract class ReflectionUtils {
 		if (ex instanceof IllegalAccessException) {
 			throw new IllegalStateException("Could not access method or field: " + ex.getMessage());
 		}
-		if (ex instanceof InvocationTargetException invocationTargetException) {
-			handleInvocationTargetException(invocationTargetException);
+		if (ex instanceof InvocationTargetException) {
+			handleInvocationTargetException((InvocationTargetException) ex);
 		}
-		if (ex instanceof RuntimeException runtimeException) {
-			throw runtimeException;
+		if (ex instanceof RuntimeException) {
+			throw (RuntimeException) ex;
 		}
 		throw new UndeclaredThrowableException(ex);
 	}
@@ -137,12 +137,12 @@ public abstract class ReflectionUtils {
 	 * @param ex the exception to rethrow
 	 * @throws RuntimeException the rethrown exception
 	 */
-	public static void rethrowRuntimeException(@Nullable Throwable ex) {
-		if (ex instanceof RuntimeException runtimeException) {
-			throw runtimeException;
+	public static void rethrowRuntimeException(Throwable ex) {
+		if (ex instanceof RuntimeException) {
+			throw (RuntimeException) ex;
 		}
-		if (ex instanceof Error error) {
-			throw error;
+		if (ex instanceof Error) {
+			throw (Error) ex;
 		}
 		throw new UndeclaredThrowableException(ex);
 	}
@@ -155,17 +155,17 @@ public abstract class ReflectionUtils {
 	 * <p>Rethrows the underlying exception cast to an {@link Exception} or
 	 * {@link Error} if appropriate; otherwise, throws an
 	 * {@link UndeclaredThrowableException}.
-	 * @param throwable the exception to rethrow
+	 * @param ex the exception to rethrow
 	 * @throws Exception the rethrown exception (in case of a checked exception)
 	 */
-	public static void rethrowException(@Nullable Throwable throwable) throws Exception {
-		if (throwable instanceof Exception exception) {
-			throw exception;
+	public static void rethrowException(Throwable ex) throws Exception {
+		if (ex instanceof Exception) {
+			throw (Exception) ex;
 		}
-		if (throwable instanceof Error error) {
-			throw error;
+		if (ex instanceof Error) {
+			throw (Error) ex;
 		}
-		throw new UndeclaredThrowableException(throwable);
+		throw new UndeclaredThrowableException(ex);
 	}
 
 
@@ -190,11 +190,12 @@ public abstract class ReflectionUtils {
 	/**
 	 * Make the given constructor accessible, explicitly setting it accessible
 	 * if necessary. The {@code setAccessible(true)} method is only called
-	 * when actually necessary, to avoid unnecessary conflicts.
+	 * when actually necessary, to avoid unnecessary conflicts with a JVM
+	 * SecurityManager (if active).
 	 * @param ctor the constructor to make accessible
 	 * @see java.lang.reflect.Constructor#setAccessible
 	 */
-	@SuppressWarnings("deprecation")
+	@SuppressWarnings("deprecation")  // on JDK 9
 	public static void makeAccessible(Constructor<?> ctor) {
 		if ((!Modifier.isPublic(ctor.getModifiers()) ||
 				!Modifier.isPublic(ctor.getDeclaringClass().getModifiers())) && !ctor.isAccessible()) {
@@ -444,9 +445,10 @@ public abstract class ReflectionUtils {
 
 	/**
 	 * Variant of {@link Class#getDeclaredMethods()} that uses a local cache in
-	 * order to avoid new Method instances. In addition, it also includes Java 8
-	 * default methods from locally implemented interfaces, since those are
-	 * effectively to be treated just like declared methods.
+	 * order to avoid the JVM's SecurityManager check and new Method instances.
+	 * In addition, it also includes Java 8 default methods from locally
+	 * implemented interfaces, since those are effectively to be treated just
+	 * like declared methods.
 	 * @param clazz the class to introspect
 	 * @return the cached array of methods
 	 * @throws IllegalStateException if introspection fails
@@ -463,7 +465,7 @@ public abstract class ReflectionUtils {
 		if (result == null) {
 			try {
 				Method[] declaredMethods = clazz.getDeclaredMethods();
-				List<Method> defaultMethods = findDefaultMethodsOnInterfaces(clazz);
+				List<Method> defaultMethods = findConcreteMethodsOnInterfaces(clazz);
 				if (defaultMethods != null) {
 					result = new Method[declaredMethods.length + defaultMethods.size()];
 					System.arraycopy(declaredMethods, 0, result, 0, declaredMethods.length);
@@ -487,15 +489,15 @@ public abstract class ReflectionUtils {
 	}
 
 	@Nullable
-	private static List<Method> findDefaultMethodsOnInterfaces(Class<?> clazz) {
+	private static List<Method> findConcreteMethodsOnInterfaces(Class<?> clazz) {
 		List<Method> result = null;
 		for (Class<?> ifc : clazz.getInterfaces()) {
-			for (Method method : ifc.getMethods()) {
-				if (method.isDefault()) {
+			for (Method ifcMethod : ifc.getMethods()) {
+				if (!Modifier.isAbstract(ifcMethod.getModifiers())) {
 					if (result == null) {
 						result = new ArrayList<>();
 					}
-					result.add(method);
+					result.add(ifcMethod);
 				}
 			}
 		}
@@ -555,11 +557,12 @@ public abstract class ReflectionUtils {
 	/**
 	 * Make the given method accessible, explicitly setting it accessible if
 	 * necessary. The {@code setAccessible(true)} method is only called
-	 * when actually necessary, to avoid unnecessary conflicts.
+	 * when actually necessary, to avoid unnecessary conflicts with a JVM
+	 * SecurityManager (if active).
 	 * @param method the method to make accessible
 	 * @see java.lang.reflect.Method#setAccessible
 	 */
-	@SuppressWarnings("deprecation")
+	@SuppressWarnings("deprecation")  // on JDK 9
 	public static void makeAccessible(Method method) {
 		if ((!Modifier.isPublic(method.getModifiers()) ||
 				!Modifier.isPublic(method.getDeclaringClass().getModifiers())) && !method.isAccessible()) {
@@ -601,31 +604,6 @@ public abstract class ReflectionUtils {
 			for (Field field : fields) {
 				if ((name == null || name.equals(field.getName())) &&
 						(type == null || type.equals(field.getType()))) {
-					return field;
-				}
-			}
-			searchType = searchType.getSuperclass();
-		}
-		return null;
-	}
-
-	/**
-	 * Attempt to find a {@link Field field} on the supplied {@link Class} with the
-	 * supplied {@code name}. Searches all superclasses up to {@link Object}.
-	 * @param clazz the class to introspect
-	 * @param name the name of the field (with upper/lower case to be ignored)
-	 * @return the corresponding Field object, or {@code null} if not found
-	 * @since 6.1
-	 */
-	@Nullable
-	public static Field findFieldIgnoreCase(Class<?> clazz, String name) {
-		Assert.notNull(clazz, "Class must not be null");
-		Assert.notNull(name, "Name must not be null");
-		Class<?> searchType = clazz;
-		while (Object.class != searchType && searchType != null) {
-			Field[] fields = getDeclaredFields(searchType);
-			for (Field field : fields) {
-				if (name.equalsIgnoreCase(field.getName())) {
 					return field;
 				}
 			}
@@ -738,7 +716,7 @@ public abstract class ReflectionUtils {
 
 	/**
 	 * This variant retrieves {@link Class#getDeclaredFields()} from a local cache
-	 * in order to avoid defensive array copying.
+	 * in order to avoid the JVM's SecurityManager check and defensive array copying.
 	 * @param clazz the class to introspect
 	 * @return the cached array of fields
 	 * @throws IllegalStateException if introspection fails
@@ -792,11 +770,12 @@ public abstract class ReflectionUtils {
 	/**
 	 * Make the given field accessible, explicitly setting it accessible if
 	 * necessary. The {@code setAccessible(true)} method is only called
-	 * when actually necessary, to avoid unnecessary conflicts.
+	 * when actually necessary, to avoid unnecessary conflicts with a JVM
+	 * SecurityManager (if active).
 	 * @param field the field to make accessible
 	 * @see java.lang.reflect.Field#setAccessible
 	 */
-	@SuppressWarnings("deprecation")
+	@SuppressWarnings("deprecation")  // on JDK 9
 	public static void makeAccessible(Field field) {
 		if ((!Modifier.isPublic(field.getModifiers()) ||
 				!Modifier.isPublic(field.getDeclaringClass().getModifiers()) ||

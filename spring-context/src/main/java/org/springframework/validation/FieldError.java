@@ -107,7 +107,8 @@ public class FieldError extends ObjectError {
 		if (!super.equals(other)) {
 			return false;
 		}
-		return (other instanceof FieldError otherError && getField().equals(otherError.getField()) &&
+		FieldError otherError = (FieldError) other;
+		return (getField().equals(otherError.getField()) &&
 				ObjectUtils.nullSafeEquals(getRejectedValue(), otherError.getRejectedValue()) &&
 				isBindingFailure() == otherError.isBindingFailure());
 	}

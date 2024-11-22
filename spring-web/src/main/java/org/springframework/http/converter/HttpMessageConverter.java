@@ -33,7 +33,6 @@ import org.springframework.lang.Nullable;
  * @author Rossen Stoyanchev
  * @since 3.0
  * @param <T> the converted object type
- * @see SmartHttpMessageConverter
  */
 public interface HttpMessageConverter<T> {
 

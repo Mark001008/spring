@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,11 @@
 
 package org.springframework.beans.factory.support;
 
+import java.security.AccessControlContext;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
+import java.security.PrivilegedActionException;
+import java.security.PrivilegedExceptionAction;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -24,8 +29,6 @@ import org.springframework.beans.factory.BeanCreationException;
 import org.springframework.beans.factory.BeanCurrentlyInCreationException;
 import org.springframework.beans.factory.FactoryBean;
 import org.springframework.beans.factory.FactoryBeanNotInitializedException;
-import org.springframework.core.AttributeAccessor;
-import org.springframework.core.ResolvableType;
 import org.springframework.lang.Nullable;
 
 /**
@@ -53,7 +56,13 @@ public abstract class FactoryBeanRegistrySupport extends DefaultSingletonBeanReg
 	@Nullable
 	protected Class<?> getTypeForFactoryBean(FactoryBean<?> factoryBean) {
 		try {
-			return factoryBean.getObjectType();
+			if (System.getSecurityManager() != null) {
+				return AccessController.doPrivileged(
+						(PrivilegedAction<Class<?>>) factoryBean::getObjectType, getAccessControlContext());
+			}
+			else {
+				return factoryBean.getObjectType();
+			}
 		}
 		catch (Throwable ex) {
 			// Thrown from the FactoryBean's getObjectType implementation.
@@ -61,38 +70,6 @@ public abstract class FactoryBeanRegistrySupport extends DefaultSingletonBeanReg
 					"that it should return null if the type of its object cannot be determined yet", ex);
 			return null;
 		}
-	}
-
-	/**
-	 * Determine the bean type for a FactoryBean by inspecting its attributes for a
-	 * {@link FactoryBean#OBJECT_TYPE_ATTRIBUTE} value.
-	 * @param attributes the attributes to inspect
-	 * @return a {@link ResolvableType} extracted from the attributes or
-	 * {@code ResolvableType.NONE}
-	 * @since 5.2
-	 */
-	ResolvableType getTypeForFactoryBeanFromAttributes(AttributeAccessor attributes) {
-		Object attribute = attributes.getAttribute(FactoryBean.OBJECT_TYPE_ATTRIBUTE);
-		if (attribute == null) {
-			return ResolvableType.NONE;
-		}
-		if (attribute instanceof ResolvableType resolvableType) {
-			return resolvableType;
-		}
-		if (attribute instanceof Class<?> clazz) {
-			return ResolvableType.forClass(clazz);
-		}
-		throw new IllegalArgumentException("Invalid value type for attribute '" +
-				FactoryBean.OBJECT_TYPE_ATTRIBUTE + "': " + attribute.getClass().getName());
-	}
-
-	/**
-	 * Determine the FactoryBean object type from the given generic declaration.
-	 * @param type the FactoryBean type
-	 * @return the nested object type, or {@code NONE} if not resolvable
-	 */
-	ResolvableType getFactoryBeanGeneric(@Nullable ResolvableType type) {
-		return (type != null ? type.as(FactoryBean.class).getGeneric() : ResolvableType.NONE);
 	}
 
 	/**
@@ -118,39 +95,41 @@ public abstract class FactoryBeanRegistrySupport extends DefaultSingletonBeanReg
 	 */
 	protected Object getObjectFromFactoryBean(FactoryBean<?> factory, String beanName, boolean shouldPostProcess) {
 		if (factory.isSingleton() && containsSingleton(beanName)) {
-			Object object = this.factoryBeanObjectCache.get(beanName);
-			if (object == null) {
-				object = doGetObjectFromFactoryBean(factory, beanName);
-				// Only post-process and store if not put there already during getObject() call above
-				// (for example, because of circular reference processing triggered by custom getBean calls)
-				Object alreadyThere = this.factoryBeanObjectCache.get(beanName);
-				if (alreadyThere != null) {
-					object = alreadyThere;
-				}
-				else {
-					if (shouldPostProcess) {
-						if (isSingletonCurrentlyInCreation(beanName)) {
-							// Temporarily return non-post-processed object, not storing it yet
-							return object;
+			synchronized (getSingletonMutex()) {
+				Object object = this.factoryBeanObjectCache.get(beanName);
+				if (object == null) {
+					object = doGetObjectFromFactoryBean(factory, beanName);
+					// Only post-process and store if not put there already during getObject() call above
+					// (e.g. because of circular reference processing triggered by custom getBean calls)
+					Object alreadyThere = this.factoryBeanObjectCache.get(beanName);
+					if (alreadyThere != null) {
+						object = alreadyThere;
+					}
+					else {
+						if (shouldPostProcess) {
+							if (isSingletonCurrentlyInCreation(beanName)) {
+								// Temporarily return non-post-processed object, not storing it yet..
+								return object;
+							}
+							beforeSingletonCreation(beanName);
+							try {
+								object = postProcessObjectFromFactoryBean(object, beanName);
+							}
+							catch (Throwable ex) {
+								throw new BeanCreationException(beanName,
+										"Post-processing of FactoryBean's singleton object failed", ex);
+							}
+							finally {
+								afterSingletonCreation(beanName);
+							}
 						}
-						beforeSingletonCreation(beanName);
-						try {
-							object = postProcessObjectFromFactoryBean(object, beanName);
-						}
-						catch (Throwable ex) {
-							throw new BeanCreationException(beanName,
-									"Post-processing of FactoryBean's singleton object failed", ex);
-						}
-						finally {
-							afterSingletonCreation(beanName);
+						if (containsSingleton(beanName)) {
+							this.factoryBeanObjectCache.put(beanName, object);
 						}
 					}
-					if (containsSingleton(beanName)) {
-						this.factoryBeanObjectCache.put(beanName, object);
-					}
 				}
+				return object;
 			}
-			return object;
 		}
 		else {
 			Object object = doGetObjectFromFactoryBean(factory, beanName);
@@ -177,7 +156,18 @@ public abstract class FactoryBeanRegistrySupport extends DefaultSingletonBeanReg
 	private Object doGetObjectFromFactoryBean(FactoryBean<?> factory, String beanName) throws BeanCreationException {
 		Object object;
 		try {
-			object = factory.getObject();
+			if (System.getSecurityManager() != null) {
+				AccessControlContext acc = getAccessControlContext();
+				try {
+					object = AccessController.doPrivileged((PrivilegedExceptionAction<Object>) factory::getObject, acc);
+				}
+				catch (PrivilegedActionException pae) {
+					throw pae.getException();
+				}
+			}
+			else {
+				object = factory.getObject();
+			}
 		}
 		catch (FactoryBeanNotInitializedException ex) {
 			throw new BeanCurrentlyInCreationException(beanName, ex.toString());
@@ -220,11 +210,11 @@ public abstract class FactoryBeanRegistrySupport extends DefaultSingletonBeanReg
 	 * @throws BeansException if the given bean cannot be exposed as a FactoryBean
 	 */
 	protected FactoryBean<?> getFactoryBean(String beanName, Object beanInstance) throws BeansException {
-		if (!(beanInstance instanceof FactoryBean<?> factoryBean)) {
+		if (!(beanInstance instanceof FactoryBean)) {
 			throw new BeanCreationException(beanName,
 					"Bean instance of type [" + beanInstance.getClass() + "] is not a FactoryBean");
 		}
-		return factoryBean;
+		return (FactoryBean<?>) beanInstance;
 	}
 
 	/**
@@ -232,8 +222,10 @@ public abstract class FactoryBeanRegistrySupport extends DefaultSingletonBeanReg
 	 */
 	@Override
 	protected void removeSingleton(String beanName) {
-		super.removeSingleton(beanName);
-		this.factoryBeanObjectCache.remove(beanName);
+		synchronized (getSingletonMutex()) {
+			super.removeSingleton(beanName);
+			this.factoryBeanObjectCache.remove(beanName);
+		}
 	}
 
 	/**
@@ -241,8 +233,20 @@ public abstract class FactoryBeanRegistrySupport extends DefaultSingletonBeanReg
 	 */
 	@Override
 	protected void clearSingletonCache() {
-		super.clearSingletonCache();
-		this.factoryBeanObjectCache.clear();
+		synchronized (getSingletonMutex()) {
+			super.clearSingletonCache();
+			this.factoryBeanObjectCache.clear();
+		}
+	}
+
+	/**
+	 * Return the security context for this bean factory. If a security manager
+	 * is set, interaction with the user code will be executed using the privileged
+	 * of the security context returned by this method.
+	 * @see AccessController#getContext()
+	 */
+	protected AccessControlContext getAccessControlContext() {
+		return AccessController.getContext();
 	}
 
 }

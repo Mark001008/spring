@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2021 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -104,33 +104,47 @@ class StaxEventXMLReader extends AbstractStaxXMLReader {
 				documentStarted = true;
 			}
 			switch (event.getEventType()) {
-				case XMLStreamConstants.START_DOCUMENT -> {
+				case XMLStreamConstants.START_DOCUMENT:
 					handleStartDocument(event);
 					documentStarted = true;
-				}
-				case XMLStreamConstants.START_ELEMENT -> {
+					break;
+				case XMLStreamConstants.START_ELEMENT:
 					elementDepth++;
 					handleStartElement(event.asStartElement());
-				}
-				case XMLStreamConstants.END_ELEMENT -> {
+					break;
+				case XMLStreamConstants.END_ELEMENT:
 					elementDepth--;
 					if (elementDepth >= 0) {
 						handleEndElement(event.asEndElement());
 					}
-				}
-				case XMLStreamConstants.PROCESSING_INSTRUCTION ->
-						handleProcessingInstruction((ProcessingInstruction) event);
-				case XMLStreamConstants.CHARACTERS, XMLStreamConstants.SPACE, XMLStreamConstants.CDATA ->
-						handleCharacters(event.asCharacters());
-				case XMLStreamConstants.END_DOCUMENT -> {
+					break;
+				case XMLStreamConstants.PROCESSING_INSTRUCTION:
+					handleProcessingInstruction((ProcessingInstruction) event);
+					break;
+				case XMLStreamConstants.CHARACTERS:
+				case XMLStreamConstants.SPACE:
+				case XMLStreamConstants.CDATA:
+					handleCharacters(event.asCharacters());
+					break;
+				case XMLStreamConstants.END_DOCUMENT:
 					handleEndDocument();
 					documentEnded = true;
-				}
-				case XMLStreamConstants.NOTATION_DECLARATION -> handleNotationDeclaration((NotationDeclaration) event);
-				case XMLStreamConstants.ENTITY_DECLARATION -> handleEntityDeclaration((EntityDeclaration) event);
-				case XMLStreamConstants.COMMENT -> handleComment((Comment) event);
-				case XMLStreamConstants.DTD -> handleDtd((DTD) event);
-				case XMLStreamConstants.ENTITY_REFERENCE -> handleEntityReference((EntityReference) event);
+					break;
+				case XMLStreamConstants.NOTATION_DECLARATION:
+					handleNotationDeclaration((NotationDeclaration) event);
+					break;
+				case XMLStreamConstants.ENTITY_DECLARATION:
+					handleEntityDeclaration((EntityDeclaration) event);
+					break;
+				case XMLStreamConstants.COMMENT:
+					handleComment((Comment) event);
+					break;
+				case XMLStreamConstants.DTD:
+					handleDtd((DTD) event);
+					break;
+				case XMLStreamConstants.ENTITY_REFERENCE:
+					handleEntityReference((EntityReference) event);
+					break;
 			}
 		}
 		if (documentStarted && !documentEnded) {

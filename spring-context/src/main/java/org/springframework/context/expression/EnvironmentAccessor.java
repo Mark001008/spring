@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,7 +25,7 @@ import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
 /**
- * Read-only SpEL {@link PropertyAccessor} that knows how to retrieve properties
+ * Read-only EL property accessor that knows how to retrieve keys
  * of a Spring {@link Environment} instance.
  *
  * @author Chris Beams
@@ -38,14 +38,18 @@ public class EnvironmentAccessor implements PropertyAccessor {
 		return new Class<?>[] {Environment.class};
 	}
 
+	/**
+	 * Can read any {@link Environment}, thus always returns true.
+	 * @return true
+	 */
 	@Override
 	public boolean canRead(EvaluationContext context, @Nullable Object target, String name) throws AccessException {
-		return (target instanceof Environment);
+		return true;
 	}
 
 	/**
-	 * Access the given target object by resolving the given property name against
-	 * the given target environment.
+	 * Access the given target object by resolving the given property name against the given target
+	 * environment.
 	 */
 	@Override
 	public TypedValue read(EvaluationContext context, @Nullable Object target, String name) throws AccessException {
@@ -61,11 +65,12 @@ public class EnvironmentAccessor implements PropertyAccessor {
 		return false;
 	}
 
+	/**
+	 * Read-only: no-op.
+	 */
 	@Override
 	public void write(EvaluationContext context, @Nullable Object target, String name, @Nullable Object newValue)
 			throws AccessException {
-
-		throw new AccessException("The Environment is read-only");
 	}
 
 }

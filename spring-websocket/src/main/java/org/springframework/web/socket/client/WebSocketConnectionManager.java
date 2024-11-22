@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,13 +16,13 @@
 
 package org.springframework.web.socket.client;
 
-import java.net.URI;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 
 import org.springframework.context.Lifecycle;
 import org.springframework.http.HttpHeaders;
 import org.springframework.lang.Nullable;
+import org.springframework.util.concurrent.ListenableFuture;
+import org.springframework.util.concurrent.ListenableFutureCallback;
 import org.springframework.web.socket.WebSocketHandler;
 import org.springframework.web.socket.WebSocketHttpHeaders;
 import org.springframework.web.socket.WebSocketSession;
@@ -34,7 +34,6 @@ import org.springframework.web.socket.handler.LoggingWebSocketHandlerDecorator;
  * {@link WebSocketHandler}.
  *
  * @author Rossen Stoyanchev
- * @author Sam Brannen
  * @since 4.0
  */
 public class WebSocketConnectionManager extends ConnectionManagerSupport {
@@ -49,24 +48,10 @@ public class WebSocketConnectionManager extends ConnectionManagerSupport {
 	private final WebSocketHttpHeaders headers = new WebSocketHttpHeaders();
 
 
-	/**
-	 * Constructor with the client to use and a handler to handle messages with.
-	 */
 	public WebSocketConnectionManager(WebSocketClient client,
 			WebSocketHandler webSocketHandler, String uriTemplate, Object... uriVariables) {
 
 		super(uriTemplate, uriVariables);
-		this.client = client;
-		this.webSocketHandler = decorateWebSocketHandler(webSocketHandler);
-	}
-
-	/**
-	 * Variant of {@link #WebSocketConnectionManager(WebSocketClient, WebSocketHandler, String, Object...)}
-	 * with a prepared {@link URI}.
-	 * @since 6.0.5
-	 */
-	public WebSocketConnectionManager(WebSocketClient client, WebSocketHandler webSocketHandler, URI uri) {
-		super(uri);
 		this.client = client;
 		this.webSocketHandler = decorateWebSocketHandler(webSocketHandler);
 	}
@@ -122,16 +107,16 @@ public class WebSocketConnectionManager extends ConnectionManagerSupport {
 
 	@Override
 	public void startInternal() {
-		if (this.client instanceof Lifecycle lifecycle && !lifecycle.isRunning()) {
-			lifecycle.start();
+		if (this.client instanceof Lifecycle && !((Lifecycle) this.client).isRunning()) {
+			((Lifecycle) this.client).start();
 		}
 		super.startInternal();
 	}
 
 	@Override
 	public void stopInternal() throws Exception {
-		if (this.client instanceof Lifecycle lifecycle && lifecycle.isRunning()) {
-			lifecycle.stop();
+		if (this.client instanceof Lifecycle && ((Lifecycle) this.client).isRunning()) {
+			((Lifecycle) this.client).stop();
 		}
 		super.stopInternal();
 	}
@@ -147,15 +132,17 @@ public class WebSocketConnectionManager extends ConnectionManagerSupport {
 			logger.info("Connecting to WebSocket at " + getUri());
 		}
 
-		CompletableFuture<WebSocketSession> future =
-				this.client.execute(this.webSocketHandler, this.headers, getUri());
+		ListenableFuture<WebSocketSession> future =
+				this.client.doHandshake(this.webSocketHandler, this.headers, getUri());
 
-		future.whenComplete((result, ex) -> {
-			if (result != null) {
-				this.webSocketSession = result;
+		future.addCallback(new ListenableFutureCallback<WebSocketSession>() {
+			@Override
+			public void onSuccess(@Nullable WebSocketSession result) {
+				webSocketSession = result;
 				logger.info("Successfully connected");
 			}
-			else if (ex != null) {
+			@Override
+			public void onFailure(Throwable ex) {
 				logger.error("Failed to connect", ex);
 			}
 		});

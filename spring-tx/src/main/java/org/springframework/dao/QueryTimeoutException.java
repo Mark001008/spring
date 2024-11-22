@@ -16,8 +16,6 @@
 
 package org.springframework.dao;
 
-import org.springframework.lang.Nullable;
-
 /**
  * Exception to be thrown on a query timeout. This could have different causes depending on
  * the database API in use but most likely thrown after the database interrupts or stops
@@ -36,7 +34,7 @@ public class QueryTimeoutException extends TransientDataAccessException {
 	 * Constructor for QueryTimeoutException.
 	 * @param msg the detail message
 	 */
-	public QueryTimeoutException(@Nullable String msg) {
+	public QueryTimeoutException(String msg) {
 		super(msg);
 	}
 
@@ -45,7 +43,7 @@ public class QueryTimeoutException extends TransientDataAccessException {
 	 * @param msg the detail message
 	 * @param cause the root cause from the data access API in use
 	 */
-	public QueryTimeoutException(@Nullable String msg, @Nullable Throwable cause) {
+	public QueryTimeoutException(String msg, Throwable cause) {
 		super(msg, cause);
 	}
 

@@ -51,7 +51,6 @@ public class UncategorizedR2dbcException extends UncategorizedDataAccessExceptio
 	/**
 	 * Return the wrapped {@link R2dbcException}.
 	 */
-	@Nullable
 	public R2dbcException getR2dbcException() {
 		return (R2dbcException) getCause();
 	}

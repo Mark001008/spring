@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2023 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,9 +20,9 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.util.function.Consumer;
 
+import javax.persistence.PersistenceException;
 import javax.sql.DataSource;
 
-import jakarta.persistence.PersistenceException;
 import org.hibernate.ConnectionReleaseMode;
 import org.hibernate.FlushMode;
 import org.hibernate.HibernateException;
@@ -87,7 +87,7 @@ import org.springframework.util.Assert;
  * transaction. The DataSource that Hibernate uses needs to be JTA-enabled in
  * such a scenario (see container setup).
  *
- * <p>This transaction manager supports nested transactions via JDBC Savepoints.
+ * <p>This transaction manager supports nested transactions via JDBC 3.0 Savepoints.
  * The {@link #setNestedTransactionAllowed} "nestedTransactionAllowed"} flag defaults
  * to "false", though, as nested transactions will just apply to the JDBC Connection,
  * not to the Hibernate Session and its cached entity objects and related context.
@@ -96,10 +96,6 @@ import org.springframework.util.Assert;
  * your JDBC driver supports Savepoints). <i>Note that Hibernate itself does not
  * support nested transactions! Hence, do not expect Hibernate access code to
  * semantically participate in a nested transaction.</i>
- *
- * <p><b>NOTE: Hibernate ORM 6.x is officially only supported as a JPA provider.
- * Please use {@link org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean}
- * with {@link org.springframework.orm.jpa.JpaTransactionManager} there instead.</b>
  *
  * @author Juergen Hoeller
  * @since 4.2
@@ -189,11 +185,11 @@ public class HibernateTransactionManager extends AbstractPlatformTransactionMana
 
 	/**
 	 * Set the JDBC DataSource that this instance should manage transactions for.
-	 * <p>The DataSource should match the one used by the Hibernate SessionFactory:
+	 * The DataSource should match the one used by the Hibernate SessionFactory:
 	 * for example, you could specify the same JNDI DataSource for both.
 	 * <p>If the SessionFactory was configured with LocalDataSourceConnectionProvider,
 	 * i.e. by Spring's LocalSessionFactoryBean with a specified "dataSource",
-	 * the DataSource will be auto-detected. You can still explicitly specify the
+	 * the DataSource will be auto-detected: You can still explicitly specify the
 	 * DataSource, but you don't need to in this case.
 	 * <p>A transactional JDBC Connection for this DataSource will be provided to
 	 * application code accessing this DataSource directly via DataSourceUtils
@@ -210,18 +206,18 @@ public class HibernateTransactionManager extends AbstractPlatformTransactionMana
 	 * for the actual target DataSource. Alternatively, consider switching
 	 * {@link #setPrepareConnection "prepareConnection"} to {@code false}.</b>
 	 * In both cases, this transaction manager will not eagerly acquire a
-	 * JDBC Connection for each Hibernate Session.
+	 * JDBC Connection for each Hibernate Session anymore (as of Spring 5.1).
 	 * @see #setAutodetectDataSource
 	 * @see TransactionAwareDataSourceProxy
 	 * @see org.springframework.jdbc.datasource.LazyConnectionDataSourceProxy
 	 * @see org.springframework.jdbc.core.JdbcTemplate
 	 */
 	public void setDataSource(@Nullable DataSource dataSource) {
-		if (dataSource instanceof TransactionAwareDataSourceProxy proxy) {
+		if (dataSource instanceof TransactionAwareDataSourceProxy) {
 			// If we got a TransactionAwareDataSourceProxy, we need to perform transactions
 			// for its underlying target DataSource, else data access code won't see
 			// properly exposed transactions (i.e. transactions for the target DataSource).
-			this.dataSource = proxy.getTargetDataSource();
+			this.dataSource = ((TransactionAwareDataSourceProxy) dataSource).getTargetDataSource();
 		}
 		else {
 			this.dataSource = dataSource;
@@ -277,7 +273,7 @@ public class HibernateTransactionManager extends AbstractPlatformTransactionMana
 	 * making it impossible to rely on ResultSet holdability. Also, Spring does not provide
 	 * an equivalent setting on {@link org.springframework.orm.jpa.JpaTransactionManager}.
 	 */
-	@Deprecated(since = "5.3.29")
+	@Deprecated
 	public void setAllowResultAccessAfterCompletion(boolean allowResultAccessAfterCompletion) {
 		this.allowResultAccessAfterCompletion = allowResultAccessAfterCompletion;
 	}
@@ -290,7 +286,7 @@ public class HibernateTransactionManager extends AbstractPlatformTransactionMana
 	 * {@link TransactionSynchronizationManager}
 	 * check preceding it).
 	 * <p>Default is "false", i.e. using a Spring-managed Session: taking the current
-	 * thread-bound Session if available (for example, in an Open-Session-in-View scenario),
+	 * thread-bound Session if available (e.g. in an Open-Session-in-View scenario),
 	 * creating a new Session for the current transaction otherwise.
 	 * <p>Switch this flag to "true" in order to enforce use of a Hibernate-managed Session.
 	 * Note that this requires {@link SessionFactory#getCurrentSession()}
@@ -313,7 +309,7 @@ public class HibernateTransactionManager extends AbstractPlatformTransactionMana
 	/**
 	 * Specify a callback for customizing every Hibernate {@code Session} resource
 	 * created for a new transaction managed by this {@code HibernateTransactionManager}.
-	 * <p>This enables convenient customizations for application purposes, for example,
+	 * <p>This enables convenient customizations for application purposes, e.g.
 	 * setting Hibernate filters.
 	 * @since 5.3
 	 * @see Session#enableFilter
@@ -365,13 +361,14 @@ public class HibernateTransactionManager extends AbstractPlatformTransactionMana
 	 */
 	@Nullable
 	public Interceptor getEntityInterceptor() throws IllegalStateException, BeansException {
-		if (this.entityInterceptor instanceof Interceptor interceptor) {
-			return interceptor;
+		if (this.entityInterceptor instanceof Interceptor) {
+			return (Interceptor) this.entityInterceptor;
 		}
-		else if (this.entityInterceptor instanceof String beanName) {
+		else if (this.entityInterceptor instanceof String) {
 			if (this.beanFactory == null) {
 				throw new IllegalStateException("Cannot get entity interceptor via bean name if no bean factory set");
 			}
+			String beanName = (String) this.entityInterceptor;
 			return this.beanFactory.getBean(beanName, Interceptor.class);
 		}
 		else {
@@ -493,7 +490,7 @@ public class HibernateTransactionManager extends AbstractPlatformTransactionMana
 
 			session = txObject.getSessionHolder().getSession().unwrap(SessionImplementor.class);
 
-			boolean holdabilityNeeded = (this.allowResultAccessAfterCompletion && !txObject.isNewSession());
+			boolean holdabilityNeeded = this.allowResultAccessAfterCompletion && !txObject.isNewSession();
 			boolean isolationLevelNeeded = (definition.getIsolationLevel() != TransactionDefinition.ISOLATION_DEFAULT);
 			if (holdabilityNeeded || isolationLevelNeeded || definition.isReadOnly()) {
 				if (this.prepareConnection && ConnectionReleaseMode.ON_CLOSE.equals(
@@ -502,11 +499,11 @@ public class HibernateTransactionManager extends AbstractPlatformTransactionMana
 					if (logger.isDebugEnabled()) {
 						logger.debug("Preparing JDBC Connection of Hibernate Session [" + session + "]");
 					}
-					Connection con = session.getJdbcCoordinator().getLogicalConnection().getPhysicalConnection();
+					Connection con = session.connection();
 					Integer previousIsolationLevel = DataSourceUtils.prepareConnectionForTransaction(con, definition);
 					txObject.setPreviousIsolationLevel(previousIsolationLevel);
 					txObject.setReadOnly(definition.isReadOnly());
-					if (holdabilityNeeded) {
+					if (this.allowResultAccessAfterCompletion && !txObject.isNewSession()) {
 						int currentHoldability = con.getHoldability();
 						if (currentHoldability != ResultSet.HOLD_CURSORS_OVER_COMMIT) {
 							txObject.setPreviousHoldability(currentHoldability);
@@ -567,9 +564,7 @@ public class HibernateTransactionManager extends AbstractPlatformTransactionMana
 
 			// Register the Hibernate Session's JDBC Connection for the DataSource, if set.
 			if (getDataSource() != null) {
-				final SessionImplementor sessionToUse = session;
-				ConnectionHolder conHolder = new ConnectionHolder(
-						() -> sessionToUse.getJdbcCoordinator().getLogicalConnection().getPhysicalConnection());
+				ConnectionHolder conHolder = new ConnectionHolder(session::connection);
 				if (timeout != TransactionDefinition.TIMEOUT_DEFAULT) {
 					conHolder.setTimeoutInSeconds(timeout);
 				}
@@ -631,9 +626,8 @@ public class HibernateTransactionManager extends AbstractPlatformTransactionMana
 			TransactionSynchronizationManager.unbindResource(sessionFactory);
 		}
 		TransactionSynchronizationManager.bindResource(sessionFactory, resourcesHolder.getSessionHolder());
-		ConnectionHolder connectionHolder = resourcesHolder.getConnectionHolder();
-		if (connectionHolder != null && getDataSource() != null) {
-			TransactionSynchronizationManager.bindResource(getDataSource(), connectionHolder);
+		if (getDataSource() != null && resourcesHolder.getConnectionHolder() != null) {
+			TransactionSynchronizationManager.bindResource(getDataSource(), resourcesHolder.getConnectionHolder());
 		}
 	}
 
@@ -659,8 +653,8 @@ public class HibernateTransactionManager extends AbstractPlatformTransactionMana
 			throw convertHibernateAccessException(ex);
 		}
 		catch (PersistenceException ex) {
-			if (ex.getCause() instanceof HibernateException hibernateEx) {
-				throw convertHibernateAccessException(hibernateEx);
+			if (ex.getCause() instanceof HibernateException) {
+				throw convertHibernateAccessException((HibernateException) ex.getCause());
 			}
 			throw ex;
 		}
@@ -687,8 +681,8 @@ public class HibernateTransactionManager extends AbstractPlatformTransactionMana
 			throw convertHibernateAccessException(ex);
 		}
 		catch (PersistenceException ex) {
-			if (ex.getCause() instanceof HibernateException hibernateEx) {
-				throw convertHibernateAccessException(hibernateEx);
+			if (ex.getCause() instanceof HibernateException) {
+				throw convertHibernateAccessException((HibernateException) ex.getCause());
 			}
 			throw ex;
 		}
@@ -732,7 +726,7 @@ public class HibernateTransactionManager extends AbstractPlatformTransactionMana
 			// the isolation level and/or read-only flag of the JDBC Connection here.
 			// Else, we need to rely on the connection pool to perform proper cleanup.
 			try {
-				Connection con = session.getJdbcCoordinator().getLogicalConnection().getPhysicalConnection();
+				Connection con = session.connection();
 				Integer previousHoldability = txObject.getPreviousHoldability();
 				if (previousHoldability != null) {
 					con.setHoldability(previousHoldability);
@@ -771,15 +765,13 @@ public class HibernateTransactionManager extends AbstractPlatformTransactionMana
 	/**
 	 * Disconnect a pre-existing Hibernate Session on transaction completion,
 	 * returning its database connection but preserving its entity state.
-	 * <p>The default implementation calls the equivalent of {@link Session#disconnect()}.
+	 * <p>The default implementation simply calls {@link Session#disconnect()}.
 	 * Subclasses may override this with a no-op or with fine-tuned disconnection logic.
 	 * @param session the Hibernate Session to disconnect
 	 * @see Session#disconnect()
 	 */
 	protected void disconnectOnCompletion(Session session) {
-		if (session instanceof SessionImplementor sessionImpl) {
-			sessionImpl.getJdbcCoordinator().getLogicalConnection().manualDisconnect();
-		}
+		session.disconnect();
 	}
 
 	/**
@@ -895,8 +887,8 @@ public class HibernateTransactionManager extends AbstractPlatformTransactionMana
 				throw convertHibernateAccessException(ex);
 			}
 			catch (PersistenceException ex) {
-				if (ex.getCause() instanceof HibernateException hibernateEx) {
-					throw convertHibernateAccessException(hibernateEx);
+				if (ex.getCause() instanceof HibernateException) {
+					throw convertHibernateAccessException((HibernateException) ex.getCause());
 				}
 				throw ex;
 			}

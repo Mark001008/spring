@@ -55,33 +55,36 @@ import org.springframework.util.ReflectionUtils;
  */
 public final class CollectionFactory {
 
-	private static final Set<Class<?>> approximableCollectionTypes = Set.of(
-			// Standard collection interfaces
-			Collection.class,
-			List.class,
-			Set.class,
-			SortedSet.class,
-			NavigableSet.class,
-			// Common concrete collection classes
-			ArrayList.class,
-			LinkedList.class,
-			HashSet.class,
-			LinkedHashSet.class,
-			TreeSet.class,
-			EnumSet.class);
+	private static final Set<Class<?>> approximableCollectionTypes = new HashSet<>();
 
-	private static final Set<Class<?>> approximableMapTypes = Set.of(
-			// Standard map interfaces
-			Map.class,
-			MultiValueMap.class,
-			SortedMap.class,
-			NavigableMap.class,
-			// Common concrete map classes
-			HashMap.class,
-			LinkedHashMap.class,
-			LinkedMultiValueMap.class,
-			TreeMap.class,
-			EnumMap.class);
+	private static final Set<Class<?>> approximableMapTypes = new HashSet<>();
+
+
+	static {
+		// Standard collection interfaces
+		approximableCollectionTypes.add(Collection.class);
+		approximableCollectionTypes.add(List.class);
+		approximableCollectionTypes.add(Set.class);
+		approximableCollectionTypes.add(SortedSet.class);
+		approximableCollectionTypes.add(NavigableSet.class);
+		approximableMapTypes.add(Map.class);
+		approximableMapTypes.add(MultiValueMap.class);
+		approximableMapTypes.add(SortedMap.class);
+		approximableMapTypes.add(NavigableMap.class);
+
+		// Common concrete collection classes
+		approximableCollectionTypes.add(ArrayList.class);
+		approximableCollectionTypes.add(LinkedList.class);
+		approximableCollectionTypes.add(HashSet.class);
+		approximableCollectionTypes.add(LinkedHashSet.class);
+		approximableCollectionTypes.add(TreeSet.class);
+		approximableCollectionTypes.add(EnumSet.class);
+		approximableMapTypes.add(HashMap.class);
+		approximableMapTypes.add(LinkedHashMap.class);
+		approximableMapTypes.add(LinkedMultiValueMap.class);
+		approximableMapTypes.add(TreeMap.class);
+		approximableMapTypes.add(EnumMap.class);
+	}
 
 
 	private CollectionFactory() {
@@ -95,9 +98,7 @@ public final class CollectionFactory {
 	 * @return {@code true} if the type is <em>approximable</em>
 	 */
 	public static boolean isApproximableCollectionType(@Nullable Class<?> collectionType) {
-		return (collectionType != null && (approximableCollectionTypes.contains(collectionType) ||
-				collectionType.getName().equals("java.util.SequencedSet") ||
-				collectionType.getName().equals("java.util.SequencedCollection")));
+		return (collectionType != null && approximableCollectionTypes.contains(collectionType));
 	}
 
 	/**
@@ -120,17 +121,18 @@ public final class CollectionFactory {
 	 * @see java.util.TreeSet
 	 * @see java.util.LinkedHashSet
 	 */
-	@SuppressWarnings({"rawtypes", "unchecked"})
+	@SuppressWarnings({"rawtypes", "unchecked", "cast"})
 	public static <E> Collection<E> createApproximateCollection(@Nullable Object collection, int capacity) {
-		if (collection instanceof EnumSet enumSet) {
-			Collection<E> copy = EnumSet.copyOf(enumSet);
-			copy.clear();
-			return copy;
+		if (collection instanceof EnumSet) {
+			// Cast is necessary for compilation in Eclipse 4.4.1.
+			Collection<E> enumSet = (Collection<E>) EnumSet.copyOf((EnumSet) collection);
+			enumSet.clear();
+			return enumSet;
 		}
-		else if (collection instanceof SortedSet sortedSet) {
-			return new TreeSet<>(sortedSet.comparator());
+		else if (collection instanceof SortedSet) {
+			return new TreeSet<>(((SortedSet<E>) collection).comparator());
 		}
-		else if (collection instanceof LinkedList) {
+		if (collection instanceof LinkedList) {
 			return new LinkedList<>();
 		}
 		else if (collection instanceof List) {
@@ -178,13 +180,11 @@ public final class CollectionFactory {
 	 * @see java.util.TreeSet
 	 * @see java.util.EnumSet
 	 */
-	@SuppressWarnings("unchecked")
+	@SuppressWarnings({"unchecked", "cast"})
 	public static <E> Collection<E> createCollection(Class<?> collectionType, @Nullable Class<?> elementType, int capacity) {
 		Assert.notNull(collectionType, "Collection type must not be null");
 		if (LinkedHashSet.class == collectionType ||
-				Set.class == collectionType || Collection.class == collectionType ||
-				collectionType.getName().equals("java.util.SequencedSet") ||
-				collectionType.getName().equals("java.util.SequencedCollection")) {
+				Set.class == collectionType || Collection.class == collectionType) {
 			return new LinkedHashSet<>(capacity);
 		}
 		else if (ArrayList.class == collectionType || List.class == collectionType) {
@@ -199,7 +199,8 @@ public final class CollectionFactory {
 		}
 		else if (EnumSet.class.isAssignableFrom(collectionType)) {
 			Assert.notNull(elementType, "Cannot create EnumSet for unknown element type");
-			return EnumSet.noneOf(asEnumType(elementType));
+			// Cast is necessary for compilation in Eclipse 4.4.1.
+			return (Collection<E>) EnumSet.noneOf(asEnumType(elementType));
 		}
 		else if (HashSet.class == collectionType) {
 			return new HashSet<>(capacity);
@@ -225,8 +226,7 @@ public final class CollectionFactory {
 	 * @return {@code true} if the type is <em>approximable</em>
 	 */
 	public static boolean isApproximableMapType(@Nullable Class<?> mapType) {
-		return (mapType != null && (approximableMapTypes.contains(mapType) ||
-				mapType.getName().equals("java.util.SequencedMap")));
+		return (mapType != null && approximableMapTypes.contains(mapType));
 	}
 
 	/**
@@ -248,13 +248,13 @@ public final class CollectionFactory {
 	 */
 	@SuppressWarnings({"rawtypes", "unchecked"})
 	public static <K, V> Map<K, V> createApproximateMap(@Nullable Object map, int capacity) {
-		if (map instanceof EnumMap enumMap) {
-			EnumMap copy = new EnumMap(enumMap);
-			copy.clear();
-			return copy;
+		if (map instanceof EnumMap) {
+			EnumMap enumMap = new EnumMap((EnumMap) map);
+			enumMap.clear();
+			return enumMap;
 		}
-		else if (map instanceof SortedMap sortedMap) {
-			return new TreeMap<>(sortedMap.comparator());
+		else if (map instanceof SortedMap) {
+			return new TreeMap<>(((SortedMap<K, V>) map).comparator());
 		}
 		else if (map instanceof MultiValueMap) {
 			return new LinkedMultiValueMap(capacity);
@@ -305,8 +305,7 @@ public final class CollectionFactory {
 	@SuppressWarnings({"rawtypes", "unchecked"})
 	public static <K, V> Map<K, V> createMap(Class<?> mapType, @Nullable Class<?> keyType, int capacity) {
 		Assert.notNull(mapType, "Map type must not be null");
-		if (LinkedHashMap.class == mapType || Map.class == mapType ||
-				mapType.getName().equals("java.util.SequencedMap")) {
+		if (LinkedHashMap.class == mapType || Map.class == mapType) {
 			return new LinkedHashMap<>(capacity);
 		}
 		else if (LinkedMultiValueMap.class == mapType || MultiValueMap.class == mapType) {

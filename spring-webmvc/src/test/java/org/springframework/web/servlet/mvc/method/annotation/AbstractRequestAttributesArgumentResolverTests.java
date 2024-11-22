@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,8 +19,9 @@ package org.springframework.web.servlet.mvc.method.annotation;
 import java.lang.reflect.Method;
 import java.util.Optional;
 
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -62,7 +63,7 @@ public abstract class AbstractRequestAttributesArgumentResolverTests {
 
 
 	@BeforeEach
-	void setup() throws Exception {
+	public void setup() throws Exception {
 		HttpServletRequest request = new MockHttpServletRequest();
 		HttpServletResponse response = new MockHttpServletResponse();
 		this.webRequest = new ServletWebRequest(request, response);
@@ -82,13 +83,13 @@ public abstract class AbstractRequestAttributesArgumentResolverTests {
 
 
 	@Test
-	void supportsParameter() throws Exception {
+	public void supportsParameter() throws Exception {
 		assertThat(this.resolver.supportsParameter(new MethodParameter(this.handleMethod, 0))).isTrue();
 		assertThat(this.resolver.supportsParameter(new MethodParameter(this.handleMethod, -1))).isFalse();
 	}
 
 	@Test
-	void resolve() throws Exception {
+	public void resolve() throws Exception {
 		MethodParameter param = initMethodParameter(0);
 		assertThatExceptionOfType(ServletRequestBindingException.class).isThrownBy(() ->
 				testResolveArgument(param))
@@ -100,7 +101,7 @@ public abstract class AbstractRequestAttributesArgumentResolverTests {
 	}
 
 	@Test
-	void resolveWithName() throws Exception {
+	public void resolveWithName() throws Exception {
 		MethodParameter param = initMethodParameter(1);
 		Foo foo = new Foo();
 		this.webRequest.setAttribute("specialFoo", foo, getScope());
@@ -108,7 +109,7 @@ public abstract class AbstractRequestAttributesArgumentResolverTests {
 	}
 
 	@Test
-	void resolveNotRequired() throws Exception {
+	public void resolveNotRequired() throws Exception {
 		MethodParameter param = initMethodParameter(2);
 		assertThat(testResolveArgument(param)).isNull();
 
@@ -118,17 +119,17 @@ public abstract class AbstractRequestAttributesArgumentResolverTests {
 	}
 
 	@Test
-	void resolveOptional() throws Exception {
+	public void resolveOptional() throws Exception {
 		WebDataBinder dataBinder = new WebRequestDataBinder(null);
 		dataBinder.setConversionService(new DefaultConversionService());
-		WebDataBinderFactory factory = mock();
+		WebDataBinderFactory factory = mock(WebDataBinderFactory.class);
 		given(factory.createBinder(this.webRequest, null, "foo")).willReturn(dataBinder);
 
 		MethodParameter param = initMethodParameter(3);
 		Object actual = testResolveArgument(param, factory);
 		assertThat(actual).isNotNull();
 		assertThat(actual.getClass()).isEqualTo(Optional.class);
-		assertThat(((Optional<?>) actual)).isNotPresent();
+		assertThat(((Optional<?>) actual).isPresent()).isFalse();
 
 		Foo foo = new Foo();
 		this.webRequest.setAttribute("foo", foo, getScope());
@@ -136,7 +137,7 @@ public abstract class AbstractRequestAttributesArgumentResolverTests {
 		actual = testResolveArgument(param, factory);
 		assertThat(actual).isNotNull();
 		assertThat(actual.getClass()).isEqualTo(Optional.class);
-		assertThat(((Optional<?>) actual)).isPresent();
+		assertThat(((Optional<?>) actual).isPresent()).isTrue();
 		assertThat(((Optional<?>) actual).get()).isSameAs(foo);
 	}
 

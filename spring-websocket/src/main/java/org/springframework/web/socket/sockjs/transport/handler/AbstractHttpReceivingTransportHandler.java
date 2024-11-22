@@ -21,7 +21,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
 import org.springframework.http.HttpStatus;
-import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.http.server.ServerHttpRequest;
 import org.springframework.http.server.ServerHttpResponse;
@@ -65,7 +64,7 @@ public abstract class AbstractHttpReceivingTransportHandler extends AbstractTran
 		catch (IOException ex) {
 			logger.error("Failed to read message", ex);
 			if (ex.getClass().getName().contains("Mapping")) {
-				// for example, Jackson's JsonMappingException, indicating an incomplete payload
+				// e.g. Jackson's JsonMappingException, indicating an incomplete payload
 				handleReadError(response, "Payload expected.", sockJsSession.getId());
 			}
 			else {
@@ -105,6 +104,6 @@ public abstract class AbstractHttpReceivingTransportHandler extends AbstractTran
 	@Nullable
 	protected abstract String[] readMessages(ServerHttpRequest request) throws IOException;
 
-	protected abstract HttpStatusCode getResponseStatus();
+	protected abstract HttpStatus getResponseStatus();
 
 }

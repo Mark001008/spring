@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -151,16 +151,17 @@ public class GroovyScriptFactory implements ScriptFactory, BeanFactoryAware, Bea
 
 	@Override
 	public void setBeanFactory(BeanFactory beanFactory) {
-		if (beanFactory instanceof ConfigurableListableBeanFactory clbf) {
-			clbf.ignoreDependencyType(MetaClass.class);
+		if (beanFactory instanceof ConfigurableListableBeanFactory) {
+			((ConfigurableListableBeanFactory) beanFactory).ignoreDependencyType(MetaClass.class);
 		}
 	}
 
 	@Override
 	public void setBeanClassLoader(ClassLoader classLoader) {
-		if (classLoader instanceof GroovyClassLoader gcl && (this.compilerConfiguration == null ||
-				gcl.hasCompatibleConfiguration(this.compilerConfiguration))) {
-			this.groovyClassLoader = gcl;
+		if (classLoader instanceof GroovyClassLoader &&
+				(this.compilerConfiguration == null ||
+						((GroovyClassLoader) classLoader).hasCompatibleConfiguration(this.compilerConfiguration))) {
+			this.groovyClassLoader = (GroovyClassLoader) classLoader;
 		}
 		else {
 			this.groovyClassLoader = buildGroovyClassLoader(classLoader);
@@ -317,20 +318,20 @@ public class GroovyScriptFactory implements ScriptFactory, BeanFactoryAware, Bea
 	@Nullable
 	protected Object executeScript(ScriptSource scriptSource, Class<?> scriptClass) throws ScriptCompilationException {
 		try {
-			GroovyObject groovyObj = (GroovyObject) ReflectionUtils.accessibleConstructor(scriptClass).newInstance();
+			GroovyObject goo = (GroovyObject) ReflectionUtils.accessibleConstructor(scriptClass).newInstance();
 
 			if (this.groovyObjectCustomizer != null) {
 				// Allow metaclass and other customization.
-				this.groovyObjectCustomizer.customize(groovyObj);
+				this.groovyObjectCustomizer.customize(goo);
 			}
 
-			if (groovyObj instanceof Script script) {
+			if (goo instanceof Script) {
 				// A Groovy script, probably creating an instance: let's execute it.
-				return script.run();
+				return ((Script) goo).run();
 			}
 			else {
 				// An instance of the scripted class: let's return it as-is.
-				return groovyObj;
+				return goo;
 			}
 		}
 		catch (NoSuchMethodException ex) {

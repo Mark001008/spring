@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,9 +16,10 @@
 
 package org.springframework.web.servlet.resource;
 
-import jakarta.servlet.http.HttpServlet;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -40,7 +41,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  *
  * @author Rossen Stoyanchev
  */
-class ResourceUrlProviderJavaConfigTests {
+public class ResourceUrlProviderJavaConfigTests {
 
 	private final TestServlet servlet = new TestServlet();
 
@@ -52,6 +53,7 @@ class ResourceUrlProviderJavaConfigTests {
 
 
 	@BeforeEach
+	@SuppressWarnings("resource")
 	public void setup() throws Exception {
 		AnnotationConfigWebApplicationContext context = new AnnotationConfigWebApplicationContext();
 		context.setServletContext(new MockServletContext());
@@ -72,7 +74,7 @@ class ResourceUrlProviderJavaConfigTests {
 	}
 
 	@Test
-	void resolvePathWithServletMappedAsRoot() throws Exception {
+	public void resolvePathWithServletMappedAsRoot() throws Exception {
 		this.request.setRequestURI("/myapp/index");
 		this.request.setServletPath("/index");
 		this.filterChain.doFilter(this.request, this.response);
@@ -81,7 +83,7 @@ class ResourceUrlProviderJavaConfigTests {
 	}
 
 	@Test
-	void resolvePathWithServletMappedByPrefix() throws Exception {
+	public void resolvePathWithServletMappedByPrefix() throws Exception {
 		this.request.setRequestURI("/myapp/myservlet/index");
 		this.request.setServletPath("/myservlet");
 		this.filterChain.doFilter(this.request, this.response);
@@ -90,7 +92,7 @@ class ResourceUrlProviderJavaConfigTests {
 	}
 
 	@Test
-	void resolvePathNoMatch() throws Exception {
+	public void resolvePathNoMatch() throws Exception {
 		this.request.setRequestURI("/myapp/myservlet/index");
 		this.request.setServletPath("/myservlet");
 		this.filterChain.doFilter(this.request, this.response);

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,10 +19,11 @@ package org.springframework.orm.jpa;
 import java.util.ArrayList;
 import java.util.List;
 
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.EntityManagerFactory;
-import jakarta.persistence.EntityTransaction;
-import jakarta.persistence.RollbackException;
+import javax.persistence.EntityManager;
+import javax.persistence.EntityManagerFactory;
+import javax.persistence.EntityTransaction;
+import javax.persistence.RollbackException;
+
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -50,29 +51,37 @@ import static org.mockito.Mockito.verify;
  * @author Juergen Hoeller
  * @author Phillip Webb
  */
-class JpaTransactionManagerTests {
+@SuppressWarnings({"unchecked", "rawtypes"})
+public class JpaTransactionManagerTests {
 
-	private EntityManagerFactory factory = mock();
+	private EntityManagerFactory factory;
 
-	private EntityManager manager = mock();
+	private EntityManager manager;
 
-	private EntityTransaction tx = mock();
+	private EntityTransaction tx;
 
-	private JpaTransactionManager tm = new JpaTransactionManager(factory);
+	private JpaTransactionManager tm;
 
-	private TransactionTemplate tt = new TransactionTemplate(tm);
+	private TransactionTemplate tt;
 
 
 	@BeforeEach
-	void setup() {
+	public void setup() {
+		factory = mock(EntityManagerFactory.class);
+		manager = mock(EntityManager.class);
+		tx = mock(EntityTransaction.class);
+
+		tm = new JpaTransactionManager(factory);
+		tt = new TransactionTemplate(tm);
+
 		given(factory.createEntityManager()).willReturn(manager);
 		given(manager.getTransaction()).willReturn(tx);
 		given(manager.isOpen()).willReturn(true);
 	}
 
 	@AfterEach
-	void verifyTransactionSynchronizationManagerState() {
-		assertThat(TransactionSynchronizationManager.getResourceMap()).isEmpty();
+	public void verifyTransactionSynchronizationManagerState() {
+		assertThat(TransactionSynchronizationManager.getResourceMap().isEmpty()).isTrue();
 		assertThat(TransactionSynchronizationManager.isSynchronizationActive()).isFalse();
 		assertThat(TransactionSynchronizationManager.isCurrentTransactionReadOnly()).isFalse();
 		assertThat(TransactionSynchronizationManager.isActualTransactionActive()).isFalse();
@@ -80,14 +89,14 @@ class JpaTransactionManagerTests {
 
 
 	@Test
-	void testTransactionCommit() {
+	public void testTransactionCommit() {
 		given(manager.getTransaction()).willReturn(tx);
 
 		final List<String> l = new ArrayList<>();
 		l.add("test");
 
-		assertThat(TransactionSynchronizationManager.hasResource(factory)).isFalse();
-		assertThat(TransactionSynchronizationManager.isSynchronizationActive()).isFalse();
+		assertThat(!TransactionSynchronizationManager.hasResource(factory)).isTrue();
+		assertThat(!TransactionSynchronizationManager.isSynchronizationActive()).isTrue();
 
 		Object result = tt.execute(status -> {
 			assertThat(TransactionSynchronizationManager.hasResource(factory)).isTrue();
@@ -96,8 +105,8 @@ class JpaTransactionManagerTests {
 		});
 		assertThat(result).isSameAs(l);
 
-		assertThat(TransactionSynchronizationManager.hasResource(factory)).isFalse();
-		assertThat(TransactionSynchronizationManager.isSynchronizationActive()).isFalse();
+		assertThat(!TransactionSynchronizationManager.hasResource(factory)).isTrue();
+		assertThat(!TransactionSynchronizationManager.isSynchronizationActive()).isTrue();
 
 		verify(tx).commit();
 		verify(manager).flush();
@@ -105,7 +114,7 @@ class JpaTransactionManagerTests {
 	}
 
 	@Test
-	void testTransactionCommitWithRollbackException() {
+	public void testTransactionCommitWithRollbackException() {
 		given(manager.getTransaction()).willReturn(tx);
 		given(tx.getRollbackOnly()).willReturn(true);
 		willThrow(new RollbackException()).given(tx).commit();
@@ -113,8 +122,8 @@ class JpaTransactionManagerTests {
 		final List<String> l = new ArrayList<>();
 		l.add("test");
 
-		assertThat(TransactionSynchronizationManager.hasResource(factory)).isFalse();
-		assertThat(TransactionSynchronizationManager.isSynchronizationActive()).isFalse();
+		assertThat(!TransactionSynchronizationManager.hasResource(factory)).isTrue();
+		assertThat(!TransactionSynchronizationManager.isSynchronizationActive()).isTrue();
 
 		try {
 			Object result = tt.execute(status -> {
@@ -126,26 +135,26 @@ class JpaTransactionManagerTests {
 		}
 		catch (TransactionSystemException tse) {
 			// expected
-			assertThat(tse.getCause()).isInstanceOf(RollbackException.class);
+			assertThat(tse.getCause() instanceof RollbackException).isTrue();
 		}
 
-		assertThat(TransactionSynchronizationManager.hasResource(factory)).isFalse();
-		assertThat(TransactionSynchronizationManager.isSynchronizationActive()).isFalse();
+		assertThat(!TransactionSynchronizationManager.hasResource(factory)).isTrue();
+		assertThat(!TransactionSynchronizationManager.isSynchronizationActive()).isTrue();
 
 		verify(manager).flush();
 		verify(manager).close();
 	}
 
 	@Test
-	void testTransactionRollback() {
+	public void testTransactionRollback() {
 		given(manager.getTransaction()).willReturn(tx);
 		given(tx.isActive()).willReturn(true);
 
 		final List<String> l = new ArrayList<>();
 		l.add("test");
 
-		assertThat(TransactionSynchronizationManager.hasResource(factory)).isFalse();
-		assertThat(TransactionSynchronizationManager.isSynchronizationActive()).isFalse();
+		assertThat(!TransactionSynchronizationManager.hasResource(factory)).isTrue();
+		assertThat(!TransactionSynchronizationManager.isSynchronizationActive()).isTrue();
 
 		assertThatRuntimeException().isThrownBy(() ->
 			tt.execute(status -> {
@@ -154,22 +163,22 @@ class JpaTransactionManagerTests {
 				throw new RuntimeException("some exception");
 			})).withMessage("some exception");
 
-		assertThat(TransactionSynchronizationManager.hasResource(factory)).isFalse();
-		assertThat(TransactionSynchronizationManager.isSynchronizationActive()).isFalse();
+		assertThat(!TransactionSynchronizationManager.hasResource(factory)).isTrue();
+		assertThat(!TransactionSynchronizationManager.isSynchronizationActive()).isTrue();
 
 		verify(tx).rollback();
 		verify(manager).close();
 	}
 
 	@Test
-	void testTransactionRollbackWithAlreadyRolledBack() {
+	public void testTransactionRollbackWithAlreadyRolledBack() {
 		given(manager.getTransaction()).willReturn(tx);
 
 		final List<String> l = new ArrayList<>();
 		l.add("test");
 
-		assertThat(TransactionSynchronizationManager.hasResource(factory)).isFalse();
-		assertThat(TransactionSynchronizationManager.isSynchronizationActive()).isFalse();
+		assertThat(!TransactionSynchronizationManager.hasResource(factory)).isTrue();
+		assertThat(!TransactionSynchronizationManager.isSynchronizationActive()).isTrue();
 
 		assertThatRuntimeException().isThrownBy(() ->
 			tt.execute(status -> {
@@ -178,22 +187,22 @@ class JpaTransactionManagerTests {
 				throw new RuntimeException("some exception");
 			}));
 
-		assertThat(TransactionSynchronizationManager.hasResource(factory)).isFalse();
-		assertThat(TransactionSynchronizationManager.isSynchronizationActive()).isFalse();
+		assertThat(!TransactionSynchronizationManager.hasResource(factory)).isTrue();
+		assertThat(!TransactionSynchronizationManager.isSynchronizationActive()).isTrue();
 
 		verify(manager).close();
 	}
 
 	@Test
-	void testTransactionRollbackOnly() {
+	public void testTransactionRollbackOnly() {
 		given(manager.getTransaction()).willReturn(tx);
 		given(tx.isActive()).willReturn(true);
 
 		final List<String> l = new ArrayList<>();
 		l.add("test");
 
-		assertThat(TransactionSynchronizationManager.hasResource(factory)).isFalse();
-		assertThat(TransactionSynchronizationManager.isSynchronizationActive()).isFalse();
+		assertThat(!TransactionSynchronizationManager.hasResource(factory)).isTrue();
+		assertThat(!TransactionSynchronizationManager.isSynchronizationActive()).isTrue();
 
 		tt.execute(status -> {
 			assertThat(TransactionSynchronizationManager.hasResource(factory)).isTrue();
@@ -204,8 +213,8 @@ class JpaTransactionManagerTests {
 			return l;
 		});
 
-		assertThat(TransactionSynchronizationManager.hasResource(factory)).isFalse();
-		assertThat(TransactionSynchronizationManager.isSynchronizationActive()).isFalse();
+		assertThat(!TransactionSynchronizationManager.hasResource(factory)).isTrue();
+		assertThat(!TransactionSynchronizationManager.isSynchronizationActive()).isTrue();
 
 		verify(manager).flush();
 		verify(tx).rollback();
@@ -213,14 +222,14 @@ class JpaTransactionManagerTests {
 	}
 
 	@Test
-	void testParticipatingTransactionWithCommit() {
+	public void testParticipatingTransactionWithCommit() {
 		given(manager.getTransaction()).willReturn(tx);
 
 		final List<String> l = new ArrayList<>();
 		l.add("test");
 
-		assertThat(TransactionSynchronizationManager.hasResource(factory)).isFalse();
-		assertThat(TransactionSynchronizationManager.isSynchronizationActive()).isFalse();
+		assertThat(!TransactionSynchronizationManager.hasResource(factory)).isTrue();
+		assertThat(!TransactionSynchronizationManager.isSynchronizationActive()).isTrue();
 
 		tt.execute(status -> {
 			assertThat(TransactionSynchronizationManager.hasResource(factory)).isTrue();
@@ -231,8 +240,8 @@ class JpaTransactionManagerTests {
 			});
 		});
 
-		assertThat(TransactionSynchronizationManager.hasResource(factory)).isFalse();
-		assertThat(TransactionSynchronizationManager.isSynchronizationActive()).isFalse();
+		assertThat(!TransactionSynchronizationManager.hasResource(factory)).isTrue();
+		assertThat(!TransactionSynchronizationManager.isSynchronizationActive()).isTrue();
 
 		verify(manager).flush();
 		verify(tx).commit();
@@ -240,15 +249,15 @@ class JpaTransactionManagerTests {
 	}
 
 	@Test
-	void testParticipatingTransactionWithRollback() {
+	public void testParticipatingTransactionWithRollback() {
 		given(manager.getTransaction()).willReturn(tx);
 		given(tx.isActive()).willReturn(true);
 
 		final List<String> l = new ArrayList<>();
 		l.add("test");
 
-		assertThat(TransactionSynchronizationManager.hasResource(factory)).isFalse();
-		assertThat(TransactionSynchronizationManager.isSynchronizationActive()).isFalse();
+		assertThat(!TransactionSynchronizationManager.hasResource(factory)).isTrue();
+		assertThat(!TransactionSynchronizationManager.isSynchronizationActive()).isTrue();
 
 		assertThatRuntimeException().isThrownBy(() ->
 			tt.execute(status -> {
@@ -259,8 +268,8 @@ class JpaTransactionManagerTests {
 				});
 			}));
 
-		assertThat(TransactionSynchronizationManager.hasResource(factory)).isFalse();
-		assertThat(TransactionSynchronizationManager.isSynchronizationActive()).isFalse();
+		assertThat(!TransactionSynchronizationManager.hasResource(factory)).isTrue();
+		assertThat(!TransactionSynchronizationManager.isSynchronizationActive()).isTrue();
 
 		verify(tx).setRollbackOnly();
 		verify(tx).rollback();
@@ -268,7 +277,7 @@ class JpaTransactionManagerTests {
 	}
 
 	@Test
-	void testParticipatingTransactionWithRollbackOnly() {
+	public void testParticipatingTransactionWithRollbackOnly() {
 		given(manager.getTransaction()).willReturn(tx);
 		given(tx.isActive()).willReturn(true);
 		given(tx.getRollbackOnly()).willReturn(true);
@@ -277,8 +286,8 @@ class JpaTransactionManagerTests {
 		final List<String> l = new ArrayList<>();
 		l.add("test");
 
-		assertThat(TransactionSynchronizationManager.hasResource(factory)).isFalse();
-		assertThat(TransactionSynchronizationManager.isSynchronizationActive()).isFalse();
+		assertThat(!TransactionSynchronizationManager.hasResource(factory)).isTrue();
+		assertThat(!TransactionSynchronizationManager.isSynchronizationActive()).isTrue();
 
 		assertThatExceptionOfType(TransactionSystemException.class).isThrownBy(() ->
 				tt.execute(status -> {
@@ -292,8 +301,8 @@ class JpaTransactionManagerTests {
 				}))
 			.withCauseInstanceOf(RollbackException.class);
 
-		assertThat(TransactionSynchronizationManager.hasResource(factory)).isFalse();
-		assertThat(TransactionSynchronizationManager.isSynchronizationActive()).isFalse();
+		assertThat(!TransactionSynchronizationManager.hasResource(factory)).isTrue();
+		assertThat(!TransactionSynchronizationManager.isSynchronizationActive()).isTrue();
 
 		verify(manager).flush();
 		verify(tx).setRollbackOnly();
@@ -301,7 +310,7 @@ class JpaTransactionManagerTests {
 	}
 
 	@Test
-	void testParticipatingTransactionWithRequiresNew() {
+	public void testParticipatingTransactionWithRequiresNew() {
 		tt.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
 
 		given(factory.createEntityManager()).willReturn(manager);
@@ -311,8 +320,8 @@ class JpaTransactionManagerTests {
 		final List<String> l = new ArrayList<>();
 		l.add("test");
 
-		assertThat(TransactionSynchronizationManager.hasResource(factory)).isFalse();
-		assertThat(TransactionSynchronizationManager.isSynchronizationActive()).isFalse();
+		assertThat(!TransactionSynchronizationManager.hasResource(factory)).isTrue();
+		assertThat(!TransactionSynchronizationManager.isSynchronizationActive()).isTrue();
 
 		Object result = tt.execute(status -> {
 			assertThat(TransactionSynchronizationManager.hasResource(factory)).isTrue();
@@ -323,8 +332,8 @@ class JpaTransactionManagerTests {
 		});
 		assertThat(result).isSameAs(l);
 
-		assertThat(TransactionSynchronizationManager.hasResource(factory)).isFalse();
-		assertThat(TransactionSynchronizationManager.isSynchronizationActive()).isFalse();
+		assertThat(!TransactionSynchronizationManager.hasResource(factory)).isTrue();
+		assertThat(!TransactionSynchronizationManager.isSynchronizationActive()).isTrue();
 
 		verify(manager).flush();
 		verify(manager, times(2)).close();
@@ -332,7 +341,7 @@ class JpaTransactionManagerTests {
 	}
 
 	@Test
-	void testParticipatingTransactionWithRequiresNewAndPrebound() {
+	public void testParticipatingTransactionWithRequiresNewAndPrebound() {
 		tt.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
 
 		given(manager.getTransaction()).willReturn(tx);
@@ -340,8 +349,8 @@ class JpaTransactionManagerTests {
 		final List<String> l = new ArrayList<>();
 		l.add("test");
 
-		assertThat(TransactionSynchronizationManager.hasResource(factory)).isFalse();
-		assertThat(TransactionSynchronizationManager.isSynchronizationActive()).isFalse();
+		assertThat(!TransactionSynchronizationManager.hasResource(factory)).isTrue();
+		assertThat(!TransactionSynchronizationManager.isSynchronizationActive()).isTrue();
 
 		TransactionSynchronizationManager.bindResource(factory, new EntityManagerHolder(manager));
 
@@ -361,8 +370,8 @@ class JpaTransactionManagerTests {
 			TransactionSynchronizationManager.unbindResource(factory);
 		}
 
-		assertThat(TransactionSynchronizationManager.hasResource(factory)).isFalse();
-		assertThat(TransactionSynchronizationManager.isSynchronizationActive()).isFalse();
+		assertThat(!TransactionSynchronizationManager.hasResource(factory)).isTrue();
+		assertThat(!TransactionSynchronizationManager.isSynchronizationActive()).isTrue();
 
 		verify(tx, times(2)).begin();
 		verify(tx, times(2)).commit();
@@ -371,7 +380,7 @@ class JpaTransactionManagerTests {
 	}
 
 	@Test
-	void testPropagationSupportsAndRequiresNew() {
+	public void testPropagationSupportsAndRequiresNew() {
 		tt.setPropagationBehavior(TransactionDefinition.PROPAGATION_SUPPORTS);
 
 		given(manager.getTransaction()).willReturn(tx);
@@ -379,8 +388,8 @@ class JpaTransactionManagerTests {
 		final List<String> l = new ArrayList<>();
 		l.add("test");
 
-		assertThat(TransactionSynchronizationManager.hasResource(factory)).isFalse();
-		assertThat(TransactionSynchronizationManager.isSynchronizationActive()).isFalse();
+		assertThat(!TransactionSynchronizationManager.hasResource(factory)).isTrue();
+		assertThat(!TransactionSynchronizationManager.isSynchronizationActive()).isTrue();
 
 		Object result = tt.execute(status -> {
 			assertThat(TransactionSynchronizationManager.hasResource(factory)).isFalse();
@@ -393,8 +402,8 @@ class JpaTransactionManagerTests {
 		});
 		assertThat(result).isSameAs(l);
 
-		assertThat(TransactionSynchronizationManager.hasResource(factory)).isFalse();
-		assertThat(TransactionSynchronizationManager.isSynchronizationActive()).isFalse();
+		assertThat(!TransactionSynchronizationManager.hasResource(factory)).isTrue();
+		assertThat(!TransactionSynchronizationManager.isSynchronizationActive()).isTrue();
 
 		verify(tx).commit();
 		verify(manager).flush();
@@ -402,7 +411,7 @@ class JpaTransactionManagerTests {
 	}
 
 	@Test
-	void testPropagationSupportsAndRequiresNewAndEarlyAccess() {
+	public void testPropagationSupportsAndRequiresNewAndEarlyAccess() {
 		tt.setPropagationBehavior(TransactionDefinition.PROPAGATION_SUPPORTS);
 
 		given(factory.createEntityManager()).willReturn(manager);
@@ -412,8 +421,8 @@ class JpaTransactionManagerTests {
 		final List<String> l = new ArrayList<>();
 		l.add("test");
 
-		assertThat(TransactionSynchronizationManager.hasResource(factory)).isFalse();
-		assertThat(TransactionSynchronizationManager.isSynchronizationActive()).isFalse();
+		assertThat(!TransactionSynchronizationManager.hasResource(factory)).isTrue();
+		assertThat(!TransactionSynchronizationManager.isSynchronizationActive()).isTrue();
 
 		Object result = tt.execute(status -> {
 			EntityManagerFactoryUtils.getTransactionalEntityManager(factory);
@@ -428,8 +437,8 @@ class JpaTransactionManagerTests {
 		});
 		assertThat(result).isSameAs(l);
 
-		assertThat(TransactionSynchronizationManager.hasResource(factory)).isFalse();
-		assertThat(TransactionSynchronizationManager.isSynchronizationActive()).isFalse();
+		assertThat(!TransactionSynchronizationManager.hasResource(factory)).isTrue();
+		assertThat(!TransactionSynchronizationManager.isSynchronizationActive()).isTrue();
 
 		verify(tx).commit();
 		verify(manager).flush();
@@ -437,19 +446,19 @@ class JpaTransactionManagerTests {
 	}
 
 	@Test
-	void testTransactionWithRequiresNewInAfterCompletion() {
+	public void testTransactionWithRequiresNewInAfterCompletion() {
 		tt.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
 
-		EntityManager manager2 = mock();
-		EntityTransaction tx2 = mock();
+		EntityManager manager2 = mock(EntityManager.class);
+		EntityTransaction tx2 = mock(EntityTransaction.class);
 
 		given(manager.getTransaction()).willReturn(tx);
 		given(factory.createEntityManager()).willReturn(manager, manager2);
 		given(manager2.getTransaction()).willReturn(tx2);
 		given(manager2.isOpen()).willReturn(true);
 
-		assertThat(TransactionSynchronizationManager.hasResource(factory)).isFalse();
-		assertThat(TransactionSynchronizationManager.isSynchronizationActive()).isFalse();
+		assertThat(!TransactionSynchronizationManager.hasResource(factory)).isTrue();
+		assertThat(!TransactionSynchronizationManager.isSynchronizationActive()).isTrue();
 
 		tt.execute(status -> {
 			EntityManagerFactoryUtils.getTransactionalEntityManager(factory).flush();
@@ -465,8 +474,8 @@ class JpaTransactionManagerTests {
 			return null;
 		});
 
-		assertThat(TransactionSynchronizationManager.hasResource(factory)).isFalse();
-		assertThat(TransactionSynchronizationManager.isSynchronizationActive()).isFalse();
+		assertThat(!TransactionSynchronizationManager.hasResource(factory)).isTrue();
+		assertThat(!TransactionSynchronizationManager.isSynchronizationActive()).isTrue();
 
 		verify(tx).commit();
 		verify(tx2).begin();
@@ -478,7 +487,7 @@ class JpaTransactionManagerTests {
 	}
 
 	@Test
-	void testTransactionCommitWithPropagationSupports() {
+	public void testTransactionCommitWithPropagationSupports() {
 		given(manager.isOpen()).willReturn(true);
 
 		final List<String> l = new ArrayList<>();
@@ -486,59 +495,59 @@ class JpaTransactionManagerTests {
 
 		tt.setPropagationBehavior(TransactionDefinition.PROPAGATION_SUPPORTS);
 
-		assertThat(TransactionSynchronizationManager.hasResource(factory)).isFalse();
-		assertThat(TransactionSynchronizationManager.isSynchronizationActive()).isFalse();
+		assertThat(!TransactionSynchronizationManager.hasResource(factory)).isTrue();
+		assertThat(!TransactionSynchronizationManager.isSynchronizationActive()).isTrue();
 
 		Object result = tt.execute(status -> {
-			assertThat(TransactionSynchronizationManager.hasResource(factory)).isFalse();
+			assertThat(!TransactionSynchronizationManager.hasResource(factory)).isTrue();
 			assertThat(TransactionSynchronizationManager.isSynchronizationActive()).isTrue();
-			assertThat(status.isNewTransaction()).isFalse();
+			assertThat(!status.isNewTransaction()).isTrue();
 			EntityManagerFactoryUtils.getTransactionalEntityManager(factory).flush();
 			return l;
 		});
 		assertThat(result).isSameAs(l);
 
-		assertThat(TransactionSynchronizationManager.hasResource(factory)).isFalse();
-		assertThat(TransactionSynchronizationManager.isSynchronizationActive()).isFalse();
+		assertThat(!TransactionSynchronizationManager.hasResource(factory)).isTrue();
+		assertThat(!TransactionSynchronizationManager.isSynchronizationActive()).isTrue();
 
 		verify(manager).flush();
 		verify(manager).close();
 	}
 
 	@Test
-	void testTransactionRollbackWithPropagationSupports() {
+	public void testTransactionRollbackWithPropagationSupports() {
 		given(manager.isOpen()).willReturn(true);
 
 		tt.setPropagationBehavior(TransactionDefinition.PROPAGATION_SUPPORTS);
 
-		assertThat(TransactionSynchronizationManager.hasResource(factory)).isFalse();
-		assertThat(TransactionSynchronizationManager.isSynchronizationActive()).isFalse();
+		assertThat(!TransactionSynchronizationManager.hasResource(factory)).isTrue();
+		assertThat(!TransactionSynchronizationManager.isSynchronizationActive()).isTrue();
 
 		tt.execute(status -> {
-			assertThat(TransactionSynchronizationManager.hasResource(factory)).isFalse();
+			assertThat(!TransactionSynchronizationManager.hasResource(factory)).isTrue();
 			assertThat(TransactionSynchronizationManager.isSynchronizationActive()).isTrue();
-			assertThat(status.isNewTransaction()).isFalse();
+			assertThat(!status.isNewTransaction()).isTrue();
 			EntityManagerFactoryUtils.getTransactionalEntityManager(factory).flush();
 			status.setRollbackOnly();
 			return null;
 		});
 
-		assertThat(TransactionSynchronizationManager.hasResource(factory)).isFalse();
-		assertThat(TransactionSynchronizationManager.isSynchronizationActive()).isFalse();
+		assertThat(!TransactionSynchronizationManager.hasResource(factory)).isTrue();
+		assertThat(!TransactionSynchronizationManager.isSynchronizationActive()).isTrue();
 
 		verify(manager).flush();
 		verify(manager).close();
 	}
 
 	@Test
-	void testTransactionCommitWithPrebound() {
+	public void testTransactionCommitWithPrebound() {
 		given(manager.getTransaction()).willReturn(tx);
 
 		final List<String> l = new ArrayList<>();
 		l.add("test");
 
-		assertThat(TransactionSynchronizationManager.hasResource(factory)).isFalse();
-		assertThat(TransactionSynchronizationManager.isSynchronizationActive()).isFalse();
+		assertThat(!TransactionSynchronizationManager.hasResource(factory)).isTrue();
+		assertThat(!TransactionSynchronizationManager.isSynchronizationActive()).isTrue();
 		TransactionSynchronizationManager.bindResource(factory, new EntityManagerHolder(manager));
 
 		try {
@@ -551,7 +560,7 @@ class JpaTransactionManagerTests {
 			assertThat(result).isSameAs(l);
 
 			assertThat(TransactionSynchronizationManager.hasResource(factory)).isTrue();
-			assertThat(TransactionSynchronizationManager.isSynchronizationActive()).isFalse();
+			assertThat(!TransactionSynchronizationManager.isSynchronizationActive()).isTrue();
 		}
 		finally {
 			TransactionSynchronizationManager.unbindResource(factory);
@@ -562,12 +571,12 @@ class JpaTransactionManagerTests {
 	}
 
 	@Test
-	void testTransactionRollbackWithPrebound() {
+	public void testTransactionRollbackWithPrebound() {
 		given(manager.getTransaction()).willReturn(tx);
 		given(tx.isActive()).willReturn(true);
 
-		assertThat(TransactionSynchronizationManager.hasResource(factory)).isFalse();
-		assertThat(TransactionSynchronizationManager.isSynchronizationActive()).isFalse();
+		assertThat(!TransactionSynchronizationManager.hasResource(factory)).isTrue();
+		assertThat(!TransactionSynchronizationManager.isSynchronizationActive()).isTrue();
 		TransactionSynchronizationManager.bindResource(factory, new EntityManagerHolder(manager));
 
 		try {
@@ -580,7 +589,7 @@ class JpaTransactionManagerTests {
 			});
 
 			assertThat(TransactionSynchronizationManager.hasResource(factory)).isTrue();
-			assertThat(TransactionSynchronizationManager.isSynchronizationActive()).isFalse();
+			assertThat(!TransactionSynchronizationManager.isSynchronizationActive()).isTrue();
 		}
 		finally {
 			TransactionSynchronizationManager.unbindResource(factory);
@@ -592,28 +601,28 @@ class JpaTransactionManagerTests {
 	}
 
 	@Test
-	void testTransactionCommitWithPreboundAndPropagationSupports() {
+	public void testTransactionCommitWithPreboundAndPropagationSupports() {
 		final List<String> l = new ArrayList<>();
 		l.add("test");
 
 		tt.setPropagationBehavior(TransactionDefinition.PROPAGATION_SUPPORTS);
 
-		assertThat(TransactionSynchronizationManager.hasResource(factory)).isFalse();
-		assertThat(TransactionSynchronizationManager.isSynchronizationActive()).isFalse();
+		assertThat(!TransactionSynchronizationManager.hasResource(factory)).isTrue();
+		assertThat(!TransactionSynchronizationManager.isSynchronizationActive()).isTrue();
 		TransactionSynchronizationManager.bindResource(factory, new EntityManagerHolder(manager));
 
 		try {
 			Object result = tt.execute(status -> {
 				assertThat(TransactionSynchronizationManager.hasResource(factory)).isTrue();
 				assertThat(TransactionSynchronizationManager.isSynchronizationActive()).isTrue();
-				assertThat(status.isNewTransaction()).isFalse();
+				assertThat(!status.isNewTransaction()).isTrue();
 				EntityManagerFactoryUtils.getTransactionalEntityManager(factory).flush();
 				return l;
 			});
 			assertThat(result).isSameAs(l);
 
 			assertThat(TransactionSynchronizationManager.hasResource(factory)).isTrue();
-			assertThat(TransactionSynchronizationManager.isSynchronizationActive()).isFalse();
+			assertThat(!TransactionSynchronizationManager.isSynchronizationActive()).isTrue();
 		}
 		finally {
 			TransactionSynchronizationManager.unbindResource(factory);
@@ -623,25 +632,25 @@ class JpaTransactionManagerTests {
 	}
 
 	@Test
-	void testTransactionRollbackWithPreboundAndPropagationSupports() {
+	public void testTransactionRollbackWithPreboundAndPropagationSupports() {
 		tt.setPropagationBehavior(TransactionDefinition.PROPAGATION_SUPPORTS);
 
-		assertThat(TransactionSynchronizationManager.hasResource(factory)).isFalse();
-		assertThat(TransactionSynchronizationManager.isSynchronizationActive()).isFalse();
+		assertThat(!TransactionSynchronizationManager.hasResource(factory)).isTrue();
+		assertThat(!TransactionSynchronizationManager.isSynchronizationActive()).isTrue();
 		TransactionSynchronizationManager.bindResource(factory, new EntityManagerHolder(manager));
 
 		try {
 			tt.execute(status -> {
 				assertThat(TransactionSynchronizationManager.hasResource(factory)).isTrue();
 				assertThat(TransactionSynchronizationManager.isSynchronizationActive()).isTrue();
-				assertThat(status.isNewTransaction()).isFalse();
+				assertThat(!status.isNewTransaction()).isTrue();
 				EntityManagerFactoryUtils.getTransactionalEntityManager(factory).flush();
 				status.setRollbackOnly();
 				return null;
 			});
 
 			assertThat(TransactionSynchronizationManager.hasResource(factory)).isTrue();
-			assertThat(TransactionSynchronizationManager.isSynchronizationActive()).isFalse();
+			assertThat(!TransactionSynchronizationManager.isSynchronizationActive()).isTrue();
 		}
 		finally {
 			TransactionSynchronizationManager.unbindResource(factory);
@@ -652,7 +661,7 @@ class JpaTransactionManagerTests {
 	}
 
 	@Test
-	void testInvalidIsolation() {
+	public void testInvalidIsolation() {
 		tt.setIsolationLevel(TransactionDefinition.ISOLATION_SERIALIZABLE);
 
 		given(manager.isOpen()).willReturn(true);
@@ -668,11 +677,11 @@ class JpaTransactionManagerTests {
 	}
 
 	@Test
-	void testTransactionFlush() {
+	public void testTransactionFlush() {
 		given(manager.getTransaction()).willReturn(tx);
 
-		assertThat(TransactionSynchronizationManager.hasResource(factory)).isFalse();
-		assertThat(TransactionSynchronizationManager.isSynchronizationActive()).isFalse();
+		assertThat(!TransactionSynchronizationManager.hasResource(factory)).isTrue();
+		assertThat(!TransactionSynchronizationManager.isSynchronizationActive()).isTrue();
 
 		tt.execute(new TransactionCallbackWithoutResult() {
 			@Override
@@ -682,8 +691,8 @@ class JpaTransactionManagerTests {
 			}
 		});
 
-		assertThat(TransactionSynchronizationManager.hasResource(factory)).isFalse();
-		assertThat(TransactionSynchronizationManager.isSynchronizationActive()).isFalse();
+		assertThat(!TransactionSynchronizationManager.hasResource(factory)).isTrue();
+		assertThat(!TransactionSynchronizationManager.isSynchronizationActive()).isTrue();
 
 		verify(tx).commit();
 		verify(manager).flush();

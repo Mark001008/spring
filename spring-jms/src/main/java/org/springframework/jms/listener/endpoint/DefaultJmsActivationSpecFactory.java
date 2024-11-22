@@ -16,8 +16,9 @@
 
 package org.springframework.jms.listener.endpoint;
 
-import jakarta.jms.Session;
-import jakarta.resource.spi.ResourceAdapter;
+import javax.jms.Session;
+import javax.resource.spi.ResourceAdapter;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -30,7 +31,7 @@ import org.springframework.beans.BeanWrapper;
  * through autodetection of well-known vendor-specific provider properties.
  *
  * <p>An ActivationSpec factory is effectively dependent on the concrete
- * JMS provider, for example, on ActiveMQ. This default implementation simply
+ * JMS provider, e.g. on ActiveMQ. This default implementation simply
  * guesses the ActivationSpec class name from the provider's class name
  * ("ActiveMQResourceAdapter" &rarr; "ActiveMQActivationSpec" in the same package,
  * or "ActivationSpecImpl" in the same package as the ResourceAdapter class),
@@ -67,7 +68,7 @@ public class DefaultJmsActivationSpecFactory extends StandardJmsActivationSpecFa
 
 	/**
 	 * This implementation guesses the ActivationSpec class name from the
-	 * provider's class name: for example, "ActiveMQResourceAdapter" &rarr;
+	 * provider's class name: e.g. "ActiveMQResourceAdapter" &rarr;
 	 * "ActiveMQActivationSpec" in the same package, or a class named
 	 * "ActivationSpecImpl" in the same package as the ResourceAdapter class.
 	 */
@@ -76,7 +77,7 @@ public class DefaultJmsActivationSpecFactory extends StandardJmsActivationSpecFa
 		String adapterClassName = adapter.getClass().getName();
 
 		if (adapterClassName.endsWith(RESOURCE_ADAPTER_SUFFIX)) {
-			// for example, ActiveMQ
+			// e.g. ActiveMQ
 			String providerName =
 					adapterClassName.substring(0, adapterClassName.length() - RESOURCE_ADAPTER_SUFFIX.length());
 			String specClassName = providerName + ACTIVATION_SPEC_SUFFIX;
@@ -91,7 +92,7 @@ public class DefaultJmsActivationSpecFactory extends StandardJmsActivationSpecFa
 		}
 
 		else if (adapterClassName.endsWith(RESOURCE_ADAPTER_IMPL_SUFFIX)){
-			// for example, WebSphere
+			//e.g. WebSphere
 			String providerName =
 					adapterClassName.substring(0, adapterClassName.length() - RESOURCE_ADAPTER_IMPL_SUFFIX.length());
 			String specClassName = providerName + ACTIVATION_SPEC_IMPL_SUFFIX;
@@ -105,7 +106,7 @@ public class DefaultJmsActivationSpecFactory extends StandardJmsActivationSpecFa
 			}
 		}
 
-		// for example, JORAM
+		// e.g. JORAM
 		String providerPackage = adapterClassName.substring(0, adapterClassName.lastIndexOf('.') + 1);
 		String specClassName = providerPackage + ACTIVATION_SPEC_IMPL_SUFFIX;
 		try {

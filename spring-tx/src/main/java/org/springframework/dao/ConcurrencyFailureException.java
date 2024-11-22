@@ -36,7 +36,7 @@ public class ConcurrencyFailureException extends TransientDataAccessException {
 	 * Constructor for ConcurrencyFailureException.
 	 * @param msg the detail message
 	 */
-	public ConcurrencyFailureException(@Nullable String msg) {
+	public ConcurrencyFailureException(String msg) {
 		super(msg);
 	}
 
@@ -45,7 +45,7 @@ public class ConcurrencyFailureException extends TransientDataAccessException {
 	 * @param msg the detail message
 	 * @param cause the root cause from the data access API in use
 	 */
-	public ConcurrencyFailureException(@Nullable String msg, @Nullable Throwable cause) {
+	public ConcurrencyFailureException(String msg, @Nullable Throwable cause) {
 		super(msg, cause);
 	}
 

@@ -17,6 +17,9 @@
 package org.springframework.web.util;
 
 import java.net.URI;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -47,7 +50,7 @@ class UriTemplateTests {
 	void getVariableNames() {
 		UriTemplate template = new UriTemplate("/hotels/{hotel}/bookings/{booking}");
 		List<String> variableNames = template.getVariableNames();
-		assertThat(variableNames).as("Invalid variable names").containsExactly("hotel", "booking");
+		assertThat(variableNames).as("Invalid variable names").isEqualTo(Arrays.asList("hotel", "booking"));
 	}
 
 	@Test
@@ -69,9 +72,6 @@ class UriTemplateTests {
 		UriTemplate template = new UriTemplate("");
 		URI result = template.expand();
 		assertThat(result).as("Invalid expanded template").isEqualTo(URI.create(""));
-
-		result = template.expand("1", "42");
-		assertThat(result).as("Invalid expanded template").isEqualTo(URI.create(""));
 	}
 
 	@Test  // SPR-9712
@@ -89,7 +89,9 @@ class UriTemplateTests {
 
 	@Test
 	void expandMap() {
-		Map<String, String> uriVariables = Map.of("booking", "42", "hotel", "1");
+		Map<String, String> uriVariables = new HashMap<>(2);
+		uriVariables.put("booking", "42");
+		uriVariables.put("hotel", "1");
 		UriTemplate template = new UriTemplate("/hotels/{hotel}/bookings/{booking}");
 		URI result = template.expand(uriVariables);
 		assertThat(result).as("Invalid expanded template").isEqualTo(URI.create("/hotels/1/bookings/42"));
@@ -98,14 +100,16 @@ class UriTemplateTests {
 	@Test
 	void expandMapDuplicateVariables() {
 		UriTemplate template = new UriTemplate("/order/{c}/{c}/{c}");
-		assertThat(template.getVariableNames()).containsExactly("c", "c", "c");
-		URI result = template.expand(Map.of("c", "cheeseburger"));
+		assertThat(template.getVariableNames()).isEqualTo(Arrays.asList("c", "c", "c"));
+		URI result = template.expand(Collections.singletonMap("c", "cheeseburger"));
 		assertThat(result).isEqualTo(URI.create("/order/cheeseburger/cheeseburger/cheeseburger"));
 	}
 
 	@Test
 	void expandMapNonString() {
-		Map<String, Integer> uriVariables = Map.of("booking", 42, "hotel", 1);
+		Map<String, Integer> uriVariables = new HashMap<>(2);
+		uriVariables.put("booking", 42);
+		uriVariables.put("hotel", 1);
 		UriTemplate template = new UriTemplate("/hotels/{hotel}/bookings/{booking}");
 		URI result = template.expand(uriVariables);
 		assertThat(result).as("Invalid expanded template").isEqualTo(URI.create("/hotels/1/bookings/42"));
@@ -113,7 +117,7 @@ class UriTemplateTests {
 
 	@Test
 	void expandMapEncoded() {
-		Map<String, String> uriVariables = Map.of("hotel", "Z\u00fcrich");
+		Map<String, String> uriVariables = Collections.singletonMap("hotel", "Z\u00fcrich");
 		UriTemplate template = new UriTemplate("/hotel list/{hotel}");
 		URI result = template.expand(uriVariables);
 		assertThat(result).as("Invalid expanded template").isEqualTo(URI.create("/hotel%20list/Z%C3%BCrich"));
@@ -121,9 +125,12 @@ class UriTemplateTests {
 
 	@Test
 	void expandMapUnboundVariables() {
-		Map<String, String> uriVariables = Map.of("booking", "42", "bar", "1");
+		Map<String, String> uriVariables = new HashMap<>(2);
+		uriVariables.put("booking", "42");
+		uriVariables.put("bar", "1");
 		UriTemplate template = new UriTemplate("/hotels/{hotel}/bookings/{booking}");
-		assertThatIllegalArgumentException().isThrownBy(() -> template.expand(uriVariables));
+		assertThatIllegalArgumentException().isThrownBy(() ->
+				template.expand(uriVariables));
 	}
 
 	@Test
@@ -160,7 +167,9 @@ class UriTemplateTests {
 
 	@Test
 	void match() {
-		Map<String, String> expected = Map.of("booking", "42", "hotel", "1");
+		Map<String, String> expected = new HashMap<>(2);
+		expected.put("booking", "42");
+		expected.put("hotel", "1");
 
 		UriTemplate template = new UriTemplate("/hotels/{hotel}/bookings/{booking}");
 		Map<String, String> result = template.match("/hotels/1/bookings/42");
@@ -176,7 +185,9 @@ class UriTemplateTests {
 
 	@Test
 	void matchCustomRegex() {
-		Map<String, String> expected = Map.of("booking", "42", "hotel", "1");
+		Map<String, String> expected = new HashMap<>(2);
+		expected.put("booking", "42");
+		expected.put("hotel", "1");
 
 		UriTemplate template = new UriTemplate("/hotels/{hotel:\\d}/bookings/{booking:\\d+}");
 		Map<String, String> result = template.match("/hotels/1/bookings/42");
@@ -187,21 +198,24 @@ class UriTemplateTests {
 	void matchCustomRegexWithNestedCurlyBraces() {
 		UriTemplate template = new UriTemplate("/site.{domain:co.[a-z]{2}}");
 		Map<String, String> result = template.match("/site.co.eu");
-		assertThat(result).as("Invalid match").isEqualTo(Map.of("domain", "co.eu"));
+		assertThat(result).as("Invalid match").isEqualTo(Collections.singletonMap("domain", "co.eu"));
 	}
 
 	@Test
 	void matchDuplicate() {
 		UriTemplate template = new UriTemplate("/order/{c}/{c}/{c}");
 		Map<String, String> result = template.match("/order/cheeseburger/cheeseburger/cheeseburger");
-		assertThat(result).as("Invalid match").isEqualTo(Map.of("c", "cheeseburger"));
+		Map<String, String> expected = Collections.singletonMap("c", "cheeseburger");
+		assertThat(result).as("Invalid match").isEqualTo(expected);
 	}
 
 	@Test
 	void matchMultipleInOneSegment() {
 		UriTemplate template = new UriTemplate("/{foo}-{bar}");
 		Map<String, String> result = template.match("/12-34");
-		Map<String, String> expected = Map.of("foo", "12", "bar", "34");
+		Map<String, String> expected = new HashMap<>(2);
+		expected.put("foo", "12");
+		expected.put("bar", "34");
 		assertThat(result).as("Invalid match").isEqualTo(expected);
 	}
 
@@ -235,14 +249,14 @@ class UriTemplateTests {
 	void expandWithDollar() {
 		UriTemplate template = new UriTemplate("/{a}");
 		URI uri = template.expand("$replacement");
-		assertThat(uri).hasToString("/$replacement");
+		assertThat(uri.toString()).isEqualTo("/$replacement");
 	}
 
 	@Test
 	void expandWithAtSign() {
 		UriTemplate template = new UriTemplate("http://localhost/query={query}");
 		URI uri = template.expand("foo@bar");
-		assertThat(uri).hasToString("http://localhost/query=foo@bar");
+		assertThat(uri.toString()).isEqualTo("http://localhost/query=foo@bar");
 	}
 
 }

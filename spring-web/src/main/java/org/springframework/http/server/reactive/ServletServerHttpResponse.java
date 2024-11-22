@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2021 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,14 +19,15 @@ package org.springframework.http.server.reactive;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.Charset;
+import java.util.List;
 
-import jakarta.servlet.AsyncContext;
-import jakarta.servlet.AsyncEvent;
-import jakarta.servlet.AsyncListener;
-import jakarta.servlet.ServletOutputStream;
-import jakarta.servlet.WriteListener;
-import jakarta.servlet.http.Cookie;
-import jakarta.servlet.http.HttpServletResponse;
+import javax.servlet.AsyncContext;
+import javax.servlet.AsyncEvent;
+import javax.servlet.AsyncListener;
+import javax.servlet.ServletOutputStream;
+import javax.servlet.WriteListener;
+import javax.servlet.http.HttpServletResponse;
+
 import org.reactivestreams.Processor;
 import org.reactivestreams.Publisher;
 
@@ -34,7 +35,7 @@ import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.core.io.buffer.DataBufferFactory;
 import org.springframework.core.io.buffer.DataBufferUtils;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatusCode;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseCookie;
 import org.springframework.lang.Nullable;
@@ -44,7 +45,6 @@ import org.springframework.util.Assert;
  * Adapt {@link ServerHttpResponse} to the Servlet {@link HttpServletResponse}.
  *
  * @author Rossen Stoyanchev
- * @author Juergen Hoeller
  * @since 5.0
  */
 class ServletServerHttpResponse extends AbstractListenerServerHttpResponse {
@@ -102,14 +102,12 @@ class ServletServerHttpResponse extends AbstractListenerServerHttpResponse {
 	}
 
 	@Override
-	public HttpStatusCode getStatusCode() {
-		HttpStatusCode status = super.getStatusCode();
-		return (status != null ? status : HttpStatusCode.valueOf(this.response.getStatus()));
+	public HttpStatus getStatusCode() {
+		HttpStatus status = super.getStatusCode();
+		return (status != null ? status : HttpStatus.resolve(this.response.getStatus()));
 	}
 
 	@Override
-	@Deprecated
-	@SuppressWarnings("removal")
 	public Integer getRawStatusCode() {
 		Integer status = super.getRawStatusCode();
 		return (status != null ? status : this.response.getStatus());
@@ -117,9 +115,9 @@ class ServletServerHttpResponse extends AbstractListenerServerHttpResponse {
 
 	@Override
 	protected void applyStatusCode() {
-		HttpStatusCode status = super.getStatusCode();
+		Integer status = super.getRawStatusCode();
 		if (status != null) {
-			this.response.setStatus(status.value());
+			this.response.setStatus(status);
 		}
 	}
 
@@ -130,11 +128,6 @@ class ServletServerHttpResponse extends AbstractListenerServerHttpResponse {
 				this.response.addHeader(headerName, headerValue);
 			}
 		});
-
-		adaptHeaders(false);
-	}
-
-	protected void adaptHeaders(boolean removeAdaptedHeaders) {
 		MediaType contentType = null;
 		try {
 			contentType = getHeaders().getContentType();
@@ -146,46 +139,31 @@ class ServletServerHttpResponse extends AbstractListenerServerHttpResponse {
 		if (this.response.getContentType() == null && contentType != null) {
 			this.response.setContentType(contentType.toString());
 		}
-
 		Charset charset = (contentType != null ? contentType.getCharset() : null);
 		if (this.response.getCharacterEncoding() == null && charset != null) {
 			this.response.setCharacterEncoding(charset.name());
 		}
-
 		long contentLength = getHeaders().getContentLength();
 		if (contentLength != -1) {
 			this.response.setContentLengthLong(contentLength);
-		}
-
-		if (removeAdaptedHeaders) {
-			getHeaders().remove(HttpHeaders.CONTENT_TYPE);
-			getHeaders().remove(HttpHeaders.CONTENT_LENGTH);
 		}
 	}
 
 	@Override
 	protected void applyCookies() {
-		for (String name : getCookies().keySet()) {
-			for (ResponseCookie httpCookie : getCookies().get(name)) {
-				Cookie cookie = new Cookie(name, httpCookie.getValue());
-				if (!httpCookie.getMaxAge().isNegative()) {
-					cookie.setMaxAge((int) httpCookie.getMaxAge().getSeconds());
-				}
-				if (httpCookie.getDomain() != null) {
-					cookie.setDomain(httpCookie.getDomain());
-				}
-				if (httpCookie.getPath() != null) {
-					cookie.setPath(httpCookie.getPath());
-				}
-				if (httpCookie.getSameSite() != null) {
-					cookie.setAttribute("SameSite", httpCookie.getSameSite());
-				}
-				cookie.setSecure(httpCookie.isSecure());
-				cookie.setHttpOnly(httpCookie.isHttpOnly());
-				if (httpCookie.isPartitioned()) {
-					cookie.setAttribute("Partitioned", "");
-				}
-				this.response.addCookie(cookie);
+
+		// Servlet Cookie doesn't support same site:
+		// https://github.com/eclipse-ee4j/servlet-api/issues/175
+
+		// For Jetty, starting 9.4.21+ we could adapt to HttpCookie:
+		// https://github.com/eclipse/jetty.project/issues/3040
+
+		// For Tomcat, it seems to be a global option only:
+		// https://tomcat.apache.org/tomcat-8.5-doc/config/cookie-processor.html
+
+		for (List<ResponseCookie> cookies : getCookies().values()) {
+			for (ResponseCookie cookie : cookies) {
+				this.response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
 			}
 		}
 	}
@@ -205,13 +183,6 @@ class ServletServerHttpResponse extends AbstractListenerServerHttpResponse {
 		ResponseBodyFlushProcessor processor = new ResponseBodyFlushProcessor();
 		this.bodyFlushProcessor = processor;
 		return processor;
-	}
-
-	/**
-	 * Return the {@link ServletOutputStream} for the current response.
-	 */
-	protected final ServletOutputStream getOutputStream() {
-		return this.outputStream;
 	}
 
 	/**

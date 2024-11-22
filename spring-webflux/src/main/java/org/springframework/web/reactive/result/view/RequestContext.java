@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -72,7 +72,7 @@ public class RequestContext {
 	private Map<String, Errors> errorsMap;
 
 	@Nullable
-	private final RequestDataValueProcessor dataValueProcessor;
+	private RequestDataValueProcessor dataValueProcessor;
 
 
 	public RequestContext(ServerWebExchange exchange, Map<String, Object> model, MessageSource messageSource) {
@@ -92,8 +92,8 @@ public class RequestContext {
 		LocaleContext localeContext = exchange.getLocaleContext();
 		Locale locale = localeContext.getLocale();
 		this.locale = (locale != null ? locale : Locale.getDefault());
-		TimeZone timeZone = (localeContext instanceof TimeZoneAwareLocaleContext tzaLocaleContext ?
-				tzaLocaleContext.getTimeZone() : null);
+		TimeZone timeZone = (localeContext instanceof TimeZoneAwareLocaleContext ?
+				((TimeZoneAwareLocaleContext) localeContext).getTimeZone() : null);
 		this.timeZone = (timeZone != null ? timeZone : TimeZone.getDefault());
 
 		this.defaultHtmlEscape = null;  // TODO
@@ -164,7 +164,7 @@ public class RequestContext {
 	 * no explicit default given.
 	 */
 	public boolean isDefaultHtmlEscape() {
-		return (this.defaultHtmlEscape != null && this.defaultHtmlEscape);
+		return (this.defaultHtmlEscape != null && this.defaultHtmlEscape.booleanValue());
 	}
 
 	/**
@@ -333,7 +333,7 @@ public class RequestContext {
 	}
 
 	/**
-	 * Retrieve the given MessageSourceResolvable (for example, an ObjectError instance), using the "defaultHtmlEscape" setting.
+	 * Retrieve the given MessageSourceResolvable (e.g. an ObjectError instance), using the "defaultHtmlEscape" setting.
 	 * @param resolvable the MessageSourceResolvable
 	 * @return the message
 	 * @throws org.springframework.context.NoSuchMessageException if not found
@@ -343,7 +343,7 @@ public class RequestContext {
 	}
 
 	/**
-	 * Retrieve the given MessageSourceResolvable (for example, an ObjectError instance).
+	 * Retrieve the given MessageSourceResolvable (e.g. an ObjectError instance).
 	 * @param resolvable the MessageSourceResolvable
 	 * @param htmlEscape if the message should be HTML-escaped
 	 * @return the message
@@ -385,15 +385,15 @@ public class RequestContext {
 			}
 		}
 
-		if (errors instanceof BindException bindException) {
-			errors = bindException.getBindingResult();
+		if (errors instanceof BindException) {
+			errors = ((BindException) errors).getBindingResult();
 		}
 
 		if (htmlEscape && !(errors instanceof EscapedErrors)) {
 			errors = new EscapedErrors(errors);
 		}
-		else if (!htmlEscape && errors instanceof EscapedErrors escapedErrors) {
-			errors = escapedErrors.getSource();
+		else if (!htmlEscape && errors instanceof EscapedErrors) {
+			errors = ((EscapedErrors) errors).getSource();
 		}
 
 		this.errorsMap.put(name, errors);
@@ -420,7 +420,7 @@ public class RequestContext {
 	 * Create a BindStatus for the given bind object using the
 	 * "defaultHtmlEscape" setting.
 	 * @param path the bean and property path for which values and errors will
-	 * be resolved (for example, "person.age")
+	 * be resolved (e.g. "person.age")
 	 * @return the new BindStatus instance
 	 * @throws IllegalStateException if no corresponding Errors object found
 	 */
@@ -432,7 +432,7 @@ public class RequestContext {
 	 * Create a BindStatus for the given bind object, using the
 	 * "defaultHtmlEscape" setting.
 	 * @param path the bean and property path for which values and errors will
-	 * be resolved (for example, "person.age")
+	 * be resolved (e.g. "person.age")
 	 * @param htmlEscape create a BindStatus with automatic HTML escaping?
 	 * @return the new BindStatus instance
 	 * @throws IllegalStateException if no corresponding Errors object found

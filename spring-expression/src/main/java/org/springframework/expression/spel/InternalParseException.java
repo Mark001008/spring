@@ -16,8 +16,6 @@
 
 package org.springframework.expression.spel;
 
-import org.springframework.lang.Nullable;
-
 /**
  * Wraps a real parse exception. This exception flows to the top parse method and then
  * the wrapped exception is thrown as the real problem.
@@ -28,12 +26,11 @@ import org.springframework.lang.Nullable;
 @SuppressWarnings("serial")
 public class InternalParseException extends RuntimeException {
 
-	public InternalParseException(@Nullable SpelParseException cause) {
+	public InternalParseException(SpelParseException cause) {
 		super(cause);
 	}
 
 	@Override
-	@Nullable
 	public SpelParseException getCause() {
 		return (SpelParseException) super.getCause();
 	}

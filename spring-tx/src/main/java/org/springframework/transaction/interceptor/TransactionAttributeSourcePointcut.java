@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,39 +27,36 @@ import org.springframework.transaction.TransactionManager;
 import org.springframework.util.ObjectUtils;
 
 /**
- * Internal class that implements a {@code Pointcut} that matches if the underlying
+ * Abstract class that implements a Pointcut that matches if the underlying
  * {@link TransactionAttributeSource} has an attribute for a given method.
  *
  * @author Juergen Hoeller
- * @author Sam Brannen
  * @since 2.5.5
  */
 @SuppressWarnings("serial")
-final class TransactionAttributeSourcePointcut extends StaticMethodMatcherPointcut implements Serializable {
+abstract class TransactionAttributeSourcePointcut extends StaticMethodMatcherPointcut implements Serializable {
 
-	@Nullable
-	private TransactionAttributeSource transactionAttributeSource;
-
-
-	public TransactionAttributeSourcePointcut() {
+	protected TransactionAttributeSourcePointcut() {
 		setClassFilter(new TransactionAttributeSourceClassFilter());
 	}
 
 
-	public void setTransactionAttributeSource(@Nullable TransactionAttributeSource transactionAttributeSource) {
-		this.transactionAttributeSource = transactionAttributeSource;
-	}
-
 	@Override
 	public boolean matches(Method method, Class<?> targetClass) {
-		return (this.transactionAttributeSource == null ||
-				this.transactionAttributeSource.hasTransactionAttribute(method, targetClass));
+		TransactionAttributeSource tas = getTransactionAttributeSource();
+		return (tas == null || tas.getTransactionAttribute(method, targetClass) != null);
 	}
 
 	@Override
 	public boolean equals(@Nullable Object other) {
-		return (this == other || (other instanceof TransactionAttributeSourcePointcut that &&
-				ObjectUtils.nullSafeEquals(this.transactionAttributeSource, that.transactionAttributeSource)));
+		if (this == other) {
+			return true;
+		}
+		if (!(other instanceof TransactionAttributeSourcePointcut)) {
+			return false;
+		}
+		TransactionAttributeSourcePointcut otherPc = (TransactionAttributeSourcePointcut) other;
+		return ObjectUtils.nullSafeEquals(getTransactionAttributeSource(), otherPc.getTransactionAttributeSource());
 	}
 
 	@Override
@@ -69,15 +66,23 @@ final class TransactionAttributeSourcePointcut extends StaticMethodMatcherPointc
 
 	@Override
 	public String toString() {
-		return getClass().getName() + ": " + this.transactionAttributeSource;
+		return getClass().getName() + ": " + getTransactionAttributeSource();
 	}
+
+
+	/**
+	 * Obtain the underlying TransactionAttributeSource (may be {@code null}).
+	 * To be implemented by subclasses.
+	 */
+	@Nullable
+	protected abstract TransactionAttributeSource getTransactionAttributeSource();
 
 
 	/**
 	 * {@link ClassFilter} that delegates to {@link TransactionAttributeSource#isCandidateClass}
 	 * for filtering classes whose methods are not worth searching to begin with.
 	 */
-	private final class TransactionAttributeSourceClassFilter implements ClassFilter {
+	private class TransactionAttributeSourceClassFilter implements ClassFilter {
 
 		@Override
 		public boolean matches(Class<?> clazz) {
@@ -86,28 +91,8 @@ final class TransactionAttributeSourcePointcut extends StaticMethodMatcherPointc
 					PersistenceExceptionTranslator.class.isAssignableFrom(clazz)) {
 				return false;
 			}
-			return (transactionAttributeSource == null || transactionAttributeSource.isCandidateClass(clazz));
-		}
-
-		@Nullable
-		private TransactionAttributeSource getTransactionAttributeSource() {
-			return transactionAttributeSource;
-		}
-
-		@Override
-		public boolean equals(@Nullable Object other) {
-			return (this == other || (other instanceof TransactionAttributeSourceClassFilter that &&
-					ObjectUtils.nullSafeEquals(getTransactionAttributeSource(), that.getTransactionAttributeSource())));
-		}
-
-		@Override
-		public int hashCode() {
-			return TransactionAttributeSourceClassFilter.class.hashCode();
-		}
-
-		@Override
-		public String toString() {
-			return TransactionAttributeSourceClassFilter.class.getName() + ": " + getTransactionAttributeSource();
+			TransactionAttributeSource tas = getTransactionAttributeSource();
+			return (tas == null || tas.isCandidateClass(clazz));
 		}
 	}
 

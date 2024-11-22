@@ -28,6 +28,7 @@ import java.util.function.Consumer;
 import org.springframework.lang.Nullable;
 import org.springframework.util.MultiValueMap;
 import org.springframework.util.ObjectUtils;
+import org.springframework.web.util.UriTemplateHandler;
 
 /**
  * Extension of {@link HttpEntity} that also exposes the HTTP method and the
@@ -166,7 +167,7 @@ public class RequestEntity<T> extends HttpEntity<T> {
 	 * on how to expand template and encode the URI. In such cases, the
 	 * {@code URI} is prepared by the
 	 * {@link org.springframework.web.client.RestTemplate} with the help of the
-	 * {@link org.springframework.web.util.UriTemplateHandler} it is configured with.
+	 * {@link UriTemplateHandler} it is configured with.
 	 */
 	public URI getUrl() {
 		if (this.url == null) {
@@ -205,8 +206,8 @@ public class RequestEntity<T> extends HttpEntity<T> {
 		if (!super.equals(other)) {
 			return false;
 		}
-		return (other instanceof RequestEntity<?> otherEntity &&
-				ObjectUtils.nullSafeEquals(this.method, otherEntity.method) &&
+		RequestEntity<?> otherEntity = (RequestEntity<?>) other;
+		return (ObjectUtils.nullSafeEquals(this.method, otherEntity.method) &&
 				ObjectUtils.nullSafeEquals(this.url, otherEntity.url));
 	}
 
@@ -736,8 +737,8 @@ public class RequestEntity<T> extends HttpEntity<T> {
 			if (!super.equals(other)) {
 				return false;
 			}
-			return (other instanceof UriTemplateRequestEntity<?> otherEntity &&
-					ObjectUtils.nullSafeEquals(this.uriTemplate, otherEntity.uriTemplate) &&
+			UriTemplateRequestEntity<?> otherEntity = (UriTemplateRequestEntity<?>) other;
+			return (ObjectUtils.nullSafeEquals(this.uriTemplate, otherEntity.uriTemplate) &&
 					ObjectUtils.nullSafeEquals(this.uriVarsArray, otherEntity.uriVarsArray) &&
 					ObjectUtils.nullSafeEquals(this.uriVarsMap, otherEntity.uriVarsMap));
 		}

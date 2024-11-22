@@ -25,7 +25,6 @@ import java.net.URI;
 import java.net.URL;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
-import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.OpenOption;
@@ -65,7 +64,7 @@ public class PathResource extends AbstractResource implements WritableResource {
 	 * Create a new {@code PathResource} from a {@link Path} handle.
 	 * <p>Note: Unlike {@link FileSystemResource}, when building relative resources
 	 * via {@link #createRelative}, the relative path will be built <i>underneath</i>
-	 * the given root: for example, Paths.get("C:/dir1/"), relative path "dir2" &rarr; "C:/dir1/dir2"!
+	 * the given root: e.g. Paths.get("C:/dir1/"), relative path "dir2" &rarr; "C:/dir1/dir2"!
 	 * @param path a Path handle
 	 */
 	public PathResource(Path path) {
@@ -77,7 +76,7 @@ public class PathResource extends AbstractResource implements WritableResource {
 	 * Create a new {@code PathResource} from a path string.
 	 * <p>Note: Unlike {@link FileSystemResource}, when building relative resources
 	 * via {@link #createRelative}, the relative path will be built <i>underneath</i>
-	 * the given root: for example, Paths.get("C:/dir1/"), relative path "dir2" &rarr; "C:/dir1/dir2"!
+	 * the given root: e.g. Paths.get("C:/dir1/"), relative path "dir2" &rarr; "C:/dir1/dir2"!
 	 * @param path a path
 	 * @see java.nio.file.Paths#get(String, String...)
 	 */
@@ -90,7 +89,7 @@ public class PathResource extends AbstractResource implements WritableResource {
 	 * Create a new {@code PathResource} from a {@link URI}.
 	 * <p>Note: Unlike {@link FileSystemResource}, when building relative resources
 	 * via {@link #createRelative}, the relative path will be built <i>underneath</i>
-	 * the given root: for example, Paths.get("C:/dir1/"), relative path "dir2" &rarr; "C:/dir1/dir2"!
+	 * the given root: e.g. Paths.get("C:/dir1/"), relative path "dir2" &rarr; "C:/dir1/dir2"!
 	 * @param uri a path URI
 	 * @see java.nio.file.Paths#get(URI)
 	 */
@@ -140,26 +139,6 @@ public class PathResource extends AbstractResource implements WritableResource {
 			throw new FileNotFoundException(getPath() + " (is a directory)");
 		}
 		return Files.newInputStream(this.path);
-	}
-
-	@Override
-	public byte[] getContentAsByteArray() throws IOException {
-		try {
-			return Files.readAllBytes(this.path);
-		}
-		catch (NoSuchFileException ex) {
-			throw new FileNotFoundException(ex.getMessage());
-		}
-	}
-
-	@Override
-	public String getContentAsString(Charset charset) throws IOException {
-		try {
-			return Files.readString(this.path, charset);
-		}
-		catch (NoSuchFileException ex) {
-			throw new FileNotFoundException(ex.getMessage());
-		}
 	}
 
 	/**
@@ -299,7 +278,8 @@ public class PathResource extends AbstractResource implements WritableResource {
 	 */
 	@Override
 	public boolean equals(@Nullable Object other) {
-		return (this == other || (other instanceof PathResource that && this.path.equals(that.path)));
+		return (this == other || (other instanceof PathResource &&
+				this.path.equals(((PathResource) other).path)));
 	}
 
 	/**

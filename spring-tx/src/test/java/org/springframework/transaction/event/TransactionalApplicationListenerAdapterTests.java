@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,10 +28,10 @@ import static org.assertj.core.api.Assertions.assertThatRuntimeException;
 /**
  * @author Juergen Hoeller
  */
-class TransactionalApplicationListenerAdapterTests {
+public class TransactionalApplicationListenerAdapterTests {
 
 	@Test
-	void invokesCompletionCallbackOnSuccess() {
+	public void invokesCompletionCallbackOnSuccess() {
 		CapturingSynchronizationCallback callback = new CapturingSynchronizationCallback();
 		PayloadApplicationEvent<Object> event = new PayloadApplicationEvent<>(this, new Object());
 
@@ -44,11 +44,11 @@ class TransactionalApplicationListenerAdapterTests {
 		assertThat(callback.postEvent).isEqualTo(event);
 		assertThat(callback.ex).isNull();
 		assertThat(adapter.getTransactionPhase()).isEqualTo(TransactionPhase.AFTER_COMMIT);
-		assertThat(adapter.getListenerId()).isEmpty();
+		assertThat(adapter.getListenerId()).isEqualTo("");
 	}
 
 	@Test
-	void invokesExceptionHandlerOnException() {
+	public void invokesExceptionHandlerOnException() {
 		CapturingSynchronizationCallback callback = new CapturingSynchronizationCallback();
 		PayloadApplicationEvent<String> event = new PayloadApplicationEvent<>(this, "event");
 		RuntimeException ex = new RuntimeException("event");
@@ -66,11 +66,11 @@ class TransactionalApplicationListenerAdapterTests {
 		assertThat(callback.postEvent).isEqualTo(event);
 		assertThat(callback.ex).isEqualTo(ex);
 		assertThat(adapter.getTransactionPhase()).isEqualTo(TransactionPhase.BEFORE_COMMIT);
-		assertThat(adapter.getListenerId()).isEmpty();
+		assertThat(adapter.getListenerId()).isEqualTo("");
 	}
 
 	@Test
-	void useSpecifiedIdentifier() {
+	public void useSpecifiedIdentifier() {
 		CapturingSynchronizationCallback callback = new CapturingSynchronizationCallback();
 		PayloadApplicationEvent<String> event = new PayloadApplicationEvent<>(this, "event");
 

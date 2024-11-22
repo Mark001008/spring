@@ -18,10 +18,10 @@ package org.springframework.jms.core;
 
 import java.util.Map;
 
-import jakarta.jms.ConnectionFactory;
-import jakarta.jms.Destination;
-import jakarta.jms.JMSException;
-import jakarta.jms.Session;
+import javax.jms.ConnectionFactory;
+import javax.jms.Destination;
+import javax.jms.JMSException;
+import javax.jms.Session;
 
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.jms.InvalidDestinationException;
@@ -123,7 +123,7 @@ public class JmsMessagingTemplate extends AbstractMessagingTemplate<Destination>
 
 	/**
 	 * Set the {@link MessageConverter} to use to convert a {@link Message} from
-	 * the messaging to and from a {@link jakarta.jms.Message}. By default, a
+	 * the messaging to and from a {@link javax.jms.Message}. By default, a
 	 * {@link MessagingMessageConverter} is defined using a {@link SimpleMessageConverter}
 	 * to convert the payload of the message.
 	 * <p>Consider configuring a {@link MessagingMessageConverter} with a different
@@ -139,7 +139,7 @@ public class JmsMessagingTemplate extends AbstractMessagingTemplate<Destination>
 
 	/**
 	 * Return the {@link MessageConverter} to use to convert a {@link Message}
-	 * from the messaging to and from a {@link jakarta.jms.Message}.
+	 * from the messaging to and from a {@link javax.jms.Message}.
 	 */
 	public MessageConverter getJmsMessageConverter() {
 		return this.jmsMessageConverter;
@@ -368,7 +368,7 @@ public class JmsMessagingTemplate extends AbstractMessagingTemplate<Destination>
 	@Nullable
 	protected Message<?> doReceive(Destination destination) {
 		try {
-			jakarta.jms.Message jmsMessage = obtainJmsTemplate().receive(destination);
+			javax.jms.Message jmsMessage = obtainJmsTemplate().receive(destination);
 			return convertJmsMessage(jmsMessage);
 		}
 		catch (JmsException ex) {
@@ -379,7 +379,7 @@ public class JmsMessagingTemplate extends AbstractMessagingTemplate<Destination>
 	@Nullable
 	protected Message<?> doReceive(String destinationName) {
 		try {
-			jakarta.jms.Message jmsMessage = obtainJmsTemplate().receive(destinationName);
+			javax.jms.Message jmsMessage = obtainJmsTemplate().receive(destinationName);
 			return convertJmsMessage(jmsMessage);
 		}
 		catch (JmsException ex) {
@@ -391,7 +391,7 @@ public class JmsMessagingTemplate extends AbstractMessagingTemplate<Destination>
 	@Nullable
 	protected Message<?> doSendAndReceive(Destination destination, Message<?> requestMessage) {
 		try {
-			jakarta.jms.Message jmsMessage = obtainJmsTemplate().sendAndReceive(
+			javax.jms.Message jmsMessage = obtainJmsTemplate().sendAndReceive(
 					destination, createMessageCreator(requestMessage));
 			return convertJmsMessage(jmsMessage);
 		}
@@ -403,7 +403,7 @@ public class JmsMessagingTemplate extends AbstractMessagingTemplate<Destination>
 	@Nullable
 	protected Message<?> doSendAndReceive(String destinationName, Message<?> requestMessage) {
 		try {
-			jakarta.jms.Message jmsMessage = obtainJmsTemplate().sendAndReceive(
+			javax.jms.Message jmsMessage = obtainJmsTemplate().sendAndReceive(
 					destinationName, createMessageCreator(requestMessage));
 			return convertJmsMessage(jmsMessage);
 		}
@@ -426,7 +426,7 @@ public class JmsMessagingTemplate extends AbstractMessagingTemplate<Destination>
 	}
 
 	@Nullable
-	protected Message<?> convertJmsMessage(@Nullable jakarta.jms.Message message) {
+	protected Message<?> convertJmsMessage(@Nullable javax.jms.Message message) {
 		if (message == null) {
 			return null;
 		}
@@ -463,13 +463,12 @@ public class JmsMessagingTemplate extends AbstractMessagingTemplate<Destination>
 		}
 
 		@Override
-		public jakarta.jms.Message createMessage(Session session) throws JMSException {
+		public javax.jms.Message createMessage(Session session) throws JMSException {
 			try {
 				return this.messageConverter.toMessage(this.message, session);
 			}
 			catch (Exception ex) {
-				throw new MessageConversionException(
-						"Could not convert '" + this.message + "': " + ex.getMessage(), ex);
+				throw new MessageConversionException("Could not convert '" + this.message + "'", ex);
 			}
 		}
 	}

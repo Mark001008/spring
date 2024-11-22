@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +20,6 @@ import org.aopalliance.intercept.MethodInterceptor;
 import org.aopalliance.intercept.MethodInvocation;
 
 import org.springframework.beans.BeansException;
-import org.springframework.beans.factory.BeanCreationNotAllowedException;
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.BeanFactoryAware;
 import org.springframework.beans.factory.InitializingBean;
@@ -115,11 +114,11 @@ public class PersistenceExceptionTranslationInterceptor
 	public void setBeanFactory(BeanFactory beanFactory) throws BeansException {
 		if (this.persistenceExceptionTranslator == null) {
 			// No explicit exception translator specified - perform autodetection.
-			if (!(beanFactory instanceof ListableBeanFactory lbf)) {
+			if (!(beanFactory instanceof ListableBeanFactory)) {
 				throw new IllegalArgumentException(
 						"Cannot use PersistenceExceptionTranslator autodetection without ListableBeanFactory");
 			}
-			this.beanFactory = lbf;
+			this.beanFactory = (ListableBeanFactory) beanFactory;
 		}
 	}
 
@@ -147,14 +146,7 @@ public class PersistenceExceptionTranslationInterceptor
 				if (translator == null) {
 					Assert.state(this.beanFactory != null,
 							"Cannot use PersistenceExceptionTranslator autodetection without ListableBeanFactory");
-					try {
-						translator = detectPersistenceExceptionTranslators(this.beanFactory);
-					}
-					catch (BeanCreationNotAllowedException ex2) {
-						// Cannot create PersistenceExceptionTranslator bean on shutdown:
-						// fall back to rethrowing original exception without translation
-						throw ex;
-					}
+					translator = detectPersistenceExceptionTranslators(this.beanFactory);
 					this.persistenceExceptionTranslator = translator;
 				}
 				throw DataAccessUtils.translateIfNecessary(ex, translator);

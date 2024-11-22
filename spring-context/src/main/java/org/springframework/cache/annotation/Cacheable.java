@@ -24,7 +24,6 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import java.util.concurrent.Callable;
 
-import org.springframework.aot.hint.annotation.Reflective;
 import org.springframework.core.annotation.AliasFor;
 
 /**
@@ -59,7 +58,6 @@ import org.springframework.core.annotation.AliasFor;
 @Retention(RetentionPolicy.RUNTIME)
 @Inherited
 @Documented
-@Reflective
 public @interface Cacheable {
 
 	/**
@@ -76,11 +74,6 @@ public @interface Cacheable {
 	 * <p>This will usually be a single cache name. If multiple names are specified,
 	 * they will be consulted for a cache hit in the order of definition, and they
 	 * will all receive a put/evict request for the same newly cached value.
-	 * <p>Note that asynchronous/reactive cache access may not fully consult all
-	 * specified caches, depending on the target cache. In the case of late-determined
-	 * cache misses (for example, with Redis), further caches will not get consulted anymore.
-	 * As a consequence, specifying multiple cache names in an async cache mode setup
-	 * only makes sense with early-determined cache misses (for example, with Caffeine).
 	 * @since 4.2
 	 * @see #value
 	 * @see CacheConfig#cacheNames

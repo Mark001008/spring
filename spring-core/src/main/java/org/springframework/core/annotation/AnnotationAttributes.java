@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2021 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -53,7 +53,7 @@ public class AnnotationAttributes extends LinkedHashMap<String, Object> {
 
 	final String displayName;
 
-	final boolean validated;
+	boolean validated = false;
 
 
 	/**
@@ -62,7 +62,6 @@ public class AnnotationAttributes extends LinkedHashMap<String, Object> {
 	public AnnotationAttributes() {
 		this.annotationType = null;
 		this.displayName = UNKNOWN;
-		this.validated = false;
 	}
 
 	/**
@@ -74,7 +73,6 @@ public class AnnotationAttributes extends LinkedHashMap<String, Object> {
 		super(initialCapacity);
 		this.annotationType = null;
 		this.displayName = UNKNOWN;
-		this.validated = false;
 	}
 
 	/**
@@ -87,7 +85,6 @@ public class AnnotationAttributes extends LinkedHashMap<String, Object> {
 		super(map);
 		this.annotationType = null;
 		this.displayName = UNKNOWN;
-		this.validated = false;
 	}
 
 	/**
@@ -111,7 +108,9 @@ public class AnnotationAttributes extends LinkedHashMap<String, Object> {
 	 * @since 4.2
 	 */
 	public AnnotationAttributes(Class<? extends Annotation> annotationType) {
-		this(annotationType, false);
+		Assert.notNull(annotationType, "'annotationType' must not be null");
+		this.annotationType = annotationType;
+		this.displayName = annotationType.getName();
 	}
 
 	/**
@@ -143,7 +142,6 @@ public class AnnotationAttributes extends LinkedHashMap<String, Object> {
 		Assert.notNull(annotationType, "'annotationType' must not be null");
 		this.annotationType = getAnnotationType(annotationType, classLoader);
 		this.displayName = annotationType;
-		this.validated = false;
 	}
 
 	@SuppressWarnings("unchecked")
@@ -329,7 +327,8 @@ public class AnnotationAttributes extends LinkedHashMap<String, Object> {
 	 */
 	@SuppressWarnings("unchecked")
 	public <A extends Annotation> A[] getAnnotationArray(String attributeName, Class<A> annotationType) {
-		return (A[]) getRequiredAttribute(attributeName, annotationType.arrayType());
+		Object array = Array.newInstance(annotationType, 0);
+		return (A[]) getRequiredAttribute(attributeName, array.getClass());
 	}
 
 	/**
@@ -351,29 +350,39 @@ public class AnnotationAttributes extends LinkedHashMap<String, Object> {
 	private <T> T getRequiredAttribute(String attributeName, Class<T> expectedType) {
 		Assert.hasText(attributeName, "'attributeName' must not be null or empty");
 		Object value = get(attributeName);
-		if (value == null) {
-			throw new IllegalArgumentException(String.format(
-					"Attribute '%s' not found in attributes for annotation [%s]",
-					attributeName, this.displayName));
-		}
-		if (value instanceof Throwable throwable) {
-			throw new IllegalArgumentException(String.format(
-					"Attribute '%s' for annotation [%s] was not resolvable due to exception [%s]",
-					attributeName, this.displayName, value), throwable);
-		}
+		assertAttributePresence(attributeName, value);
+		assertNotException(attributeName, value);
 		if (!expectedType.isInstance(value) && expectedType.isArray() &&
-				expectedType.componentType().isInstance(value)) {
-			Object array = Array.newInstance(expectedType.componentType(), 1);
+				expectedType.getComponentType().isInstance(value)) {
+			Object array = Array.newInstance(expectedType.getComponentType(), 1);
 			Array.set(array, 0, value);
 			value = array;
 		}
-		if (!expectedType.isInstance(value)) {
+		assertAttributeType(attributeName, value, expectedType);
+		return (T) value;
+	}
+
+	private void assertAttributePresence(String attributeName, Object attributeValue) {
+		Assert.notNull(attributeValue, () -> String.format(
+				"Attribute '%s' not found in attributes for annotation [%s]",
+				attributeName, this.displayName));
+	}
+
+	private void assertNotException(String attributeName, Object attributeValue) {
+		if (attributeValue instanceof Throwable) {
+			throw new IllegalArgumentException(String.format(
+					"Attribute '%s' for annotation [%s] was not resolvable due to exception [%s]",
+					attributeName, this.displayName, attributeValue), (Throwable) attributeValue);
+		}
+	}
+
+	private void assertAttributeType(String attributeName, Object attributeValue, Class<?> expectedType) {
+		if (!expectedType.isInstance(attributeValue)) {
 			throw new IllegalArgumentException(String.format(
 					"Attribute '%s' is of type %s, but %s was expected in attributes for annotation [%s]",
-					attributeName, value.getClass().getSimpleName(), expectedType.getSimpleName(),
+					attributeName, attributeValue.getClass().getSimpleName(), expectedType.getSimpleName(),
 					this.displayName));
 		}
-		return (T) value;
 	}
 
 	@Override
@@ -397,8 +406,8 @@ public class AnnotationAttributes extends LinkedHashMap<String, Object> {
 		if (value == this) {
 			return "(this Map)";
 		}
-		if (value instanceof Object[] objects) {
-			return "[" + StringUtils.arrayToDelimitedString(objects, ", ") + "]";
+		if (value instanceof Object[]) {
+			return "[" + StringUtils.arrayToDelimitedString((Object[]) value, ", ") + "]";
 		}
 		return String.valueOf(value);
 	}
@@ -417,8 +426,8 @@ public class AnnotationAttributes extends LinkedHashMap<String, Object> {
 		if (map == null) {
 			return null;
 		}
-		if (map instanceof AnnotationAttributes annotationAttributes) {
-			return annotationAttributes;
+		if (map instanceof AnnotationAttributes) {
+			return (AnnotationAttributes) map;
 		}
 		return new AnnotationAttributes(map);
 	}

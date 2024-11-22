@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2021 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -44,7 +44,7 @@ import static org.springframework.util.ClassUtils.convertClassNameToResourcePath
  * @author Juergen Hoeller
  * @author Chris Beams
  */
-class QualifierAnnotationTests {
+public class QualifierAnnotationTests {
 
 	private static final String CLASSNAME = QualifierAnnotationTests.class.getName();
 
@@ -53,7 +53,7 @@ class QualifierAnnotationTests {
 
 
 	@Test
-	void testNonQualifiedFieldFails() {
+	public void testNonQualifiedFieldFails() {
 		StaticApplicationContext context = new StaticApplicationContext();
 		BeanDefinitionReader reader = new XmlBeanDefinitionReader(context);
 		reader.loadBeanDefinitions(CONFIG_LOCATION);
@@ -65,7 +65,7 @@ class QualifierAnnotationTests {
 	}
 
 	@Test
-	void testQualifiedByValue() {
+	public void testQualifiedByValue() {
 		StaticApplicationContext context = new StaticApplicationContext();
 		BeanDefinitionReader reader = new XmlBeanDefinitionReader(context);
 		reader.loadBeanDefinitions(CONFIG_LOCATION);
@@ -77,7 +77,7 @@ class QualifierAnnotationTests {
 	}
 
 	@Test
-	void testQualifiedByParentValue() {
+	public void testQualifiedByParentValue() {
 		StaticApplicationContext parent = new StaticApplicationContext();
 		GenericBeanDefinition parentLarry = new GenericBeanDefinition();
 		parentLarry.setBeanClass(Person.class);
@@ -102,7 +102,7 @@ class QualifierAnnotationTests {
 	}
 
 	@Test
-	void testQualifiedByBeanName() {
+	public void testQualifiedByBeanName() {
 		StaticApplicationContext context = new StaticApplicationContext();
 		BeanDefinitionReader reader = new XmlBeanDefinitionReader(context);
 		reader.loadBeanDefinitions(CONFIG_LOCATION);
@@ -111,12 +111,11 @@ class QualifierAnnotationTests {
 		QualifiedByBeanNameTestBean testBean = (QualifiedByBeanNameTestBean) context.getBean("testBean");
 		Person person = testBean.getLarry();
 		assertThat(person.getName()).isEqualTo("LarryBean");
-		assertThat(testBean.myProps).isNotNull();
-		assertThat(testBean.myProps).isEmpty();
+		assertThat(testBean.myProps != null && testBean.myProps.isEmpty()).isTrue();
 	}
 
 	@Test
-	void testQualifiedByFieldName() {
+	public void testQualifiedByFieldName() {
 		StaticApplicationContext context = new StaticApplicationContext();
 		BeanDefinitionReader reader = new XmlBeanDefinitionReader(context);
 		reader.loadBeanDefinitions(CONFIG_LOCATION);
@@ -128,7 +127,7 @@ class QualifierAnnotationTests {
 	}
 
 	@Test
-	void testQualifiedByParameterName() {
+	public void testQualifiedByParameterName() {
 		StaticApplicationContext context = new StaticApplicationContext();
 		BeanDefinitionReader reader = new XmlBeanDefinitionReader(context);
 		reader.loadBeanDefinitions(CONFIG_LOCATION);
@@ -140,7 +139,7 @@ class QualifierAnnotationTests {
 	}
 
 	@Test
-	void testQualifiedByAlias() {
+	public void testQualifiedByAlias() {
 		StaticApplicationContext context = new StaticApplicationContext();
 		BeanDefinitionReader reader = new XmlBeanDefinitionReader(context);
 		reader.loadBeanDefinitions(CONFIG_LOCATION);
@@ -152,7 +151,7 @@ class QualifierAnnotationTests {
 	}
 
 	@Test
-	void testQualifiedByAnnotation() {
+	public void testQualifiedByAnnotation() {
 		StaticApplicationContext context = new StaticApplicationContext();
 		BeanDefinitionReader reader = new XmlBeanDefinitionReader(context);
 		reader.loadBeanDefinitions(CONFIG_LOCATION);
@@ -164,7 +163,7 @@ class QualifierAnnotationTests {
 	}
 
 	@Test
-	void testQualifiedByCustomValue() {
+	public void testQualifiedByCustomValue() {
 		StaticApplicationContext context = new StaticApplicationContext();
 		BeanDefinitionReader reader = new XmlBeanDefinitionReader(context);
 		reader.loadBeanDefinitions(CONFIG_LOCATION);
@@ -176,7 +175,7 @@ class QualifierAnnotationTests {
 	}
 
 	@Test
-	void testQualifiedByAnnotationValue() {
+	public void testQualifiedByAnnotationValue() {
 		StaticApplicationContext context = new StaticApplicationContext();
 		BeanDefinitionReader reader = new XmlBeanDefinitionReader(context);
 		reader.loadBeanDefinitions(CONFIG_LOCATION);
@@ -188,7 +187,7 @@ class QualifierAnnotationTests {
 	}
 
 	@Test
-	void testQualifiedByAttributesFailsWithoutCustomQualifierRegistered() {
+	public void testQualifiedByAttributesFailsWithoutCustomQualifierRegistered() {
 		StaticApplicationContext context = new StaticApplicationContext();
 		BeanDefinitionReader reader = new XmlBeanDefinitionReader(context);
 		reader.loadBeanDefinitions(CONFIG_LOCATION);
@@ -200,7 +199,7 @@ class QualifierAnnotationTests {
 	}
 
 	@Test
-	void testQualifiedByAttributesWithCustomQualifierRegistered() {
+	public void testQualifiedByAttributesWithCustomQualifierRegistered() {
 		StaticApplicationContext context = new StaticApplicationContext();
 		BeanDefinitionReader reader = new XmlBeanDefinitionReader(context);
 		reader.loadBeanDefinitions(CONFIG_LOCATION);
@@ -217,7 +216,7 @@ class QualifierAnnotationTests {
 	}
 
 	@Test
-	void testInterfaceWithOneQualifiedFactoryAndOneQualifiedBean() {
+	public void testInterfaceWithOneQualifiedFactoryAndOneQualifiedBean() {
 		StaticApplicationContext context = new StaticApplicationContext();
 		BeanDefinitionReader reader = new XmlBeanDefinitionReader(context);
 		reader.loadBeanDefinitions(CONFIG_LOCATION);

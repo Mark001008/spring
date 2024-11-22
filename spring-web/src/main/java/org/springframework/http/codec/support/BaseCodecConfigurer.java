@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2022 the original author or authors.
+ * Copyright 2002-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -55,7 +55,6 @@ abstract class BaseCodecConfigurer implements CodecConfigurer {
 		Assert.notNull(defaultCodecs, "'defaultCodecs' is required");
 		this.defaultCodecs = defaultCodecs;
 		this.customCodecs = new DefaultCustomCodecs();
-		this.defaultCodecs.setPartWritersSupplier(this::getWriters);
 	}
 
 	/**
@@ -65,7 +64,6 @@ abstract class BaseCodecConfigurer implements CodecConfigurer {
 	protected BaseCodecConfigurer(BaseCodecConfigurer other) {
 		this.defaultCodecs = other.cloneDefaultCodecs();
 		this.customCodecs = new DefaultCustomCodecs(other.customCodecs);
-		this.defaultCodecs.setPartWritersSupplier(this::getWriters);
 	}
 
 	/**
@@ -198,18 +196,20 @@ abstract class BaseCodecConfigurer implements CodecConfigurer {
 
 		private void addCodec(Object codec, boolean applyDefaultConfig) {
 
-			if (codec instanceof Decoder<?> decoder) {
-				codec = new DecoderHttpMessageReader<>(decoder);
+			if (codec instanceof Decoder) {
+				codec = new DecoderHttpMessageReader<>((Decoder<?>) codec);
 			}
-			else if (codec instanceof Encoder<?> encoder) {
-				codec = new EncoderHttpMessageWriter<>(encoder);
+			else if (codec instanceof Encoder) {
+				codec = new EncoderHttpMessageWriter<>((Encoder<?>) codec);
 			}
 
-			if (codec instanceof HttpMessageReader<?> reader) {
+			if (codec instanceof HttpMessageReader) {
+				HttpMessageReader<?> reader = (HttpMessageReader<?>) codec;
 				boolean canReadToObject = reader.canRead(ResolvableType.forClass(Object.class), null);
 				(canReadToObject ? this.objectReaders : this.typedReaders).put(reader, applyDefaultConfig);
 			}
-			else if (codec instanceof HttpMessageWriter<?> writer) {
+			else if (codec instanceof HttpMessageWriter) {
+				HttpMessageWriter<?> writer = (HttpMessageWriter<?>) codec;
 				boolean canWriteObject = writer.canWrite(ResolvableType.forClass(Object.class), null);
 				(canWriteObject ? this.objectWriters : this.typedWriters).put(writer, applyDefaultConfig);
 			}

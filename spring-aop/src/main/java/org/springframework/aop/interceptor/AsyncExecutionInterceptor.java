@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2018 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,6 +32,7 @@ import org.springframework.core.Ordered;
 import org.springframework.core.task.AsyncTaskExecutor;
 import org.springframework.core.task.SimpleAsyncTaskExecutor;
 import org.springframework.lang.Nullable;
+import org.springframework.util.ClassUtils;
 
 /**
  * AOP Alliance {@code MethodInterceptor} that processes method invocations
@@ -46,16 +47,16 @@ import org.springframework.lang.Nullable;
  * target method needs to implement the same signature, it will have to return
  * a temporary Future handle that just passes the return value through
  * (like Spring's {@link org.springframework.scheduling.annotation.AsyncResult}
- * or EJB's {@code jakarta.ejb.AsyncResult}).
+ * or EJB 3.1's {@code javax.ejb.AsyncResult}).
  *
  * <p>When the return type is {@code java.util.concurrent.Future}, any exception thrown
  * during the execution can be accessed and managed by the caller. With {@code void}
  * return type however, such exceptions cannot be transmitted back. In that case an
  * {@link AsyncUncaughtExceptionHandler} can be registered to process such exceptions.
  *
- * <p>Note: the {@code AnnotationAsyncExecutionInterceptor} subclass is preferred
- * due to its support for executor qualification in conjunction with Spring's
- * {@code @Async} annotation.
+ * <p>As of Spring 3.1.2 the {@code AnnotationAsyncExecutionInterceptor} subclass is
+ * preferred for use due to its support for executor qualification in conjunction with
+ * Spring's {@code @Async} annotation.
  *
  * @author Juergen Hoeller
  * @author Chris Beams
@@ -70,8 +71,8 @@ public class AsyncExecutionInterceptor extends AsyncExecutionAspectSupport imple
 	/**
 	 * Create a new instance with a default {@link AsyncUncaughtExceptionHandler}.
 	 * @param defaultExecutor the {@link Executor} (typically a Spring {@link AsyncTaskExecutor}
-	 * or {@link java.util.concurrent.ExecutorService}) to delegate to; a local
-	 * executor for this interceptor will be built otherwise
+	 * or {@link java.util.concurrent.ExecutorService}) to delegate to;
+	 * as of 4.2.6, a local executor for this interceptor will be built otherwise
 	 */
 	public AsyncExecutionInterceptor(@Nullable Executor defaultExecutor) {
 		super(defaultExecutor);
@@ -80,8 +81,8 @@ public class AsyncExecutionInterceptor extends AsyncExecutionAspectSupport imple
 	/**
 	 * Create a new {@code AsyncExecutionInterceptor}.
 	 * @param defaultExecutor the {@link Executor} (typically a Spring {@link AsyncTaskExecutor}
-	 * or {@link java.util.concurrent.ExecutorService}) to delegate to; a local
-	 * executor for this interceptor will be built otherwise
+	 * or {@link java.util.concurrent.ExecutorService}) to delegate to;
+	 * as of 4.2.6, a local executor for this interceptor will be built otherwise
 	 * @param exceptionHandler the {@link AsyncUncaughtExceptionHandler} to use
 	 */
 	public AsyncExecutionInterceptor(@Nullable Executor defaultExecutor, AsyncUncaughtExceptionHandler exceptionHandler) {
@@ -98,12 +99,12 @@ public class AsyncExecutionInterceptor extends AsyncExecutionAspectSupport imple
 	 */
 	@Override
 	@Nullable
-	@SuppressWarnings("NullAway")
 	public Object invoke(final MethodInvocation invocation) throws Throwable {
 		Class<?> targetClass = (invocation.getThis() != null ? AopUtils.getTargetClass(invocation.getThis()) : null);
-		final Method userMethod = BridgeMethodResolver.getMostSpecificMethod(invocation.getMethod(), targetClass);
+		Method specificMethod = ClassUtils.getMostSpecificMethod(invocation.getMethod(), targetClass);
+		final Method userDeclaredMethod = BridgeMethodResolver.findBridgedMethod(specificMethod);
 
-		AsyncTaskExecutor executor = determineAsyncExecutor(userMethod);
+		AsyncTaskExecutor executor = determineAsyncExecutor(userDeclaredMethod);
 		if (executor == null) {
 			throw new IllegalStateException(
 					"No executor specified and no default executor set on AsyncExecutionInterceptor either");
@@ -112,15 +113,15 @@ public class AsyncExecutionInterceptor extends AsyncExecutionAspectSupport imple
 		Callable<Object> task = () -> {
 			try {
 				Object result = invocation.proceed();
-				if (result instanceof Future<?> future) {
-					return future.get();
+				if (result instanceof Future) {
+					return ((Future<?>) result).get();
 				}
 			}
 			catch (ExecutionException ex) {
-				handleError(ex.getCause(), userMethod, invocation.getArguments());
+				handleError(ex.getCause(), userDeclaredMethod, invocation.getArguments());
 			}
 			catch (Throwable ex) {
-				handleError(ex, userMethod, invocation.getArguments());
+				handleError(ex, userDeclaredMethod, invocation.getArguments());
 			}
 			return null;
 		};
@@ -129,12 +130,9 @@ public class AsyncExecutionInterceptor extends AsyncExecutionAspectSupport imple
 	}
 
 	/**
-	 * Get the qualifier for a specific executor to use when executing the given
-	 * method.
-	 * <p>The default implementation of this method is effectively a no-op.
-	 * <p>Subclasses may override this method to provide support for extracting
-	 * qualifier information &mdash; for example, via an annotation on the given
-	 * method.
+	 * This implementation is a no-op for compatibility in Spring 3.1.2.
+	 * Subclasses may override to provide support for extracting qualifier information,
+	 * e.g. via an annotation on the given method.
 	 * @return always {@code null}
 	 * @since 3.1.2
 	 * @see #determineAsyncExecutor(Method)
@@ -148,7 +146,7 @@ public class AsyncExecutionInterceptor extends AsyncExecutionAspectSupport imple
 	/**
 	 * This implementation searches for a unique {@link org.springframework.core.task.TaskExecutor}
 	 * bean in the context, or for an {@link Executor} bean named "taskExecutor" otherwise.
-	 * If neither of the two is resolvable (for example, if no {@code BeanFactory} was configured at all),
+	 * If neither of the two is resolvable (e.g. if no {@code BeanFactory} was configured at all),
 	 * this implementation falls back to a newly created {@link SimpleAsyncTaskExecutor} instance
 	 * for local use if no default could be found.
 	 * @see #DEFAULT_TASK_EXECUTOR_BEAN_NAME

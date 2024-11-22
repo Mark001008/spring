@@ -43,11 +43,12 @@ package org.springframework.core.env;
  * {@code Environment} in order to query profile state or resolve properties directly.
  *
  * <p>In most cases, however, application-level beans should not need to interact with the
- * {@code Environment} directly but instead may request to have {@code ${...}} property
+ * {@code Environment} directly but instead may have to have {@code ${...}} property
  * values replaced by a property placeholder configurer such as
  * {@link org.springframework.context.support.PropertySourcesPlaceholderConfigurer
  * PropertySourcesPlaceholderConfigurer}, which itself is {@code EnvironmentAware} and
- * registered by default when using {@code <context:property-placeholder/>}.
+ * as of Spring 3.1 is registered by default when using
+ * {@code <context:property-placeholder/>}.
  *
  * <p>Configuration of the {@code Environment} object must be done through the
  * {@code ConfigurableEnvironment} interface, returned from all

@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2021 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -114,7 +114,7 @@ public abstract class AbstractMethodMessageHandler<T>
 	 * Configure a predicate for selecting which Spring beans to check for the
 	 * presence of message handler methods.
 	 * <p>This is not set by default. However, subclasses may initialize it to
-	 * some default strategy (for example, {@code @Controller} classes).
+	 * some default strategy (e.g. {@code @Controller} classes).
 	 * @see #setHandlers(List)
 	 */
 	public void setHandlerPredicate(@Nullable Predicate<Class<?>> handlerPredicate) {
@@ -146,7 +146,7 @@ public abstract class AbstractMethodMessageHandler<T>
 	 * Configure custom resolvers for handler method arguments.
 	 */
 	public void setArgumentResolverConfigurer(ArgumentResolverConfigurer configurer) {
-		Assert.notNull(configurer, "ArgumentResolverConfigurer is required");
+		Assert.notNull(configurer, "HandlerMethodArgumentResolver is required");
 		this.argumentResolverConfigurer = configurer;
 	}
 
@@ -210,7 +210,7 @@ public abstract class AbstractMethodMessageHandler<T>
 
 	/**
 	 * Subclasses can invoke this method to populate the MessagingAdviceBean cache
-	 * (for example, to support "global" {@code @MessageExceptionHandler}).
+	 * (e.g. to support "global" {@code @MessageExceptionHandler}).
 	 */
 	protected void registerExceptionHandlerAdvice(
 			MessagingAdviceBean bean, AbstractExceptionHandlerMethodResolver resolver) {
@@ -227,7 +227,7 @@ public abstract class AbstractMethodMessageHandler<T>
 
 	/**
 	 * Return a read-only multi-value map with a direct lookup of mappings,
-	 * (for example, for non-pattern destinations).
+	 * (e.g. for non-pattern destinations).
 	 */
 	public MultiValueMap<String, T> getDestinationLookup() {
 		return CollectionUtils.unmodifiableMultiValueMap(CollectionUtils.toMultiValueMap(this.destinationLookup));
@@ -322,10 +322,10 @@ public abstract class AbstractMethodMessageHandler<T>
 	 */
 	protected final void detectHandlerMethods(Object handler) {
 		Class<?> handlerType;
-		if (handler instanceof String handlerName) {
+		if (handler instanceof String) {
 			ApplicationContext context = getApplicationContext();
 			Assert.state(context != null, "ApplicationContext is required for resolving handler bean names");
-			handlerType = context.getType(handlerName);
+			handlerType = context.getType((String) handler);
 		}
 		else {
 			handlerType = handler.getClass();
@@ -404,10 +404,11 @@ public abstract class AbstractMethodMessageHandler<T>
 	 */
 	private HandlerMethod createHandlerMethod(Object handler, Method method) {
 		HandlerMethod handlerMethod;
-		if (handler instanceof String handlerName) {
+		if (handler instanceof String) {
 			ApplicationContext context = getApplicationContext();
 			Assert.state(context != null, "ApplicationContext is required for resolving handler bean names");
-			handlerMethod = new HandlerMethod(handlerName, context.getAutowireCapableBeanFactory(), method);
+			String beanName = (String) handler;
+			handlerMethod = new HandlerMethod(beanName, context.getAutowireCapableBeanFactory(), method);
 		}
 		else {
 			handlerMethod = new HandlerMethod(handler, method);
@@ -419,7 +420,7 @@ public abstract class AbstractMethodMessageHandler<T>
 	 * This method is invoked just before mappings are added. It allows
 	 * subclasses to update the mapping with the {@link HandlerMethod} in mind.
 	 * This can be useful when the method signature is used to refine the
-	 * mapping, for example, based on the cardinality of input and output.
+	 * mapping, e.g. based on the cardinality of input and output.
 	 * <p>By default this method returns the mapping that is passed in.
 	 * @param mapping the mapping to be added
 	 * @param handlerMethod the target handler for the mapping
@@ -505,14 +506,13 @@ public abstract class AbstractMethodMessageHandler<T>
 	@Nullable
 	protected abstract RouteMatcher.Route getDestination(Message<?> message);
 
-	@SuppressWarnings("NullAway")
 	private void addMatchesToCollection(
 			Collection<T> mappingsToCheck, Message<?> message, List<Match<T>> matches) {
 
 		for (T mapping : mappingsToCheck) {
 			T match = getMatchingMapping(mapping, message);
 			if (match != null) {
-				matches.add(new Match<>(match, this.handlerMethods.get(mapping)));
+				matches.add(new Match<T>(match, this.handlerMethods.get(mapping)));
 			}
 		}
 	}
@@ -547,7 +547,7 @@ public abstract class AbstractMethodMessageHandler<T>
 
 	/**
 	 * Create a concrete instance of {@link AbstractExceptionHandlerMethodResolver}
-	 * that finds exception handling methods based on some criteria, for example, based
+	 * that finds exception handling methods based on some criteria, e.g. based
 	 * on the presence of {@code @MessageExceptionHandler}.
 	 * @param beanType the class in which an exception occurred during handling
 	 * @return the resolver to use

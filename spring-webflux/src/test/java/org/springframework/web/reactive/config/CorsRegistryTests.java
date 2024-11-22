@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,30 +31,30 @@ import static org.assertj.core.api.Assertions.assertThat;
  *
  * @author Sebastien Deleuze
  */
-class CorsRegistryTests {
+public class CorsRegistryTests {
 
 	private final CorsRegistry registry = new CorsRegistry();
 
 
 	@Test
-	void noMapping() {
-		assertThat(this.registry.getCorsConfigurations()).isEmpty();
+	public void noMapping() {
+		assertThat(this.registry.getCorsConfigurations().isEmpty()).isTrue();
 	}
 
 	@Test
-	void multipleMappings() {
+	public void multipleMappings() {
 		this.registry.addMapping("/foo");
 		this.registry.addMapping("/bar");
-		assertThat(this.registry.getCorsConfigurations()).hasSize(2);
+		assertThat(this.registry.getCorsConfigurations().size()).isEqualTo(2);
 	}
 
 	@Test
-	void customizedMapping() {
+	public void customizedMapping() {
 		this.registry.addMapping("/foo").allowedOrigins("https://domain2.com", "https://domain2.com")
 				.allowedMethods("DELETE").allowCredentials(true).allowPrivateNetwork(true)
 				.allowedHeaders("header1", "header2").exposedHeaders("header3", "header4").maxAge(3600);
 		Map<String, CorsConfiguration> configs = this.registry.getCorsConfigurations();
-		assertThat(configs).hasSize(1);
+		assertThat(configs.size()).isEqualTo(1);
 		CorsConfiguration config = configs.get("/foo");
 		assertThat(config.getAllowedOrigins()).isEqualTo(Arrays.asList("https://domain2.com", "https://domain2.com"));
 		assertThat(config.getAllowedMethods()).isEqualTo(Collections.singletonList("DELETE"));
@@ -66,7 +66,7 @@ class CorsRegistryTests {
 	}
 
 	@Test
-	void allowCredentials() {
+	public void allowCredentials() {
 		this.registry.addMapping("/foo").allowCredentials(true);
 		CorsConfiguration config = this.registry.getCorsConfigurations().get("/foo");
 		assertThat(config.getAllowedOrigins())
@@ -84,7 +84,7 @@ class CorsRegistryTests {
 		this.registry.addMapping("/api/**").combine(otherConfig);
 
 		Map<String, CorsConfiguration> configs = this.registry.getCorsConfigurations();
-		assertThat(configs).hasSize(1);
+		assertThat(configs.size()).isEqualTo(1);
 		CorsConfiguration config = configs.get("/api/**");
 		assertThat(config.getAllowedOrigins()).isEqualTo(Collections.singletonList("http://localhost:3000"));
 		assertThat(config.getAllowedMethods()).isEqualTo(Collections.singletonList("*"));

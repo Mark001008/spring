@@ -105,14 +105,14 @@ class AopUtilsTests {
 
 	@Test  // gh-32365
 	void mostSpecificMethodBetweenJdkProxyAndTarget() throws Exception {
-		Class<?> proxyClass = new ProxyFactory(new WithInterface()).getProxyClass(getClass().getClassLoader());
+		Class<?> proxyClass = new ProxyFactory(new WithInterface()).getProxy(getClass().getClassLoader()).getClass();
 		Method specificMethod = AopUtils.getMostSpecificMethod(proxyClass.getMethod("handle", List.class), WithInterface.class);
 		assertThat(ResolvableType.forMethodParameter(specificMethod, 0).getGeneric().toClass()).isEqualTo(String.class);
 	}
 
 	@Test  // gh-32365
 	void mostSpecificMethodBetweenCglibProxyAndTarget() throws Exception {
-		Class<?> proxyClass = new ProxyFactory(new WithoutInterface()).getProxyClass(getClass().getClassLoader());
+		Class<?> proxyClass = new ProxyFactory(new WithoutInterface()).getProxy(getClass().getClassLoader()).getClass();
 		Method specificMethod = AopUtils.getMostSpecificMethod(proxyClass.getMethod("handle", List.class), WithoutInterface.class);
 		assertThat(ResolvableType.forMethodParameter(specificMethod, 0).getGeneric().toClass()).isEqualTo(String.class);
 	}

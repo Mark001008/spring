@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 the original author or authors.
+ * Copyright 2002-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,6 +37,7 @@ import org.springframework.web.servlet.i18n.AcceptHeaderLocaleResolver;
 import org.springframework.web.servlet.mvc.HttpRequestHandlerAdapter;
 import org.springframework.web.servlet.mvc.SimpleControllerHandlerAdapter;
 import org.springframework.web.servlet.support.SessionFlashMapManager;
+import org.springframework.web.servlet.theme.FixedThemeResolver;
 import org.springframework.web.servlet.view.DefaultRequestToViewNameTranslator;
 import org.springframework.web.util.UrlPathHelper;
 
@@ -131,7 +132,7 @@ public abstract class MvcNamespaceUtils {
 	}
 
 	/**
-	 * Registers an {@link HttpRequestHandlerAdapter} under a well-known
+	 * Registers  an {@link HttpRequestHandlerAdapter} under a well-known
 	 * name unless already registered.
 	 */
 	private static void registerBeanNameUrlHandlerMapping(ParserContext context, @Nullable Object source) {
@@ -148,7 +149,7 @@ public abstract class MvcNamespaceUtils {
 	}
 
 	/**
-	 * Registers an {@link HttpRequestHandlerAdapter} under a well-known
+	 * Registers  an {@link HttpRequestHandlerAdapter} under a well-known
 	 * name unless already registered.
 	 */
 	private static void registerHttpRequestHandlerAdapter(ParserContext context, @Nullable Object source) {
@@ -203,7 +204,7 @@ public abstract class MvcNamespaceUtils {
 	}
 
 	/**
-	 * Registers an {@link HandlerMappingIntrospector} under a well-known name
+	 * Registers  an {@link HandlerMappingIntrospector} under a well-known name
 	 * unless already registered.
 	 */
 	private static void registerHandlerMappingIntrospector(ParserContext context, @Nullable Object source) {
@@ -232,13 +233,12 @@ public abstract class MvcNamespaceUtils {
 	}
 
 	/**
-	 * Registers an {@link org.springframework.web.servlet.theme.FixedThemeResolver}
-	 * under a well-known name unless already registered.
+	 * Registers an {@link FixedThemeResolver} under a well-known name
+	 * unless already registered.
 	 */
-	@SuppressWarnings("deprecation")
 	private static void registerThemeResolver(ParserContext context, @Nullable Object source) {
 		if (!containsBeanInHierarchy(context, DispatcherServlet.THEME_RESOLVER_BEAN_NAME)) {
-			RootBeanDefinition beanDef = new RootBeanDefinition(org.springframework.web.servlet.theme.FixedThemeResolver.class);
+			RootBeanDefinition beanDef = new RootBeanDefinition(FixedThemeResolver.class);
 			beanDef.setSource(source);
 			beanDef.setRole(BeanDefinition.ROLE_INFRASTRUCTURE);
 			context.getRegistry().registerBeanDefinition(DispatcherServlet.THEME_RESOLVER_BEAN_NAME, beanDef);
@@ -303,7 +303,7 @@ public abstract class MvcNamespaceUtils {
 	 */
 	private static boolean containsBeanInHierarchy(ParserContext context, String beanName) {
 		BeanDefinitionRegistry registry = context.getRegistry();
-		return (registry instanceof BeanFactory beanFactory ? beanFactory.containsBean(beanName) :
+		return (registry instanceof BeanFactory ? ((BeanFactory) registry).containsBean(beanName) :
 				registry.containsBeanDefinition(beanName));
 	}
 

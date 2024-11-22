@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,8 +18,9 @@ package org.springframework.web.context.support;
 
 import java.io.IOException;
 
-import jakarta.servlet.Servlet;
-import jakarta.servlet.ServletException;
+import javax.servlet.Servlet;
+import javax.servlet.ServletException;
+
 import org.junit.jupiter.api.Test;
 
 import org.springframework.web.HttpRequestHandler;
@@ -38,10 +39,10 @@ import static org.assertj.core.api.Assertions.assertThatIOException;
  * @author Chris Beams
  * @since 2.0
  */
-class HttpRequestHandlerTests {
+public class HttpRequestHandlerTests {
 
 	@Test
-	void testHttpRequestHandlerServletPassThrough() throws Exception {
+	public void testHttpRequestHandlerServletPassThrough() throws Exception {
 		MockServletContext servletContext = new MockServletContext();
 		MockHttpServletRequest request = new MockHttpServletRequest();
 		MockHttpServletResponse response = new MockHttpServletResponse();
